@@ -1,6 +1,9 @@
 //inyeccion de dependencias
 import express, { Application } from "express";
 import userRoutes from '../routes/user.route'
+import authRoutes from '../routes/auth.route';
+import patientRoutes from '../routes/patient.route';
+import noteRoutes from '../routes/evolution-note.route';
 import cors from 'cors'
 import db from "../db/connection";
 
@@ -9,7 +12,10 @@ class Server {
     private app: Application;
     private port: string;
     private apiRoutes = {
-        users: '/api/users'
+        auth: '/api/auth',
+        users: '/api/users',
+        patients: '/api/patients',
+        evolutionNotes: '/api/patients'
     }
 
     constructor(){
@@ -24,6 +30,9 @@ class Server {
 
     routes() {
         this.app.use(this.apiRoutes.users, userRoutes)
+        this.app.use(this.apiRoutes.auth, authRoutes)
+        this.app.use(this.apiRoutes.patients, patientRoutes)
+        this.app.use(this.apiRoutes.evolutionNotes, noteRoutes)
     }
 
     //pequeño codigo que se ejecuta antes de la ruta

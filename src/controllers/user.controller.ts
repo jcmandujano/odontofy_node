@@ -29,29 +29,81 @@ export const createUser = async (req: Request, res: Response) => {
     const { body } = req;
 
     try {
+        const existEmail = await User.findOne({
+            where: {
+                email: body.email
+            }
+        })
+
+        if(existEmail){
+            return res.status(400).json({
+                msg: 'El email que deseas registrar ya existe'
+            })
+        }
         const newUser = await User.create(body);
         res.json(newUser)
     } catch (error) {
         res.status(500).json({
-            msg: 'Ocurrio un problema al realizar esta solicitud'
+            msg: 'Ocurrio un problema al realizar tu solicitud',
+            error
         })
     }
 }
 
-export const updateUser = (req: Request, res: Response) => {
+export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { body } = req;
-    res.json({
-        msg: 'actualiza un usuario',
-        body,
-        id
-    })
+    try {
+        const user = await User.findByPk(id);
+        if(!user){
+            return res.status(404).json({
+                msg: 'No existe un usuario con el id ' + id
+            })
+        }
+
+        if(body.email){
+            const existEmail = await User.findOne({
+                where: {
+                    email: body.email
+                }
+            });
+    
+            if(existEmail){
+                return res.status(400).json({
+                    msg: 'El email que deseas actualizar ya existe'
+                })
+            }
+        }
+
+        await user.update(body);
+        res.json(user)
+
+    } catch (error) {
+        res.status(500).json({
+            msg: 'Ocurrio un problema al realizar tu solicitud',
+            error
+        })
+    }
 }
 
-export const deleteUser = (req: Request, res: Response) => {
+export const deleteUser = async (req: Request, res: Response) => {
     const { id } = req.params;
-    res.json({
-        msg: 'elimina un usuario',
-        id
-    })
+    try {
+        const user = await User.findByPk(id);
+        if(!user){
+            return res.status(404).json({
+                msg: 'No existe un usuario con el id' + id
+            })
+        }
+        await user.update({status: false});
+        res.json({
+            msg: 'El usuario ha sido eliminado correctamente'
+        })    
+    } catch (error) {
+        res.status(500).json({
+            msg: 'Ocurrio un problema al realizar tu solicitud',
+            error
+        })
+    }
+    
 }
