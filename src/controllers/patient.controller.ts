@@ -4,6 +4,20 @@ import Patient from "../models/patient.model"
 
 export const listPatient = async (req: Request, res: Response) => {
     const { authorUid } = req;
+    //probaremos el paginado mas adelante
+    /*const page = parseInt(req.query.page) || 1; // Página solicitada, por defecto 1
+    const limit = parseInt(req.query.limit) || 10; // Límite de resultados por página, por defecto 10
+    const offset = (page - 1) * limit; // Desplazamiento en la consulta
+    const patients = await Patient.findAndCountAll({
+        where: {
+            user_id: authorUid
+        },
+        limit,
+        offset
+    });
+
+    const totalPages = Math.ceil(patients.count / limit); // Número total de páginas
+     */
     const patients = await Patient.findAll({
         where: {
           user_id: authorUid
@@ -39,13 +53,13 @@ export const createPatient = async (req: Request, res: Response) => {
     const { body, authorUid } = req;
     const patient = new Patient(body);
     try {
-            patient.user_id = authorUid ? authorUid : 0
-            patient.status = true
-            const newPatient = await Patient.create(patient.dataValues);
-            res.json({
-                msg: 'Se creo correctamente al paciente',
-                patient: newPatient
-            })
+        patient.user_id = authorUid ? authorUid : 0
+        patient.status = true
+        const newPatient = await Patient.create(patient.dataValues);
+        res.json({
+            msg: 'Se creo correctamente al paciente',
+            patient: newPatient
+        })
         
     } catch (error) {
         res.status(500).json({
@@ -100,7 +114,7 @@ export const deletePatient = async (req: Request, res: Response) => {
                 msg: 'No existe un usuario con el id' + id
             })
         }
-        await user.update({status: false});
+        await user.destroy();
         res.json({
             msg: 'El usuario ha sido eliminado correctamente'
         })  

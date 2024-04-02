@@ -18,8 +18,8 @@ interface PatientAttributes {
     emergency_contact_relationship: string
     reason_for_consultation: string
     rfc: string
-    family_medical_history: string
-    personal_medical_history: string
+    family_medical_history: {}
+    personal_medical_history: {}
     email: string
     status: boolean
 }
@@ -43,8 +43,8 @@ class Patient extends Model<PatientAttributes, PatientCreationAttributes> implem
     emergency_contact_relationship!: string
     reason_for_consultation!: string
     rfc!: string
-    family_medical_history!: string
-    personal_medical_history!: string
+    family_medical_history!: {}
+    personal_medical_history!: {}
     email!: string
     status!: boolean
 }
@@ -101,10 +101,10 @@ Patient.init({
         type: DataTypes.STRING
     },
     family_medical_history: {
-        type: DataTypes.STRING
+        type: DataTypes.JSON
     },
     personal_medical_history: {
-        type: DataTypes.STRING
+        type: DataTypes.JSON
     },
     email: {
         type: DataTypes.STRING

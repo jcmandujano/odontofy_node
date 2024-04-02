@@ -39,7 +39,6 @@ export const createNote = async (req: Request, res: Response) => {
     const patientId = req.params.patient_id
     const { body } = req;
     const note = new EvolutionNote(body)
-
     try {
         note.patient_id = parseInt(patientId)
         const newNote = await EvolutionNote.create(note.dataValues);
