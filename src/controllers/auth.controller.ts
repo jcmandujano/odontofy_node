@@ -128,7 +128,8 @@ export const register = async (req: Request, res: Response) => {
         } 
         */
         res.json({
-            msg: 'Usuario registrado correctamente'
+            msg: 'Usuario registrado correctamente',
+            user: newUser
         })
         
     } catch (error) {
