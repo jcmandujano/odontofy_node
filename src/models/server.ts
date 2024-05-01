@@ -4,6 +4,9 @@ import userRoutes from '../routes/user.route'
 import authRoutes from '../routes/auth.route';
 import patientRoutes from '../routes/patient.route';
 import noteRoutes from '../routes/evolution-note.route';
+import paymentRoutes from '../routes/payment.route';
+import conceptRoutes from '../routes/concept.route';
+
 import cors from 'cors'
 import db from "../db/connection";
 
@@ -15,7 +18,9 @@ class Server {
         auth: '/api/auth',
         users: '/api/users',
         patients: '/api/patients',
-        evolutionNotes: '/api/patients'
+        evolutionNotes: '/api/patients',
+        payments: '/api/patients',
+        concepts: '/api/concepts'
     }
 
     constructor(){
@@ -33,6 +38,8 @@ class Server {
         this.app.use(this.apiRoutes.auth, authRoutes)
         this.app.use(this.apiRoutes.patients, patientRoutes)
         this.app.use(this.apiRoutes.evolutionNotes, noteRoutes)
+        this.app.use(this.apiRoutes.payments, paymentRoutes)
+        this.app.use(this.apiRoutes.concepts, conceptRoutes)
     }
 
     //pequeño codigo que se ejecuta antes de la ruta
