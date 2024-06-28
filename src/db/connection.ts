@@ -1,8 +1,9 @@
 import { Sequelize } from "sequelize";
 
-const db = new Sequelize('odontofy', 'root', 'JcRc193494$=', {
+const db = new Sequelize('odontofy', 'root', 'JcRc1934$', {
     host: 'localhost',
-    dialect: "mysql"
+    dialect: "mysql",
+    port:3307
 });
 
 export default db;

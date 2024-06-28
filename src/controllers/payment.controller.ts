@@ -32,11 +32,12 @@ export const listPayments  = async (req: Request, res: Response) => {
             total: payment.total,
             createdAt: payment.createdAt,
             updatedAt: payment.updatedAt,
-            paymentConcepts: paymentConcepts.map((pc) => ({
+            concepts: paymentConcepts.map((pc) => ({
               id: pc.id,
               conceptId: pc.conceptId,
               quantity: pc.quantity,
-              payment: pc.paymentId
+              paymentId: pc.paymentId,
+              payment_method: pc.payment_method
               /* concept: {
                 description: pc.Concept.description,
                 unit_price: pc.Concept.unit_price,
@@ -126,6 +127,7 @@ export const createPayment  = async (req: Request, res: Response) => {
             const paymentConceptsData = body.concepts.map((concept: any) => ({
                 paymentId: payment.id,
                 conceptId: concept.conceptId,
+                payment_method: concept.payment_method,
                 quantity: concept.quantity,
               }));
         
@@ -142,52 +144,77 @@ export const createPayment  = async (req: Request, res: Response) => {
     }
 }
 
-export const updatePayment  = async (req: Request, res: Response) => {
-    const { body } = req;
-    const { id } = req.params;
-    const t = await db.transaction();
-    try {
-        // Buscar el Payment por su ID
-        const payment = await Payment.findByPk(id, { transaction: t });
-        const conceptsList = body.concepts
-        if (!payment) {
+export const updatePayment = async (req: Request, res: Response) => {
+  const { body } = req;
+  const { id } = req.params;
+  const t = await db.transaction();
+  try {
+      // Buscar el Payment por su ID
+      const payment = await Payment.findByPk(id, { transaction: t });
+      if (!payment) {
+          await t.rollback();
           return res.status(404).json({ msg: 'Payment no encontrado' });
-        }
-        // Actualizar los campos del Payment con los datos recibidos en el body
-        await payment.update(body, { transaction: t });
-
-        if(body.concepts && body.concepts.length  > 0){
-          for (const concept of body.concepts) {
-            // Buscar el PaymentConcept por conceptId dentro de la transacción
-            const paymentConcept = await PaymentUser.findOne({
-              where: {
-                paymentId: id,//this is a paymentId
-                id: concept.id,
-              }
-            });
-    
-            // Verificar si se encontró el PaymentConcept
-            if (!paymentConcept) {
-              await t.rollback(); // Revertir la transacción si el PaymentConcept no fue encontrado
-              return res.status(404).json({ msg: 'PaymentConcept no encontrado' });
-            }
-            await paymentConcept.update(concept, { transaction: t })
-          }
-        }
-        
-        await t.commit();
-
-        // Respuesta con el Payment actualizado
-        res.json({
-          payment,
-          conceptsList
-        });
-      } catch (error) {
-        console.error('Error al actualizar el Pago:', error);
-        res.status(500).json({ msg: 'Ocurrió un error al actualizar el Payment', error });
-        await t.rollback();
       }
 
+      // Actualizar los campos del Payment con los datos recibidos en el body
+      await payment.update(body, { transaction: t });
+
+      if (body.concepts && body.concepts.length > 0) {
+          const existingConceptIds = body.concepts.filter((concept: { id: any; }) => concept.id).map((concept: { id: any; }) => concept.id);
+          
+          // Obtener todos los PaymentConcept actuales
+          const currentPaymentConcepts = await PaymentUser.findAll({
+              where: { paymentId: id },
+              transaction: t
+          });
+
+          // Eliminar los PaymentConcept que no están en la lista actualizada
+          for (const currentConcept of currentPaymentConcepts) {
+              if (!existingConceptIds.includes(currentConcept.id)) {
+                  await currentConcept.destroy({ transaction: t });
+              }
+          }
+
+          // Actualizar o crear nuevos PaymentConcept
+          for (const concept of body.concepts) {
+              if (concept.id) {
+                  // Actualizar PaymentConcept existente
+                  const paymentConcept = await PaymentUser.findOne({
+                      where: {
+                          paymentId: id,
+                          id: concept.id,
+                      },
+                      transaction: t
+                  });
+
+                  if (!paymentConcept) {
+                      await t.rollback();
+                      return res.status(404).json({ msg: 'PaymentConcept no encontrado' });
+                  }
+
+                  await paymentConcept.update(concept, { transaction: t });
+              } else {
+                  // Crear nuevo PaymentConcept
+                  await PaymentUser.create({
+                      ...concept,
+                      paymentId: id
+                  }, { transaction: t });
+              }
+          }
+      }
+
+      await t.commit();
+
+      // Respuesta con el Payment actualizado
+      res.json({
+          payment,
+          conceptsList: body.concepts
+      });
+  } catch (error) {
+      console.error('Error al actualizar el Pago:', error);
+      await t.rollback();
+      res.status(500).json({ msg: 'Ocurrió un error al actualizar el Payment', error });
+  }
 }
 
 export const deletePayment  = async (req: Request, res: Response) => {

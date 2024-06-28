@@ -8,6 +8,7 @@ interface PaymentUserAttributes {
   id: number;
   paymentId: number;
   conceptId: number;
+  payment_method:string;
   quantity: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -19,6 +20,7 @@ class PaymentUser extends Model<PaymentUserAttributes, PaymentUserCreationAttrib
   id!: number;
   paymentId!: number;
   conceptId!: number;
+  payment_method!:string;
   quantity!: number;
   public createdAt?: Date;
   public updatedAt?: Date;
@@ -37,7 +39,11 @@ PaymentUser.init(
     conceptId: {
         type: DataTypes.NUMBER,
         primaryKey: true,
-      },
+    },
+    payment_method: {
+      type: DataTypes.NUMBER,
+      primaryKey: true,
+    },
     quantity: {
       type: DataTypes.NUMBER,
       allowNull: false,
