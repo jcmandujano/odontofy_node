@@ -13,7 +13,7 @@ router.get('/:patient_id/payment/:id', [
 router.post('/:patient_id/payment/', [
     validarJWT
 ], createPayment)
-router.put('/:patient_id/payment/:id',[
+router.patch('/:patient_id/payment/:id',[
     validarJWT
 ], updatePayment)
 router.delete('/:patient_id/payment/:id',[
