@@ -6,6 +6,8 @@ import patientRoutes from '../routes/patient.route';
 import noteRoutes from '../routes/evolution-note.route';
 import paymentRoutes from '../routes/payment.route';
 import conceptRoutes from '../routes/concept.route';
+import informedConsentsRoutes from '../routes/informed-consent.route';
+import signedConsentsRoutes from '../routes/signed-consents.route';
 
 import cors from 'cors'
 import db from "../db/connection";
@@ -20,7 +22,9 @@ class Server {
         patients: '/api/patients',
         evolutionNotes: '/api/patients',
         payments: '/api/patients',
-        concepts: '/api/concepts'
+        concepts: '/api/concepts',
+        informedConsents: '/api/informed-consents', 
+        signedConsentsRoutes: '/api/signed-consents'
     }
 
     constructor(){
@@ -40,6 +44,8 @@ class Server {
         this.app.use(this.apiRoutes.evolutionNotes, noteRoutes)
         this.app.use(this.apiRoutes.payments, paymentRoutes)
         this.app.use(this.apiRoutes.concepts, conceptRoutes)
+        this.app.use(this.apiRoutes.informedConsents, informedConsentsRoutes)
+        this.app.use(this.apiRoutes.signedConsentsRoutes, signedConsentsRoutes)
     }
 
     //pequeño codigo que se ejecuta antes de la ruta

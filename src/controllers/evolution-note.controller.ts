@@ -1,4 +1,5 @@
 //funciones que se iran llamando eventualmente
+//por ahora las notas se consultan por paciente
 import { Request, Response } from "express"
 import EvolutionNote from "../models/evolution-note.model";
 
@@ -95,5 +96,4 @@ export const deleteNote = async (req: Request, res: Response) => {
             error
         })
     }
-    
 }
