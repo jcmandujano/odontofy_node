@@ -48,7 +48,7 @@ class Server {
         this.app.use(this.apiRoutes.signedConsentsRoutes, signedConsentsRoutes)
     }
 
-    //pequeño codigo que se ejecuta antes de la ruta
+    //middlewares que se ejecutan antes de la ruta
     middlewares(){
         //cors
         this.app.use(cors())
