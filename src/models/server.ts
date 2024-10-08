@@ -8,6 +8,7 @@ import paymentRoutes from '../routes/payment.route';
 import conceptRoutes from '../routes/concept.route';
 import informedConsentsRoutes from '../routes/informed-consent.route';
 import signedConsentsRoutes from '../routes/signed-consents.route';
+import appointmentRoutes from '../routes/appointment.route';
 
 import cors from 'cors'
 import db from "../db/connection";
@@ -24,7 +25,8 @@ class Server {
         payments: '/api/patients',
         concepts: '/api/concepts',
         informedConsents: '/api/informed-consents', 
-        signedConsentsRoutes: '/api/signed-consents'
+        signedConsentsRoutes: '/api/signed-consents',
+        appointmentRoutes: '/api/appointments'
     }
 
     constructor(){
@@ -46,6 +48,7 @@ class Server {
         this.app.use(this.apiRoutes.concepts, conceptRoutes)
         this.app.use(this.apiRoutes.informedConsents, informedConsentsRoutes)
         this.app.use(this.apiRoutes.signedConsentsRoutes, signedConsentsRoutes)
+        this.app.use(this.apiRoutes.appointmentRoutes, appointmentRoutes)
     }
 
     //middlewares que se ejecutan antes de la ruta
