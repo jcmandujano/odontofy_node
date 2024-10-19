@@ -52,7 +52,7 @@ export const getAppointment = async (req: Request, res: Response) => {
 
 // Crear una nueva cita
 export const createAppointment = async (req: Request, res: Response) => {
-    const patientId = req.params.patient_id;
+    const patientId = req.body.patient_id;
     const { authorUid } = req;
     const { body } = req;
     try {
