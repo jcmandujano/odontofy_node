@@ -6,6 +6,7 @@ import patientRoutes from '../routes/patient.route';
 import noteRoutes from '../routes/evolution-note.route';
 import paymentRoutes from '../routes/payment.route';
 import conceptRoutes from '../routes/concept.route';
+import userConceptRoutes from '../routes/user-concept.route';
 import informedConsentsRoutes from '../routes/informed-consent.route';
 import signedConsentsRoutes from '../routes/signed-consents.route';
 import appointmentRoutes from '../routes/appointment.route';
@@ -24,6 +25,7 @@ class Server {
         evolutionNotes: '/api/patients',
         payments: '/api/patients',
         concepts: '/api/concepts',
+        userConcepts: '/api/user-concepts',
         informedConsents: '/api/informed-consents', 
         signedConsentsRoutes: '/api/signed-consents',
         appointmentRoutes: '/api/appointments'
@@ -46,6 +48,7 @@ class Server {
         this.app.use(this.apiRoutes.evolutionNotes, noteRoutes)
         this.app.use(this.apiRoutes.payments, paymentRoutes)
         this.app.use(this.apiRoutes.concepts, conceptRoutes)
+        this.app.use(this.apiRoutes.userConcepts, userConceptRoutes)
         this.app.use(this.apiRoutes.informedConsents, informedConsentsRoutes)
         this.app.use(this.apiRoutes.signedConsentsRoutes, signedConsentsRoutes)
         this.app.use(this.apiRoutes.appointmentRoutes, appointmentRoutes)
