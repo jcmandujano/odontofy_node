@@ -2,13 +2,13 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import db from "../db/connection";
 import Payment from './payment.model';
-import Concept from './concept.model';
+import UserConcept from './user_concept.model';
 
 interface PaymentUserAttributes {
-  id: number;
+  id?: number;
   paymentId: number;
   conceptId: number;
-  payment_method:string;
+  paymentMethod: 'CASH' | 'DEBIT' | 'CREDIT' | 'TRANSFERENCE'; // Definirlo como un tipo específico  
   quantity: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -20,10 +20,12 @@ class PaymentUser extends Model<PaymentUserAttributes, PaymentUserCreationAttrib
   id!: number;
   paymentId!: number;
   conceptId!: number;
-  payment_method!:string;
+  paymentMethod!: 'CASH' | 'DEBIT' | 'CREDIT' | 'TRANSFERENCE';
   quantity!: number;
   public createdAt?: Date;
   public updatedAt?: Date;
+
+  public userConcept?: UserConcept; // Sequelize llenará este campo al hacer un include
 }
 
 PaymentUser.init(
@@ -38,11 +40,9 @@ PaymentUser.init(
     },
     conceptId: {
         type: DataTypes.NUMBER,
-        primaryKey: true,
     },
-    payment_method: {
-      type: DataTypes.NUMBER,
-      primaryKey: true,
+    paymentMethod: {
+      type: DataTypes.ENUM('CASH', 'DEBIT', 'CREDIT', 'TRANSFERENCE')
     },
     quantity: {
       type: DataTypes.NUMBER,
@@ -60,6 +60,6 @@ PaymentUser.init(
 
 // Definir las relaciones con los modelos Payment y Concept
 PaymentUser.belongsTo(Payment, { foreignKey: 'paymentId' });
-PaymentUser.belongsTo(Concept, { foreignKey: 'conceptId' });
+PaymentUser.belongsTo(UserConcept, { foreignKey: 'conceptId', as: 'userConcept' });
 
 export default PaymentUser;
