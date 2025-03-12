@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validarJWT } from "../middlewares/validar-jwt";
-import { listPayments, getPayment, createPayment, updatePayment, deletePayment } from "../controllers/payment.controller";
+import { listPayments, getPayment, createPayment, updatePayment, deletePayment, getPaymentBalancePerUser } from "../controllers/payment.controller";
 
 const router = Router();
 
@@ -19,5 +19,8 @@ router.patch('/:patient_id/payment/:id',[
 router.delete('/:patient_id/payment/:id',[
     validarJWT
 ], deletePayment)
+router.get('/payment/payment-balance',[
+    validarJWT
+], getPaymentBalancePerUser)
 
 export default router;
