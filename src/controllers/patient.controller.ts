@@ -1,6 +1,10 @@
 //funciones que se iran llamando eventualmente
 import { Request, Response } from "express"
 import Patient from "../models/patient.model"
+import { Op } from "sequelize";
+import Appointment from "../models/appointment.model";
+
+
 
 export const listPatient = async (req: Request, res: Response) => {
     const { authorUid } = req;
@@ -20,14 +24,27 @@ export const listPatient = async (req: Request, res: Response) => {
      */
     const patients = await Patient.findAll({
         where: {
-          user_id: authorUid
-        }
-      });
-    
-    res.json({
-        patients
-    })
-}
+            user_id: authorUid
+        },
+        include: [
+            {
+                model: Appointment,
+                where: {
+                    appointment_date: {
+                        [Op.gte]: new Date() // Solo futuras
+                    }
+                },
+                required: false,
+                limit: 1,
+                order: [['appointment_date', 'ASC']],
+                attributes: ['appointment_date', 'appointment_time', 'status']
+            }
+        ]
+    });
+
+    res.json({ patients });
+};
+
 
 export const getPatient = async (req: Request, res: Response) => {
     const { id } = req.params;

@@ -22,6 +22,7 @@ interface PatientAttributes {
     personal_medical_history: {}
     email: string
     status: boolean
+    debt: number
 }
 
 interface PatientCreationAttributes extends Optional<PatientAttributes, "id"> {}
@@ -47,6 +48,7 @@ class Patient extends Model<PatientAttributes, PatientCreationAttributes> implem
     personal_medical_history!: {}
     email!: string
     status!: boolean
+    debt!: number
 }
 
 Patient.init({
@@ -112,6 +114,10 @@ Patient.init({
     status: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
+    },
+    debt: {
+        type: DataTypes.DECIMAL,
+        defaultValue: 0
     }
 },{
     sequelize: db,

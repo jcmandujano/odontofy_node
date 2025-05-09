@@ -11,6 +11,7 @@ import informedConsentsRoutes from '../routes/informed-consent.route';
 import userInformedConsentRoutes from '../routes/user-informed-consent.route'
 import signedConsentsRoutes from '../routes/signed-consents.route';
 import appointmentRoutes from '../routes/appointment.route';
+import calendarRoutes from '../routes/google.route';
 
 import cors from 'cors'
 import db from "../db/connection";
@@ -30,7 +31,9 @@ class Server {
         informedConsents: '/api/informed-consents', 
         signedConsentsRoutes: '/api/signed-consents',
         appointmentRoutes: '/api/appointments',
-        userInformedConsentRoutes: '/api/user-informed-consents'
+        userInformedConsentRoutes: '/api/user-informed-consents',
+        calendarRoutes: '/api/google',
+
     }
 
     constructor(){
@@ -55,6 +58,7 @@ class Server {
         this.app.use(this.apiRoutes.signedConsentsRoutes, signedConsentsRoutes)
         this.app.use(this.apiRoutes.appointmentRoutes, appointmentRoutes)
         this.app.use(this.apiRoutes.userInformedConsentRoutes, userInformedConsentRoutes)
+        this.app.use(this.apiRoutes.calendarRoutes, calendarRoutes)
     }
 
     //middlewares que se ejecutan antes de la ruta

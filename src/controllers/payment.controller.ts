@@ -5,12 +5,19 @@ import PaymentUser from "../models/payment-user.model"
 import Concept from "../models/concept.model"
 import db from "../db/connection";
 import UserConcept from "../models/user_concept.model";
+import dayjs from "dayjs";
+import { Op } from "sequelize";
 
 
 export const listPayments  = async (req: Request, res: Response) => {  
+  const patientId = req.params.patient_id
     try {
 
-        const payments = await Payment.findAll();
+        const payments = await Payment.findAll({
+          where: {
+            patientId: patientId
+          }
+        });
         // Para cada pago, buscar sus conceptos asociados
         const paymentsWithConcepts = await Promise.all(
             payments.map(async (payment) => {
@@ -119,32 +126,47 @@ export const getPayment  = async (req: Request, res: Response) => {
     }
 }
 
-export const getPaymentBalancePerUser  = async (req: Request, res: Response) => {
-    const { authorUid } = req;
-    try {
-        //variable que obtiene el payment por authorUid y suma el total
-        const paymentsPerUser = await Payment.findAll({ where: { user_id: authorUid } });
+export const getPaymentBalancePerUser = async (req: Request, res: Response) => {
+  const { authorUid } = req;
+  const { currentMonthOnly } = req.query; // opcional: ?currentMonthOnly=true
 
-        // Sumar los totales de los pagos
-        const totalPayments = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.total), 0);
+  try {
+    // Rango de fechas del mes actual
+    let dateFilter = {};
+    if (currentMonthOnly === 'true') {
+      const startOfMonth = dayjs().startOf('month').toDate();
+      const endOfMonth = dayjs().endOf('month').toDate();
 
-        //Sumar los totales de debt
-        const totalDebt = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.debt), 0);
-
-        const totalIncome = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.income), 0);
-
-        res.json({
-            totalPayments,
-            totalDebt,
-            totalIncome
-        })
-    } catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrió un problema al realizar tu solicitud',
-            error
-        })
+      dateFilter = {
+        payment_date: {
+          [Op.between]: [startOfMonth, endOfMonth],
+        },
+      };
     }
-}
+
+    const paymentsPerUser = await Payment.findAll({
+      where: {
+        user_id: authorUid,
+        ...dateFilter,
+      },
+    });
+
+    const totalPayments = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.total), 0);
+    const totalDebt = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.debt), 0);
+    const totalIncome = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.income), 0);
+
+    res.json({
+      totalPayments,
+      totalDebt,
+      totalIncome,
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: 'Ocurrió un problema al realizar tu solicitud',
+      error,
+    });
+  }
+};
 
 export const createPayment  = async (req: Request, res: Response) => {
     const patientId = req.params.patient_id
