@@ -44,7 +44,7 @@ export const doLogin = async (req: Request, res: Response) => {
      
         res.json({
             msg: 'LOGIN OK',
-            user,
+            user: user.toSafeJSON(),
             token
         })
         
@@ -129,7 +129,7 @@ export const register = async (req: Request, res: Response) => {
         */
         res.json({
             msg: 'Usuario registrado correctamente',
-            user: newUser
+            user: newUser.toSafeJSON()
         })
         
     } catch (error) {
@@ -137,5 +137,27 @@ export const register = async (req: Request, res: Response) => {
             msg: 'Ocurrio un problema al realizar tu solicitud',
             error
         })
+    }
+}
+
+export const verifyPassword = async (req: Request, res: Response) => {
+    const { authorUid } = req;
+    const { password } = req.body;
+
+    try {
+        const user = await User.findByPk(authorUid);
+
+        if (!user) {
+            return res.status(400).json({ msg: 'No se pudo verificar la contraseña' });
+        }
+
+        const isValid = bcryptjs.compareSync(password, user.password);
+        if (!isValid) {
+            return res.status(400).json({ msg: 'No se pudo verificar la contraseña' });
+        }
+
+        return res.json({ msg: 'Contraseña válida' });
+    } catch (error) {
+        return res.status(500).json({ msg: 'Error del servidor' });
     }
 }

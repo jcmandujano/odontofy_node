@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { check } from "express-validator";
-import { doLogin, register } from "../controllers/auth.controller";
+import { doLogin, register, verifyPassword } from "../controllers/auth.controller";
 import { validarCampos } from "../middlewares/validarCampos";
+import { validarJWT } from "../middlewares/validar-jwt";
 
 const router = Router();
 
@@ -11,5 +12,8 @@ router.post('/login', [
     validarCampos
 ], doLogin)
 router.post('/register', register)
+router.post('/verify-password', [
+    validarJWT
+], verifyPassword)
 
 export default router;

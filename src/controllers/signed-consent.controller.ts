@@ -3,10 +3,12 @@ import SignedConsent from "../models/signed-consent.model"
 
 export const listSignedConsents = async (req: Request, res: Response) => {
     const { authorUid } = req;
+    const patientId = req.params.patient_id
 
     const signedConsents = await SignedConsent.findAll({
         where:{
-            doctor_id: authorUid
+            doctor_id: authorUid,
+            patient_id: patientId
         }
     });
 

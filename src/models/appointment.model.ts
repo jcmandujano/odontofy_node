@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import db from "../db/connection";
+import Patient from "./patient.model";
 
 // Definir los atributos del modelo
 interface AppointmentAttributes {
@@ -10,6 +11,7 @@ interface AppointmentAttributes {
     appointment_time: string;
     status: string;
     note: string | null; // Nueva propiedad para contenido HTML
+    google_event_id: string | null; // Nueva propiedad para almacenar el ID del evento de Google Calendar
 }
 
 // Definir los atributos opcionales al crear una nueva instancia (id es opcional porque es auto-incremental)
@@ -24,6 +26,7 @@ class Appointment extends Model<AppointmentAttributes, AppointmentCreationAttrib
     public appointment_time!: string;
     public status!: string;
     public note!: string | null; // Inicializar la propiedad "note"
+    public google_event_id!: string | null; // Inicializar la propiedad "google_event_id"
 }
 
 // Inicializar el modelo
@@ -58,6 +61,10 @@ Appointment.init({
         allowNull: false,
         defaultValue: 'pendiente',
     },
+    google_event_id: {
+        type: DataTypes.STRING,
+        allowNull: true, // Permitir valores nulos para cuando no haya un evento de Google Calendar
+    },
 }, {
     sequelize: db,
     tableName: "appointments",
@@ -65,5 +72,9 @@ Appointment.init({
     createdAt: "createdAt",
     updatedAt: "updatedAt",
 });
+
+// Después de la clase Patient o al final del archivo
+Patient.hasMany(Appointment, { foreignKey: 'patient_id' });
+Appointment.belongsTo(Patient, { foreignKey: 'patient_id' });
 
 export default Appointment;

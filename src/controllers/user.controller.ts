@@ -3,27 +3,30 @@ import { Request, Response } from "express"
 import User from "../models/user.model"
 
 export const getUsers = async (req: Request, res: Response) => {
-
     const users = await User.findAll();
-    
+
+    const safeUsers = users.map(user => user.toSafeJSON());
+
     res.json({
-        users
-    })
-}
+        users: safeUsers
+    });
+};
+
 
 export const getUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = await User.findByPk(id);
-    if(user){
+
+    if (user) {
         res.json({
-            user
-        })
-    }else{
+            user: user.toSafeJSON()
+        });
+    } else {
         res.status(404).json({
             msg: 'Usuario no encontrado'
-        })
+        });
     }
-}
+};
 
 export const createUser = async (req: Request, res: Response) => {
     const { body } = req;
@@ -41,7 +44,9 @@ export const createUser = async (req: Request, res: Response) => {
             })
         }
         const newUser = await User.create(body);
-        res.json(newUser)
+        res.json({
+            user: newUser.toSafeJSON()
+        });
     } catch (error) {
         res.status(500).json({
             msg: 'Ocurrio un problema al realizar tu solicitud',
@@ -76,7 +81,9 @@ export const updateUser = async (req: Request, res: Response) => {
         }
 
         await user.update(body);
-        res.json(user)
+        res.json({
+            user: user.toSafeJSON()
+        });
 
     } catch (error) {
         res.status(500).json({
