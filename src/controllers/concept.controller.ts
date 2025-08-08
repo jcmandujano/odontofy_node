@@ -1,27 +1,19 @@
 //funciones que se iran llamando eventualmente
 import { Request, Response } from "express"
 import Concept from "../models/concept.model"
+import { errorResponse, successResponse } from "../utils/response";
 
-export const listConcepts  = async (req: Request, res: Response) => {
+export const listConcepts = async (req: Request, res: Response) => {
     const concepts = await Concept.findAll();
-    res.json({
-        concepts
-    })
+    return successResponse(res, concepts, 'Concepts obtained successfully');
 }
 
-export const getConcept  = async (req: Request, res: Response) => {
+export const getConcept = async (req: Request, res: Response) => {
     const { id } = req.params;
     const concept = await Concept.findByPk(id);
-    if(concept){
-        res.json({
-            concept
-        })
-    }else{
-        res.status(404).json({
-            msg: 'Concepto no encontrado'
-        })
+    if (concept) {
+        return successResponse(res, concept, 'concept obtained successfully');
+    } else {
+        return errorResponse(res, 'Concept not found', 404);
     }
 }
-export const createConcept  = async (req: Request, res: Response) => {}
-export const updateConcept  = async (req: Request, res: Response) => {}
-export const deleteConcept  = async (req: Request, res: Response) => {}

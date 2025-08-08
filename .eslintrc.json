@@ -1,0 +1,11 @@
+{
+    "extends": [
+      "eslint:recommended",
+      "plugin:prettier/recommended" // Esto asegura que Prettier se ejecute junto con ESLint
+    ],
+    "rules": {
+      "prettier/prettier": ["error", { "singleQuote": true, "semi": false }],
+      "no-console": "warn"
+    }
+  }
+  

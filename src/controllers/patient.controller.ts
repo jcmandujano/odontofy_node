@@ -1,146 +1,189 @@
-//funciones que se iran llamando eventualmente
 import { Request, Response } from "express"
 import Patient from "../models/patient.model"
 import { Op } from "sequelize";
 import Appointment from "../models/appointment.model";
+import { errorResponse, successResponse } from "../utils/response";
+import { PaginatedResponse } from "../types/api-response";
 
-
-
+/**
+ * Get a paginated list of patients associated with the authenticated user
+ * @param {Request} req - The HTTP request
+ * @param {Response} res - The HTTP response
+ * @returns {Response} Response with the list of patients or an error message
+ */
 export const listPatient = async (req: Request, res: Response) => {
-    const { authorUid } = req;
-    //probaremos el paginado mas adelante
-    /*const page = parseInt(req.query.page) || 1; // Página solicitada, por defecto 1
-    const limit = parseInt(req.query.limit) || 10; // Límite de resultados por página, por defecto 10
-    const offset = (page - 1) * limit; // Desplazamiento en la consulta
-    const patients = await Patient.findAndCountAll({
-        where: {
-            user_id: authorUid
-        },
-        limit,
-        offset
-    });
+    try {
+        // Obtiene el identificador del usuario autenticado desde el JWT
+        const { authorUid } = req;
 
-    const totalPages = Math.ceil(patients.count / limit); // Número total de páginas
-     */
-    const patients = await Patient.findAll({
-        where: {
-            user_id: authorUid
-        },
-        include: [
-            {
-                model: Appointment,
-                where: {
-                    appointment_date: {
-                        [Op.gte]: new Date() // Solo futuras
-                    }
-                },
-                required: false,
-                limit: 1,
-                order: [['appointment_date', 'ASC']],
-                attributes: ['appointment_date', 'appointment_time', 'status']
-            }
-        ]
-    });
+        // Configuración de paginación: página actual y límite de resultados
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const offset = (page - 1) * limit;
+        console.log(`Fetching users: page=${page}, limit=${limit}, offset=${offset}`);
+        // Obtiene los pacientes asociados al usuario autenticado con citas futuras
+        const { count, rows: patients } = await Patient.findAndCountAll({
+            where: {
+                user_id: authorUid
+            },
+            include: [
+                {
+                    model: Appointment,
+                    where: {
+                        appointment_date: {
+                            [Op.gte]: new Date() // solo citas futuras
+                        }
+                    },
+                    required: false,
+                    limit: 1,
+                    order: [['appointment_date', 'ASC']],
+                    attributes: ['appointment_date', 'appointment_time', 'status']
+                }
+            ],
+            limit,
+            offset,
+            distinct: true // para contar correctamente con joins
+        });
 
-    res.json({ patients });
+        // Respuesta paginada
+        const response: PaginatedResponse<typeof patients[number]> = {
+            total: count,
+            page,
+            perPage: limit,
+            totalPages: Math.ceil(count / limit),
+            results: patients
+        };
+
+        // Devuelve la respuesta exitosa con los datos
+        return successResponse(res, response, 'Patients fetched successfully');
+    } catch (err) {
+        // Manejo de errores
+        console.error('Error in listPatient:', err);
+        return errorResponse(res, 'Failed to fetch patients', 500, err);
+    }
 };
 
-
+/**
+ * Obtener un paciente específico por su ID
+ * @param {Request} req - La solicitud HTTP
+ * @param {Response} res - La respuesta HTTP
+ * @returns {Response} Respuesta con el paciente o un mensaje de error
+ */
 export const getPatient = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { authorUid } = req;
-    const patient = await Patient.findOne({
-        where: {
-            id: id,
-            user_id: authorUid
+
+    try {
+        // Verifica si el ID del paciente es un número válido
+        const patient = await Patient.findOne({
+            where: {
+                id,
+                user_id: authorUid
+            }
+        });
+
+        // Si el paciente no existe, devuelve un error 404
+        // Si el paciente existe, devuelve los datos del paciente
+        if (patient) {
+            return successResponse(res, patient, 'Patient found');
+        } else {
+            return errorResponse(res, 'Patient not found', 404);
         }
-      });
-    if(patient){
-        res.json({
-            patient
-        })
-    }else{
-        res.status(404).json({
-            msg: 'Paciente no encontrado'
-        })
+    } catch (error) {
+        console.error('Error in getPatient:', error);
+        return errorResponse(res, 'An error occurred while fetching the patient', 500, error);
     }
 }
 
+/**
+ * Crear un nuevo paciente
+ * @param {Request} req - La solicitud HTTP
+ * @param {Response} res - La respuesta HTTP
+ * @returns {Response} Respuesta con el paciente creado o un mensaje de error
+ */
 export const createPatient = async (req: Request, res: Response) => {
     const { body, authorUid } = req;
-    const patient = new Patient(body);
-    try {
-        patient.user_id = authorUid ? authorUid : 0
-        patient.status = true
-        const newPatient = await Patient.create(patient.dataValues);
-        res.json({
-            msg: 'Se creo correctamente al paciente',
-            patient: newPatient
-        })
-        
-    } catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrio un problema al realizar tu solicitud',
-            error
-        })
-    }
-}
 
+    try {
+        // Verifica si el paciente ya existe
+        const patient = new Patient({
+            ...body,
+            user_id: authorUid ?? 0,
+            status: true
+        });
+
+        //Crea el paciente en la base de datos
+        const newPatient = await Patient.create(patient.dataValues);
+        return successResponse(res, newPatient, 'Patient created successfully');
+    } catch (error) {
+        console.error('Error in createPatient:', error);
+        return errorResponse(res, 'An error occurred while creating the patient', 500, error);
+    }
+};
+
+/**
+ * Actualizar un paciente existente
+ * @param {Request} req - La solicitud HTTP
+ * @param {Response} res - La respuesta HTTP
+ * @returns {Response} Respuesta con el paciente actualizado o un mensaje de error
+ */
 export const updatePatient = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { body, authorUid } = req;
+
     try {
+        // Verifica si el paciente existe
         const patient = await Patient.findOne({
             where: {
                 id: id,
                 user_id: authorUid
             }
-          });
-        if(!patient){
-            return res.status(404).json({
-                msg: 'No existe un paciente con el id ' + id
-            })
+        });
+
+        // Si el paciente no existe, devuelve un error 404
+        if (!patient) {
+            return errorResponse(res, `No patient found with ID ${id}`, 404);
         }
-        
+
+        // Actualiza el paciente en la base de datos
         await patient.update(body);
-        res.json({
-            msg: "El usuario se actualizo correctamente",
-            patient
-        })
+        return successResponse(res, patient, 'Patient updated successfully');
 
     } catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrio un problema al realizar tu solicitud',
-            error
-        })
+        console.error('Error in updatePatient:', error);
+        return errorResponse(res, 'An error occurred while updating the patient', 500, error);
     }
 }
 
+/**
+ * Eliminar un paciente existente
+ * @param {Request} req - La solicitud HTTP
+ * @param {Response} res - La respuesta HTTP
+ * @returns {Response} Respuesta con un mensaje de éxito o un mensaje de error
+ */
 export const deletePatient = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { authorUid } = req;
+
     try {
-        const user = await Patient.findOne({
+        // Verifica si el paciente existe
+        const patient = await Patient.findOne({
             where: {
-                id: id,
+                id,
                 user_id: authorUid
             }
-          });
-        if(!user){
-            return res.status(404).json({
-                msg: 'No existe un usuario con el id' + id
-            })
+        });
+
+        // Si el paciente no existe, devuelve un error 404
+        if (!patient) {
+            return errorResponse(res, `No patient found with ID ${id}`, 404);
         }
-        await user.destroy();
-        res.json({
-            msg: 'El usuario ha sido eliminado correctamente'
-        })  
-          
+
+        // Elimina el paciente de la base de datos
+        await patient.destroy();
+        return successResponse(res, null, 'Patient deleted successfully');
     } catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrio un problema al realizar tu solicitud',
-            error
-        })
+        console.error('Error in deletePatient:', error);
+        return errorResponse(res, 'An error occurred while deleting the patient', 500, error);
     }
-    
-}
+};

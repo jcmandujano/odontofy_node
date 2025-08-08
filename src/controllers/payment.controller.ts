@@ -7,214 +7,203 @@ import db from "../db/connection";
 import UserConcept from "../models/user_concept.model";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
+import { successResponse, errorResponse } from "../utils/response";
+import { PaginatedResponse } from "../types/api-response";
 
-
-export const listPayments  = async (req: Request, res: Response) => {  
-  const patientId = req.params.patient_id
-    try {
-
-        const payments = await Payment.findAll({
-          where: {
-            patientId: patientId
-          }
-        });
-        // Para cada pago, buscar sus conceptos asociados
-        const paymentsWithConcepts = await Promise.all(
-            payments.map(async (payment) => {
-            // Buscar los conceptos asociados al pago en la tabla intermedia
-            const paymentConcepts = await PaymentUser.findAll({
-                where: {
-                paymentId: payment.id,
-            },
-            include: [
-              {
-                  model: UserConcept, 
-                  as: 'userConcept', // 🔥 Asegurar que coincide con el alias en belongsTo
-                  attributes: ['id', 'description'],
-              }
-          ]
-          });
-          
-          // Construir el objeto del pago con los conceptos asociados
-          const paymentWithConcepts = {
-            id: payment.id,
-            user_id: payment.user_id,
-            patientId: payment.patientId,
-            payment_date: payment.payment_date,
-            income: payment.income,
-            debt: payment.debt,
-            total: payment.total,
-            createdAt: payment.createdAt,
-            updatedAt: payment.updatedAt,
-            concepts: paymentConcepts.map((pc) => ({
-              id: pc.id,
-              conceptId: pc.conceptId,
-              quantity: pc.quantity,
-              paymentId: pc.paymentId,
-              paymentMethod: pc.paymentMethod,
-              description: pc.userConcept?.dataValues?.description || null,
-            })),
-          };
-  
-          return paymentWithConcepts;
-        })
-      );
-  
-      res.json(paymentsWithConcepts);
-        
-    } catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrió un problema al realizar tu solicitud',
-            error,
-        });
-    }
-
-
-}
-
-export const getPayment  = async (req: Request, res: Response) => {
-    const { id } = req.params;
-
-    try {
-        // Buscamos el pago por su ID
-        const payment = await Payment.findByPk(id);
-        if (!payment) {
-          return res.status(404).json({
-            msg: 'No se encontró el pago con el ID proporcionado',
-          });
-        }
-    
-        // Buscamos los conceptos asociados a este pago en la tabla intermedia
-        const paymentConcepts = await PaymentUser.findAll({
-          where: {
-            paymentId: parseInt(id, 10),
-          },
-          include: {
-            model: Concept,
-            attributes: ['description', 'unit_price'],
-          },
-        });
-    
-        // Construir el objeto de respuesta combinando el pago y los conceptos asociados
-        const paymentWithConcepts = {
-          id: payment.id,
-          user_id: payment.user_id,
-          patientId: payment.patientId,
-          payment_date: payment.payment_date,
-          income: payment.income,
-          debt: payment.debt,
-          total: payment.total,
-          createdAt: payment.createdAt,
-          updatedAt: payment.updatedAt,
-          paymentConcepts: paymentConcepts.map((pc) => ({
-            id: pc.id,
-            conceptId: pc.conceptId,
-            quantity: pc.quantity
-           /*  concept: {
-              description: pc.Concept.description,
-              unit_price: pc.Concept.unit_price,
-            }, */
-          })),
-        };
-    
-        res.json(paymentWithConcepts);
-      }  catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrió un problema al realizar tu solicitud',
-            error,
-        });
-    }
-}
-
-export const getPaymentBalancePerUser = async (req: Request, res: Response) => {
-  const { authorUid } = req;
-  const { currentMonthOnly } = req.query; // opcional: ?currentMonthOnly=true
+/**
+ * Listar pagos de un paciente con paginación
+ * @param {Request} req - La solicitud HTTP
+ * @param {Response} res - La respuesta HTTP
+ * @returns {Response} Lista paginada de pagos con sus conceptos
+ */
+export const listPayments = async (req: Request, res: Response) => {
+  const { patient_id } = req.params;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const offset = (page - 1) * limit;
 
   try {
-    // Rango de fechas del mes actual
-    let dateFilter = {};
-    if (currentMonthOnly === 'true') {
-      const startOfMonth = dayjs().startOf('month').toDate();
-      const endOfMonth = dayjs().endOf('month').toDate();
+    const { count, rows: payments } = await Payment.findAndCountAll({
+      where: { patientId: patient_id },
+      limit,
+      offset,
+      order: [["payment_date", "DESC"]],
+    });
 
+    const paymentsWithConcepts = await Promise.all(
+      payments.map(async (payment) => {
+        const paymentConcepts = await PaymentUser.findAll({
+          where: { paymentId: payment.id },
+          include: [
+            {
+              model: UserConcept,
+              as: "userConcept",
+              attributes: ["id", "description"],
+            },
+          ],
+        });
+
+        return {
+          ...payment.toJSON(),
+          concepts: paymentConcepts.map((pc) => ({
+            id: pc.id,
+            conceptId: pc.conceptId,
+            quantity: pc.quantity,
+            paymentId: pc.paymentId,
+            paymentMethod: pc.paymentMethod,
+            description: pc.userConcept?.description || null,
+          })),
+        };
+      })
+    );
+
+    const response: PaginatedResponse<typeof paymentsWithConcepts[number]> = {
+      total: count,
+      page,
+      perPage: limit,
+      totalPages: Math.ceil(count / limit),
+      results: paymentsWithConcepts
+    };
+
+    return successResponse(res, response, 'payments fetched successfully');
+
+
+  } catch (error) {
+    console.error("Error in listPayments:", error);
+    return errorResponse(res, "Failed to fetch payments", 500, error);
+  }
+};
+
+/**
+ * Obtener un pago específico por su ID
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Response} Detalle del pago con sus conceptos
+ */
+export const getPayment = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const payment = await Payment.findByPk(id);
+
+    if (!payment) {
+      return errorResponse(res, "Payment not found", 404);
+    }
+
+    const paymentConcepts = await PaymentUser.findAll({
+      where: { paymentId: parseInt(id) },
+      include: { model: Concept, attributes: ["description", "unit_price"] },
+    });
+
+    const response = {
+      ...payment.toJSON(),
+      concepts: paymentConcepts.map((pc) => ({
+        id: pc.id,
+        conceptId: pc.conceptId,
+        quantity: pc.quantity,
+      })),
+    };
+
+    return successResponse(res, response, "Payment fetched successfully");
+  } catch (error) {
+    console.error("Error in getPayment:", error);
+    return errorResponse(res, "Failed to fetch payment", 500, error);
+  }
+};
+
+/**
+ * Obtener el balance total de pagos, ingresos y deudas por usuario
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Response} Totales agregados
+ */
+export const getPaymentBalancePerUser = async (req: Request, res: Response) => {
+  const { authorUid } = req;
+  const { currentMonthOnly } = req.query;
+
+  try {
+    let dateFilter = {};
+    if (currentMonthOnly === "true") {
       dateFilter = {
         payment_date: {
-          [Op.between]: [startOfMonth, endOfMonth],
+          [Op.between]: [dayjs().startOf("month").toDate(), dayjs().endOf("month").toDate()],
         },
       };
     }
 
-    const paymentsPerUser = await Payment.findAll({
-      where: {
-        user_id: authorUid,
-        ...dateFilter,
-      },
+    const payments = await Payment.findAll({
+      where: { user_id: authorUid, ...dateFilter },
     });
 
-    const totalPayments = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.total), 0);
-    const totalDebt = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.debt), 0);
-    const totalIncome = paymentsPerUser.reduce((acc, payment) => acc + Number(payment.income), 0);
+    const totalPayments = payments.reduce((acc, p) => acc + Number(p.total), 0);
+    const totalDebt = payments.reduce((acc, p) => acc + Number(p.debt), 0);
+    const totalIncome = payments.reduce((acc, p) => acc + Number(p.income), 0);
 
-    res.json({
-      totalPayments,
-      totalDebt,
-      totalIncome,
-    });
+    return successResponse(res, { totalPayments, totalDebt, totalIncome }, "Balance fetched successfully");
   } catch (error) {
-    res.status(500).json({
-      msg: 'Ocurrió un problema al realizar tu solicitud',
-      error,
-    });
+    console.error("Error in getPaymentBalancePerUser:", error);
+    return errorResponse(res, "Failed to fetch balance", 500, error);
   }
 };
 
-export const createPayment  = async (req: Request, res: Response) => {
-    const patientId = req.params.patient_id
-    const { body, authorUid } = req;
-    const newPayment = new Payment(body)
-    newPayment.user_id = authorUid ? authorUid : 0
-    newPayment.patientId = patientId ? parseInt(patientId) : 0
-    try {
-        const payment = await Payment.create(newPayment.dataValues);
-        if(body.concepts && body.concepts.length  > 0){
-            const paymentConceptsData = body.concepts.map((concept: any) => ({
-                paymentId: payment.id,
-                conceptId: concept.conceptId,
-                paymentMethod: concept.paymentMethod,
-                quantity: concept.quantity,
-              }));
-        
-              await PaymentUser.bulkCreate(paymentConceptsData);
-        }
-        res.json({
-            msg: 'El pago se ha generado satisfactoriamente',
-        })
-    } catch (error) {
-        res.status(500).json({
-            msg: 'Ocurrio un problema al realizar tu solicitud',
-            error
-        })
-    }
-}
+/**
+ * Crear un nuevo pago para un paciente específico
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Response} Confirmación de creación del pago
+ */
+export const createPayment = async (req: Request, res: Response) => {
+  const { patient_id } = req.params;
+  const { body, authorUid } = req;
 
+  try {
+    const newPayment = await Payment.create({
+      ...body,
+      user_id: authorUid,
+      patientId: parseInt(patient_id),
+    });
+
+    if (body.concepts?.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const conceptsData = body.concepts.map((concept: any) => ({
+        paymentId: newPayment.id,
+        conceptId: concept.conceptId,
+        paymentMethod: concept.paymentMethod,
+        quantity: concept.quantity,
+      }));
+
+      await PaymentUser.bulkCreate(conceptsData);
+    }
+
+    return successResponse(res, newPayment, "Payment created successfully");
+  } catch (error) {
+    console.error("Error in createPayment:", error);
+    return errorResponse(res, "Failed to create payment", 500, error);
+  }
+};
+
+
+
+/**
+ * Actualizar un pago existente
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Response} Confirmación de actualización del pago
+ */
 export const updatePayment = async (req: Request, res: Response) => {
-  const { body } = req;
   const { id } = req.params;
+  const { body } = req;
+
   const t = await db.transaction();
 
   try {
-    // Buscar el Payment por su ID y validar que pertenezca al paciente correcto
-    const payment = await Payment.findOne({
-      where: { id },
-      transaction: t,
-    });
+    const payment = await Payment.findOne({ where: { id }, transaction: t });
 
     if (!payment) {
       await t.rollback();
-      return res.status(404).json({ msg: "Payment no encontrado" });
+      return errorResponse(res, `Payment with ID ${id} not found`, 404);
     }
 
-    // Actualizar los campos de Payment
     await payment.update(
       {
         payment_date: body.payment_date,
@@ -225,32 +214,29 @@ export const updatePayment = async (req: Request, res: Response) => {
       { transaction: t }
     );
 
-    // Manejo de los PaymentUser
     if (Array.isArray(body.concepts)) {
-      // Obtener los PaymentUser actuales
       const currentPaymentUsers = await PaymentUser.findAll({
         where: { paymentId: id },
         transaction: t,
       });
-      
-      // Crear un mapa de los PaymentUser existentes
-      const currentPaymentUsersMap = new Map();
-      currentPaymentUsers.forEach((pu) => {
-        currentPaymentUsersMap.set(pu.id, pu);
-      });
 
-      // Procesar la lista de conceptos recibida
+      const currentMap = new Map(currentPaymentUsers.map((pu) => [pu.id, pu]));
+
       for (const concept of body.concepts) {
-        if (concept.id && currentPaymentUsersMap.has(concept.id)) {
-          // Si el concepto ya existe, actualizarlo
-          const existingPaymentUser = currentPaymentUsersMap.get(concept.id);
-
-          // Forzar que Sequelize lo reconozca como modificado
-          await existingPaymentUser.save({ transaction: t,  logging: console.log });
-          
-          currentPaymentUsersMap.delete(concept.id); // Eliminar del mapa para evitar su eliminación
+        if (concept.id && currentMap.has(concept.id)) {
+          const existingPU = currentMap.get(concept.id);
+          if (existingPU) {
+            await existingPU.update(
+              {
+                quantity: concept.quantity,
+                conceptId: concept.conceptId,
+                paymentMethod: concept.paymentMethod,
+              },
+              { transaction: t }
+            );
+            currentMap.delete(concept.id);
+          }
         } else {
-          // Si no existe, crearlo
           await PaymentUser.create(
             {
               paymentId: parseInt(id),
@@ -263,61 +249,48 @@ export const updatePayment = async (req: Request, res: Response) => {
         }
       }
 
-      // Eliminar los registros que ya no están en la lista recibida
-      for (const [ paymentUser] of currentPaymentUsersMap) {
-        const deletablePaymentUser = await PaymentUser.findByPk(paymentUser)
-        if (deletablePaymentUser) {
-          await deletablePaymentUser.destroy({ transaction: t });
-        }
+      // Eliminar los PaymentUser que ya no están
+      for (const [idToDelete] of currentMap) {
+        await PaymentUser.destroy({ where: { id: idToDelete }, transaction: t });
       }
     }
 
     await t.commit();
-
-    // Respuesta con el Payment actualizado
-    res.json({
-      msg: "Payment actualizado correctamente",
-      payment,
-      conceptsList: body.concepts,
-    });
+    return successResponse(res, null, "Payment updated successfully");
   } catch (error) {
-    console.error("Error al actualizar el Pago:", error);
     await t.rollback();
-    res.status(500).json({
-      msg: "Ocurrió un error al actualizar el Payment",
-      error,
-    });
+    console.error("Error in updatePayment:", error);
+    return errorResponse(res, "Failed to update payment", 500, error);
   }
 };
 
 
-export const deletePayment  = async (req: Request, res: Response) => {
+/**
+ * Eliminar un pago y sus conceptos asociados
+ * @param {Request} req - La solicitud HTTP
+ * @param {Response} res - La respuesta HTTP
+ * @returns {Response} Confirmación de eliminación
+ */
+export const deletePayment = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const t = await db.transaction();
+
   try {
-     // Buscar el Payment por su ID
-    const payment = await Payment.findByPk(id, { transaction: t });
+    const payment = await Payment.findByPk(id);
+
     if (!payment) {
-      await t.rollback();
-      return res.status(404).json({ msg: 'Pago no encontrado' });
+      return errorResponse(res, "Payment not found", 404);
     }
-    
-    //por integridad referencial primero eliminamos los conceptos relacionados al pago y despues el pago
-    await PaymentUser.destroy({ where: { paymentId: id }, transaction: t });
 
-    await payment.destroy({ transaction: t });
+    // Eliminar los conceptos asociados
+    await PaymentUser.destroy({ where: { paymentId: id } });
 
-    await t.commit();
+    // Eliminar el pago
+    await payment.destroy();
 
-
-    res.json({
-      msg: 'El pago y sus conceptos asociados han sido eliminados correctamente'
-  })    
-
+    return successResponse(res, null, "Payment deleted successfully");
   } catch (error) {
-    console.error('Error al eliminar el pago:', error);
-    res.status(500).json({ msg: 'Ocurrió un error al eliminar el Payment', error });
-    await t.rollback();
+    console.error("Error in deletePayment:", error);
+    return errorResponse(res, "Failed to delete payment", 500, error);
   }
+};
 
-}

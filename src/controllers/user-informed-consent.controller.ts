@@ -1,22 +1,32 @@
 import { Request, Response } from "express";
 import UserInformedConsent from "../models/user-informed-consent.model";
+import { PaginatedResponse } from "../types/api-response";
+import { errorResponse, successResponse } from "../utils/response";
 
 
 // Listar todos los consentimientos informados
 export const listUserConsents = async (req: Request, res: Response) => {
     const { authorUid } = req;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
     try {
 
         // Obtener consentimientos personalizados del usuario
-        const userInformedConsents = await UserInformedConsent.findAll({ where: { user_id:authorUid } });
+        const { count, rows: userInformedConsents } = await UserInformedConsent.findAndCountAll({ where: { user_id: authorUid }, limit, offset: (page - 1) * limit });
 
-        res.json({
-            consents: userInformedConsents // Retornamos los consentimientos por usuario
-        });
+        const response: PaginatedResponse<typeof userInformedConsents[number]> = {
+            total: count,
+            page,
+            perPage: limit,
+            totalPages: Math.ceil(count / limit),
+            results: userInformedConsents
+        };
+
+        return successResponse(res, response, "Consentimientos informados obtenidos exitosamente");
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: "Error al obtener los consentimientos informados" });
+        return errorResponse(res, "Error al obtener los consentimientos informados", 500, error);
     }
 };
 
@@ -25,16 +35,16 @@ export const getUserConsents = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { authorUid } = req;
     try {
-        // Buscar en la tabla de consentimientos personalizados 
-        const userInformedConsent = await UserInformedConsent.findOne({ where: { id, user_id : authorUid} });
+        // Buscar en la tabla de consentimientos personalizados
+        const userInformedConsent = await UserInformedConsent.findOne({ where: { id, user_id: authorUid } });
 
         if (userInformedConsent) {
-            return res.json({ consent: userInformedConsent });
+            return successResponse(res, userInformedConsent, "Consentimiento informado obtenido exitosamente");
         }
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Error al obtener el consentimiento' });
+        return errorResponse(res, "Error al obtener el consentimiento informado", 500, error);
     }
 };
 
@@ -46,20 +56,17 @@ export const createUserConsent = async (req: Request, res: Response) => {
     try {
         const newConsent = await UserInformedConsent.create({
             user_id: authorUid || 0,
-            informed_consent_id: null, 
+            informed_consent_id: null,
             name,
             description,
             file_url,
             is_custom
         });
 
-        res.json({
-            msg: 'Consentimiento creado exitosamente',
-            consent: newConsent
-        });
+        return successResponse(res, newConsent, "Consentimiento creado exitosamente");
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Error al crear el consentimiento' });
+        return errorResponse(res, "Error al crear el consentimiento", 500, error);
     }
 };
 
@@ -72,10 +79,10 @@ export const updateUserConsent = async (req: Request, res: Response) => {
     try {
 
         // Buscamos el consentimiento a actualizar
-        let userInformedConsent = await UserInformedConsent.findOne({   
-            where: { user_id:authorUid, id },
+        const userInformedConsent = await UserInformedConsent.findOne({
+            where: { user_id: authorUid, id },
         });
-        
+
         if (userInformedConsent) {
             // Si existe, actualizar el consentimiento
             await userInformedConsent.update({
@@ -84,18 +91,14 @@ export const updateUserConsent = async (req: Request, res: Response) => {
                 file_url,
             });
 
-            res.json({
-                msg: "Consentimiento actualizado exitosamente",
-                consent: userInformedConsent,
-            });
+            return successResponse(res, userInformedConsent, "Consentimiento actualizado exitosamente");
         } else {
-            res.status(404).json({ msg: 'Consentimiento no encontrado' });
+            return errorResponse(res, "Consentimiento no encontrado", 404);
         }
 
-        
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: "Error al personalizar el consentimiento" });
+        return errorResponse(res, "Error al personalizar el consentimiento", 500, error);
     }
 };
 
@@ -104,16 +107,16 @@ export const deleteUserConsent = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { authorUid } = req;
     try {
-        const userInformedConsent = await UserInformedConsent.findOne({ where: { id, user_id:authorUid } });
+        const userInformedConsent = await UserInformedConsent.findOne({ where: { id, user_id: authorUid } });
 
         if (!userInformedConsent) {
-            return res.status(404).json({ msg: 'Consentimiento no encontrado' });
+            return errorResponse(res, "Consentimiento no encontrado", 404);
         }
 
         await userInformedConsent.destroy();
-        res.json({ msg: 'Consentimiento eliminado exitosamente' });
+        return successResponse(res, null, "Consentimiento eliminado exitosamente");
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Error al eliminar el consentimiento' });
+        return errorResponse(res, "Error al eliminar el consentimiento", 500, error);
     }
 };

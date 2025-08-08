@@ -4,13 +4,13 @@ import { listSignedConsents, getSignedConsent, createSignedConsents, deleteSigne
 
 const router = Router();
 
-router.get('/', [
+router.get('/:patient_id/signed-consents', [
     validarJWT
 ], listSignedConsents)
-router.get('/:id', [
+router.get('/:patient_id/signed-consents/:id', [
     validarJWT
 ], getSignedConsent)
-router.post('/', [
+router.post('/:patient_id/signed-consents', [
     validarJWT
 ], createSignedConsents)
 //posiblemente no debamos editar la actualizacion de consentimientos informados.... 
@@ -18,7 +18,7 @@ router.post('/', [
 /* router.put('/:id',[
     validarJWT
 ], updateSignedConsents) */
-router.delete('/:id',[
+router.delete('/:patient_id/signed-consents/:id', [
     validarJWT
 ], deleteSignedConsents)
 

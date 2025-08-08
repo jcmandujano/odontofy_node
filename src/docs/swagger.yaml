@@ -1,0 +1,299 @@
+openapi: 3.0.0
+info:
+  title: Odontofy API
+  description: API documentation for Odontofy
+  version: 1.0.0
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        gender:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        phone:
+          type: string
+        marital_status:
+          type: string
+        occupation:
+          type: string
+        address:
+          type: string
+        emergency_contact_name:
+          type: string
+        emergency_contact_phone:
+          type: string
+        emergency_contact_relationship:
+          type: string
+        reason_for_consultation:
+          type: string
+        rfc:
+          type: string
+        family_medical_history:
+          type: object
+        personal_medical_history:
+          type: object
+        email:
+          type: string
+        status:
+          type: boolean
+        debt:
+          type: number
+          format: float
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PatientInput:
+      type: object
+      properties:
+        name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        gender:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        phone:
+          type: string
+        marital_status:
+          type: string
+        occupation:
+          type: string
+        address:
+          type: string
+        emergency_contact_name:
+          type: string
+        emergency_contact_phone:
+          type: string
+        emergency_contact_relationship:
+          type: string
+        reason_for_consultation:
+          type: string
+        rfc:
+          type: string
+        family_medical_history:
+          type: object
+        personal_medical_history:
+          type: object
+        email:
+          type: string
+        debt:
+          type: number
+          format: float
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/patients:
+    get:
+      summary: Get paginated list of patients
+      tags: [Patients]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (default 1)
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Number of results per page (default 10)
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A paginated list of patients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Patients fetched successfully
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      perPage:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Patient'
+                  errors:
+                    type: object
+                    nullable: true
+
+    post:
+      summary: Create a new patient
+      tags: [Patients]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientInput'
+      responses:
+        '200':
+          description: Patient created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Se creó correctamente al paciente
+                  patient:
+                    $ref: '#/components/schemas/Patient'
+
+  /api/patients/{id}:
+    get:
+      summary: Get a single patient by ID
+      tags: [Patients]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the patient
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Patient found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patient:
+                    $ref: '#/components/schemas/Patient'
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Paciente no encontrado
+
+    put:
+      summary: Update a patient by ID
+      tags: [Patients]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the patient
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientInput'
+      responses:
+        '200':
+          description: Patient updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: El usuario se actualizó correctamente
+                  patient:
+                    $ref: '#/components/schemas/Patient'
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: No existe un paciente con el id 1
+
+    delete:
+      summary: Delete a patient by ID
+      tags: [Patients]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the patient
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Patient deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: El usuario ha sido eliminado correctamente
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: No existe un usuario con el id 1
