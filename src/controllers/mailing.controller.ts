@@ -1,36 +1,21 @@
-import  nodemailer from "nodemailer";
+import { Request, Response } from 'express';
+import { sendEmail } from '../services/email.service';
+import { welcomeTemplate } from '../utils/email-templates/welcome.template';
 
-export const sendEmail = async(from: string, to: string, subject: string, body: string) => {
+
+export const sendWelcomeEmail = async (req: Request, res: Response) => {
+    const { email, name } = req.body;
+
     try {
-        
-        let mailOptions = ({
-            from,
-            to,
-            subject,
-            body
-        })
+        await sendEmail({
+            to: email,
+            subject: 'Bienvenido a Odontofy',
+            html: welcomeTemplate(name),
+        });
 
-        //asign createTransport method in nodemailer to a variable
-        //service: to determine which email platform to use
-        //auth contains the senders email and password which are all saved in the .env
-        const Transporter = nodemailer.createTransport({
-            service: "smtp.mailgun.org",
-            port: 587,
-            auth: {
-              user: 'postmaster@sandbox4fc9c94bd9da4cae9fbcd7403b6e6873.mailgun.org', //only for develop
-              pass: "dc2f9bb76a1e40fc8c09757645274374-408f32f3-df3f0625", //only for develop
-            },
-          });
-
-        //return the Transporter variable which has the sendMail method to send the mail
-        //which is within the mailOptions
-        return await Transporter.sendMail(mailOptions).then(info=>{
-            console.log('Preview URL: ' + nodemailer.getTestMessageUrl(info));
-        }); 
+        res.status(200).json({ ok: true, msg: 'Correo de bienvenida enviado' });
     } catch (error) {
-        return {
-            msg: "No se pudo enviar tu email",
-            error
-        }
+        console.error('Error al enviar el correo:', error);
+        res.status(500).json({ ok: false, msg: 'Error al enviar el correo' });
     }
-}
+};

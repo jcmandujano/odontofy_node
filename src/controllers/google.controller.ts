@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getGoogleOAuthClient } from '../googleClient';
+import { getGoogleOAuthClient } from '../googleOAuthClient';
 import User from '../models/user.model';
 
 

@@ -12,13 +12,18 @@ import userInformedConsentRoutes from '../routes/user-informed-consent.route'
 import signedConsentsRoutes from '../routes/signed-consents.route';
 import appointmentRoutes from '../routes/appointment.route';
 import calendarRoutes from '../routes/google.route';
+import fileUploadRoute from '../routes/upload.route';
+import mailingRoutes from '../routes/mailing.route';
 
 import cors from 'cors'
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 import db from "../db/connection";
 
 class Server {
 
     private app: Application;
+    private swaggerDocument: object;
     private port: string;
     private apiRoutes = {
         auth: '/api/auth',
@@ -28,17 +33,21 @@ class Server {
         payments: '/api/patients',
         concepts: '/api/concepts',
         userConcepts: '/api/user-concepts',
-        informedConsents: '/api/informed-consents', 
-        signedConsentsRoutes: '/api/signed-consents',
+        informedConsents: '/api/informed-consents',
+        signedConsentsRoutes: '/api/patients',
         appointmentRoutes: '/api/appointments',
         userInformedConsentRoutes: '/api/user-informed-consents',
         calendarRoutes: '/api/google',
-
+        fileUploadRoutes: '/api/upload',
+        mailingRoutes: '/api/mailing'
     }
 
-    constructor(){
+    constructor() {
         this.app = express();
         this.port = process.env.PORT || '8000';
+
+        // Cargar archivo YAML
+        this.swaggerDocument = YAML.load('./src/docs/swagger.yaml'); // ajusta la ruta si es necesari
 
         //configuramos middlewares y rutas
         this.dbConfig();
@@ -59,10 +68,13 @@ class Server {
         this.app.use(this.apiRoutes.appointmentRoutes, appointmentRoutes)
         this.app.use(this.apiRoutes.userInformedConsentRoutes, userInformedConsentRoutes)
         this.app.use(this.apiRoutes.calendarRoutes, calendarRoutes)
+        this.app.use(this.apiRoutes.fileUploadRoutes, fileUploadRoute)
+        this.app.use(this.apiRoutes.mailingRoutes, mailingRoutes)
+        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(this.swaggerDocument));
     }
 
     //middlewares que se ejecutan antes de la ruta
-    middlewares(){
+    middlewares() {
         //cors
         this.app.use(cors())
 
@@ -73,16 +85,16 @@ class Server {
         this.app.use(express.static('public'))
     }
 
-    async dbConfig(){
+    async dbConfig() {
         try {
             await db.authenticate();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.log('OCURRIO UN ERROR')
-            throw new Error(error)
+            throw new Error(typeof error === 'string' ? error : (error instanceof Error ? error.message : JSON.stringify(error)))
         }
     }
 
-    listen(){
+    listen() {
         this.app.listen(this.port, () => {
             console.log('Servidor corriendo en ' + this.port)
         })

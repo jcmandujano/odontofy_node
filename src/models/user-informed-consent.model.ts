@@ -1,6 +1,7 @@
 // models/informedConsent.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
 import db from "../db/connection";
+import SignedConsent from './signed-consent.model';
 
 interface UserInformedConsentAttributes {
   id: number;
@@ -12,7 +13,7 @@ interface UserInformedConsentAttributes {
   is_custom: boolean;
 }
 
-interface UserInformedConsentCreationAttributes extends Optional<UserInformedConsentAttributes, 'id'> {}
+interface UserInformedConsentCreationAttributes extends Optional<UserInformedConsentAttributes, 'id'> { }
 
 class UserInformedConsent extends Model<UserInformedConsentAttributes, UserInformedConsentCreationAttributes> implements UserInformedConsentAttributes {
   public id!: number;
@@ -35,12 +36,12 @@ UserInformedConsent.init(
       primaryKey: true,
     },
     user_id: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
     },
     informed_consent_id: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: true,
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
     },
     name: {
       type: DataTypes.STRING,
@@ -55,8 +56,8 @@ UserInformedConsent.init(
       allowNull: true,
     },
     is_custom: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
     }
   },
   {
@@ -66,5 +67,10 @@ UserInformedConsent.init(
     updatedAt: 'updatedAt',
   }
 );
+
+SignedConsent.belongsTo(UserInformedConsent, {
+  foreignKey: 'consent_id',
+  as: 'consent'
+});
 
 export default UserInformedConsent;

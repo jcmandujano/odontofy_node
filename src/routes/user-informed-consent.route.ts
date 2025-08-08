@@ -18,11 +18,11 @@ router.post('/', [
     validarJWT,
     validateUser
 ], createUserConsent)
-router.put('/:id',[
+router.put('/:id', [
     validarJWT,
     validateUser,
 ], updateUserConsent)
-router.delete('/:id',[
+router.delete('/:id', [
     validarJWT,
     validateUser,
 ], deleteUserConsent)

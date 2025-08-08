@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { check } from "express-validator";
-import { doLogin, register, verifyPassword } from "../controllers/auth.controller";
+import { confirmAccount, doLogin, register, verifyPassword } from "../controllers/auth.controller";
 import { validarCampos } from "../middlewares/validarCampos";
 import { validarJWT } from "../middlewares/validar-jwt";
 
@@ -15,5 +15,6 @@ router.post('/register', register)
 router.post('/verify-password', [
     validarJWT
 ], verifyPassword)
+router.get('/verify-account/:userId/:token', confirmAccount)
 
 export default router;

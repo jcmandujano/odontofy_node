@@ -1,21 +1,32 @@
 import { Request, Response } from "express";
 import UserConcept from "../models/user_concept.model";
 import PaymentUser from "../models/payment-user.model";
+import { errorResponse, successResponse } from "../utils/response";
+import { PaginatedResponse } from "../types/api-response";
 
 // Listar todos los conceptos (globales y personalizados del usuario)
 export const listUserConcepts = async (req: Request, res: Response) => {
     const { authorUid } = req;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
     try {
         // Obtener conceptos personalizados del usuario
-        const userConcepts = await UserConcept.findAll({ where: { user_id:authorUid } });
+        const { count, rows: userConcepts } = await UserConcept.findAndCountAll({ where: { user_id: authorUid }, limit, offset: (page - 1) * limit });
 
-        res.json({
-            concepts: userConcepts, // Combinar conceptos globales y personalizados
-        });
+
+        const response: PaginatedResponse<typeof userConcepts[number]> = {
+            total: count,
+            page,
+            perPage: limit,
+            totalPages: Math.ceil(count / limit),
+            results: userConcepts
+        };
+
+        return successResponse(res, response, "Concepts fetched successfully")
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: "Error al obtener los conceptos" });
+        return errorResponse(res, 'An error occurred while fetching the concepts', 500, error);
     }
 };
 
@@ -25,17 +36,17 @@ export const getUserConcept = async (req: Request, res: Response) => {
     const { authorUid } = req;
     try {
         // Buscar en la tabla de conceptos personalizados primero
-        const userConcept = await UserConcept.findOne({ where: { id, user_id : authorUid} });
+        const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid } });
 
         if (userConcept) {
-            return res.json({ concept: userConcept });
+            return successResponse(res, userConcept, "Concept founded")
         } else {
-            res.status(404).json({ msg: 'Concepto no encontrado' });
+            return errorResponse(res, 'Failed to find concept', 500);
         }
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Error al obtener el concepto' });
+        return errorResponse(res, 'An error occurred while finding the concept', 500, error);
     }
 };
 
@@ -53,13 +64,11 @@ export const createUserConcept = async (req: Request, res: Response) => {
             is_custom
         });
 
-        res.json({
-            msg: 'Concepto creado exitosamente',
-            concept: newConcept
-        });
+        return successResponse(res, newConcept, "Concepts created successfully")
+
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Error al crear el concepto' });
+        return errorResponse(res, 'An error occurred while creating new concept', 500, error);
     }
 };
 
@@ -72,10 +81,10 @@ export const updateUserConcept = async (req: Request, res: Response) => {
     try {
 
         // Si el concepto global no existe, buscar en los conceptos personalizados
-        let userConcept = await UserConcept.findOne({   
-            where: { user_id:authorUid, id },
+        const userConcept = await UserConcept.findOne({
+            where: { user_id: authorUid, id },
         });
-        
+
         if (userConcept) {
             // Si existe, actualizar el concepto personalizado
             await userConcept.update({
@@ -83,18 +92,16 @@ export const updateUserConcept = async (req: Request, res: Response) => {
                 unit_price: unit_price || userConcept.unit_price,
             });
 
-            res.json({
-                msg: "Concepto personalizado actualizado",
-                concept: userConcept,
-            });
+            return successResponse(res, userConcept, "Concepts updated successfully")
+
         } else {
-            res.status(404).json({ msg: 'Concepto no encontrado' });
+            return errorResponse(res, 'Failed to find concept', 500);
         }
 
-        
+
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: "Error al personalizar el concepto" });
+        return errorResponse(res, 'An error occurred while update the concept', 500, error);
     }
 };
 
@@ -103,23 +110,23 @@ export const deleteUserConcept = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { authorUid } = req;
     try {
-        const userConcept = await UserConcept.findOne({ where: { id, user_id:authorUid } });
+        const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid } });
 
         if (!userConcept) {
-            return res.status(404).json({ msg: 'Concepto no encontrado' });
+            return errorResponse(res, 'Failed to find concept', 500);
         }
 
         // Verificar si existe una relación en PaymentUser
         const relatedPayments = await PaymentUser.findOne({ where: { conceptId: id } });
 
         if (relatedPayments) {
-            return res.status(400).json({ msg: 'No se puede eliminar el concepto porque está asociado a pagos' });
+            return errorResponse(res, 'The concept cannot be deleted because it is associated with payments', 400);
         }
 
         await userConcept.destroy();
-        res.json({ msg: 'Concepto eliminado exitosamente' });
+        return successResponse(res, "Concepts deleted successfully")
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Error al eliminar el concepto' });
+        return errorResponse(res, 'An error occurred while delete the concept', 500, error);
     }
 };
