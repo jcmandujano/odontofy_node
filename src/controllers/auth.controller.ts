@@ -7,6 +7,7 @@ import { errorResponse, successResponse } from "../utils/response";
 import Token from "../models/token.model";
 import { sendEmail } from "../services/email.service";
 import { accountConfirmationTemplate } from "../utils/email-templates/confirm-account.template";
+import { accountActivatedTemplate } from "../utils/email-templates/activated-account.template";
 
 /**
  * Handles user login by verifying credentials and generating a JWT token.
@@ -120,7 +121,7 @@ export const register = async (req: Request, res: Response) => {
         });
 
         // Generar enlace de confirmación
-        const confirmationUrl = `${process.env.FRONTEND_URL}/auth/verify-account/${newUser.id}/${token}`;
+        const confirmationUrl = `${process.env.BACKEND_URL}/api/auth/verify-account/${newUser.id}/${token}`;
 
         // Enviar correo
         await sendEmail({
@@ -196,17 +197,8 @@ export const confirmAccount = async (req: Request, res: Response) => {
         await Token.destroy({ where: { id: tokenRecord.id } });
 
         //return succes html message
-        res.send(`
-            <html>
-                <head>
-                    <title>Cuenta Verificada</title>
-                </head>
-                <body>
-                    <h1>Cuenta Verificada Exitosamente</h1>
-                    <p>Tu cuenta ha sido verificada exitosamente. Ahora puedes iniciar sesión.</p       >
-                </body>
-            </html>
-        `);
+        //send to frontend html template accountActivatedTemplate
+        res.send(accountActivatedTemplate(user.name));
 
         //return successResponse(res, user.toSafeJSON(), 'Cuenta verificada exitosamente');
     } catch (error) {
