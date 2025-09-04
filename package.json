@@ -1,10 +1,12 @@
 {
   "name": "odontofyapi_node",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API backend para Odontofy en Node + Express + TypeScript",
+  "main": "dist/app.js",
   "scripts": {
-    "dev": "ts-node-dev src/app.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
