@@ -36,6 +36,7 @@
     "typescript-eslint": "^8.32.1"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^3.0.1",
     "@google-cloud/storage": "^7.16.0",
     "@sendgrid/mail": "^8.1.5",
     "bcryptjs": "^2.4.3",
