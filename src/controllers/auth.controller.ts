@@ -8,6 +8,8 @@ import Token from "../models/token.model";
 import { sendEmail } from "../services/email.service";
 import { accountConfirmationTemplate } from "../utils/email-templates/confirm-account.template";
 import { accountActivatedTemplate } from "../utils/email-templates/activated-account.template";
+import PasswordReset from "../models/password-reset.model";
+import { resetPasswordTemplate } from "../utils/email-templates/reset-password.template";
 
 /**
  * Handles user login by verifying credentials and generating a JWT token.
@@ -173,6 +175,24 @@ export const verifyPassword = async (req: Request, res: Response) => {
     }
 }
 
+/**
+ * Confirms a user's account using a verification token.
+ *
+ * This controller function handles account confirmation by verifying the provided
+ * user ID and token from the request parameters. It checks if the user exists and
+ * if the token is valid. If both checks pass, it updates the user's status to active,
+ * deletes the token, and sends a confirmation email. It responds with appropriate
+ * success or error messages based on the outcome of each step.
+ * @param req - Express request object containing `userId` and `token` in the parameters.
+ * @param res - Express response object used to send the response.
+ * @returns A JSON response indicating the result of the account confirmation process.
+ * @remarks
+ * - Returns 404 if the user is not found.
+ * - Returns 400 if the token is invalid.
+ * - Returns 500 for server errors.
+ * - Sends a confirmation email upon successful account activation.
+ */
+
 export const confirmAccount = async (req: Request, res: Response) => {
     const { userId, token } = req.params;
 
@@ -206,3 +226,88 @@ export const confirmAccount = async (req: Request, res: Response) => {
         return errorResponse(res, 'Error del servidor', 500, error);
     }
 }
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    try {
+        // Check if the user exists
+        console.log('Arrived at forgotPassword with email:', email);
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return errorResponse(res, 'Ocurrio un problema con el email', 400);
+        }
+
+        // Create a password reset token
+        const resetToken = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 3600000); // Token expires in 1 hour
+
+        const resetPasswordUrl = `${process.env.FRONTEND_URL}/reset-password?uid=${user.id}&token=${resetToken}`;
+
+        // Save the token and expiration date in the database
+        await PasswordReset.create({
+            user_id: user.id,
+            token: resetToken,
+            expires_at: expiresAt,
+        });
+
+        // Send the password reset email
+        await sendEmail({
+            to: 'carlosmandujano.v@gmail.com', //newUser.email || '', //testing with my email, uncomment this line to use the user's email
+            subject: 'Confirma tu cuenta en Odontofy',
+            html: resetPasswordTemplate(user.name, resetPasswordUrl),
+        });
+
+        return successResponse(res, 'Se ha enviado un correo electrónico para restablecer la contraseña');
+    } catch (error) {
+        console.error('Error in forgotPassword:', error);
+        return errorResponse(res, 'Error del servidor', 500, error);
+    }
+}
+
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            return res.status(400).json({ ok: false, msg: "Token y contraseña son requeridos" });
+        }
+
+        // Buscar token en la tabla
+        const passwordReset = await PasswordReset.findOne({ where: { token } });
+
+        if (!passwordReset) {
+            return res.status(400).json({ ok: false, msg: "Token inválido" });
+        }
+
+        if (passwordReset.used) {
+            return res.status(400).json({ ok: false, msg: "El token ya fue usado" });
+        }
+
+        if (passwordReset.expires_at < new Date()) {
+            return res.status(400).json({ ok: false, msg: "El token ha expirado" });
+        }
+
+        // Buscar usuario
+        const user = await User.findByPk(passwordReset.user_id);
+        if (!user) {
+            return res.status(400).json({ ok: false, msg: "Usuario no encontrado" });
+        }
+
+        // Hashear nueva contraseña
+        const hashedPassword = await bcryptjs.hash(password, 10);
+
+        // Guardar nueva contraseña
+        user.password = hashedPassword;
+        await user.save();
+
+        // Marcar token como usado
+        passwordReset.used = true;
+        await passwordReset.save();
+
+        return res.status(200).json({ ok: true, msg: "Contraseña actualizada correctamente" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ ok: false, msg: "Error en el servidor" });
+    }
+};
