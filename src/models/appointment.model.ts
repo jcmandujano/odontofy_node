@@ -15,7 +15,7 @@ interface AppointmentAttributes {
 }
 
 // Definir los atributos opcionales al crear una nueva instancia (id es opcional porque es auto-incremental)
-interface AppointmentCreationAttributes extends Optional<AppointmentAttributes, "id"> {}
+type AppointmentCreationAttributes = Optional<AppointmentAttributes, "id">
 
 // Definir la clase del modelo
 class Appointment extends Model<AppointmentAttributes, AppointmentCreationAttributes> implements AppointmentAttributes {

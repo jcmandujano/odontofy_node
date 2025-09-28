@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from "express";
 import Appointment from "../models/appointment.model";
 import { Op } from "sequelize";
 import { createGoogleCalendarEvent, deleteGoogleCalendarEvent, getAuthorizedGoogleClient, listGoogleCalendarEvents, updateGoogleCalendarEvent } from "../utils/googleCalendar";
 import { errorResponse, successResponse } from "../utils/response";
-import { PaginatedResponse } from "../types/api-response";
+import Patient from "../models/patient.model";
 
 
 /**
@@ -12,33 +13,27 @@ import { PaginatedResponse } from "../types/api-response";
  * @param {Response} res - La respuesta HTTP
  * @returns {Response} Respuesta con la lista de citas o un mensaje de error
  */
-export const listAppointments = async (req: Request, res: Response) => {
+/* export const _listAppointments = async (req: Request, res: Response) => {
   try {
     const { authorUid } = req;
-    const { fromToday = "false" } = req.query;
+    const { startDate, endDate } = req.query;
 
     // Configuración de paginación
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
+    // Convertir startDate y endDate a string si son arrays o ParsedQs
+    const start = Array.isArray(startDate) ? startDate[0] : (typeof startDate === 'object' ? '' : startDate);
+    const end = Array.isArray(endDate) ? endDate[0] : (typeof endDate === 'object' ? '' : endDate);
+
     // Construcción de condiciones de búsqueda
     const whereCondition: Record<string, unknown> = {
       user_id: authorUid,
+      appointment_date: {
+        [Op.between]: [start as string, end as string],
+      },
     };
-
-    // si se recibe el parámetro fromToday, filtra las citas desde hoy
-    if (fromToday === "true") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const oneMonthLater = new Date();
-      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
-
-      whereCondition.appointment_date = {
-        [Op.between]: [today, oneMonthLater]
-      };
-    }
 
     // Búsqueda con conteo total para paginación
     const { count, rows: dbAppointments } = await Appointment.findAndCountAll({
@@ -51,10 +46,11 @@ export const listAppointments = async (req: Request, res: Response) => {
     // Intentar obtener eventos de Google Calendar
     let googleEvents: unknown[] = [];
     const oauth2Client = await getAuthorizedGoogleClient(authorUid!);
-
+    console.log('OAuth2 Client:', oauth2Client ? 'Available' : 'Not available');
     if (oauth2Client) {
       try {
         googleEvents = await listGoogleCalendarEvents(oauth2Client, 30);
+        console.log(`Fetched ${googleEvents.length} events from Google Calendar`);
       } catch (err) {
         console.warn('No se pudieron obtener eventos de Google Calendar:', err);
       }
@@ -74,9 +70,103 @@ export const listAppointments = async (req: Request, res: Response) => {
     console.error('Error in listAppointments:', error);
     return errorResponse(res, 'Failed to fetch appointments', 500, error);
   }
+}; */
+
+
+
+export const listAppointments = async (req: Request, res: Response) => {
+  try {
+    const { authorUid } = req;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return errorResponse(res, "Debes enviar startDate y endDate en la consulta", 400);
+    }
+
+    // Convertir startDate y endDate a string si son arrays o ParsedQs
+    const start = Array.isArray(startDate) ? startDate[0] : (typeof startDate === 'object' ? '' : startDate);
+    const end = Array.isArray(endDate) ? endDate[0] : (typeof endDate === 'object' ? '' : endDate);
+
+
+    // 1. Obtener citas locales de la DB dentro del rango
+    const dbAppointments = await Appointment.findAll({
+      where: {
+        user_id: authorUid,
+        appointment_date: {
+          [Op.between]: [start as string, end as string],
+        },
+      },
+      include: [{ model: Patient, attributes: ["id", "name"] }],
+    });
+
+    const localEvents = dbAppointments.map((a: any) => ({
+      id: a.id.toString(),
+      source: "local",
+      title:
+        a.patient_id === 0
+          ? "Cita sin paciente asignado"
+          : `Cita con paciente: ${a.Patient?.name || a.patient_id}`,
+      start: new Date(`${a.appointment_date}T${a.appointment_time}`),
+      end: new Date(`${a.appointment_date}T${a.appointment_time}`),
+      note: a.note,
+      status: a.status,
+      google_event_id: a.google_event_id,
+    }));
+
+    // 2. Obtener eventos de Google Calendar en el mismo rango
+    // Intentar obtener eventos de Google Calendar
+    let googleEvents: unknown[] = [];
+    const oauth2Client = await getAuthorizedGoogleClient(authorUid!);
+    console.log('OAuth2 Client:', oauth2Client ? 'Available' : 'Not available');
+    if (oauth2Client) {
+      try {
+        googleEvents = await listGoogleCalendarEvents(oauth2Client, new Date(startDate as string).toISOString(), new Date(endDate as string).toISOString());
+        console.log(`Fetched ${googleEvents.length} events from Google Calendar`);
+      } catch (err) {
+        console.warn('No se pudieron obtener eventos de Google Calendar:', err);
+      }
+    }
+
+    let googleMapped = googleEvents.map((ev) => {
+      const event = ev as {
+        id?: string;
+        summary?: string;
+        start?: { dateTime?: string; date?: string };
+        end?: { dateTime?: string; date?: string };
+        description?: string;
+        status?: string;
+      };
+      return {
+        id: event.id!,
+        source: "google",
+        title: event.summary || "Evento de Google",
+        start: event.start?.dateTime
+          ? new Date(event.start.dateTime)
+          : new Date(event.start?.date || ""),
+        end: event.end?.dateTime
+          ? new Date(event.end.dateTime)
+          : new Date(event.end?.date || ""),
+        note: event.description || null,
+        status: event.status,
+        google_event_id: event.id,
+      };
+    });
+
+    // 3. Filtrar duplicados → si ya existe en DB (google_event_id), no lo mostramos de Google
+    const dbGoogleIds = new Set(
+      localEvents.map((ev) => ev.google_event_id).filter((id) => !!id)
+    );
+    googleMapped = googleMapped.filter((ev) => !dbGoogleIds.has(ev.id));
+
+    // 4. Unificar
+    const unifiedEvents = [...localEvents, ...googleMapped];
+
+    return successResponse(res, unifiedEvents, "Appointments fetched successfully");
+  } catch (error) {
+    console.error("Error en listAppointments:", error);
+    return errorResponse(res, "Error al obtener citas", 500);
+  }
 };
-
-
 
 
 /**

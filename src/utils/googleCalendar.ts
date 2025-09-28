@@ -1,25 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { google } from 'googleapis';
 import User from '../models/user.model';
 import Appointment from '../models/appointment.model';
 
 // Metodo para listar eventos de Google Calendar
-export const listGoogleCalendarEvents = async (oauth2Client: any, daysRange = 30) => {
+export const listGoogleCalendarEvents = async (oauth2Client: any, from: string, to: string) => {
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-  const now = new Date();
-  const later = new Date();
-  later.setDate(now.getDate() + daysRange);
 
   const response = await calendar.events.list({
     calendarId: 'primary',
-    timeMin: now.toISOString(),
-    timeMax: later.toISOString(),
+    timeMin: from,
+    timeMax: to,
     singleEvents: true,
     orderBy: 'startTime'
   });
 
   return response.data.items || [];
 };
+
+
 
 // Metodo para crear un evento en Google Calendar
 export const createGoogleCalendarEvent = async (
