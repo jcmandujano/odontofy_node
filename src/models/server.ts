@@ -89,7 +89,7 @@ class Server {
         try {
             await db.authenticate();
         } catch (error: unknown) {
-            console.log('OCURRIO UN ERROR')
+            console.log('OCURRIO UN ERROR', error)
             throw new Error(typeof error === 'string' ? error : (error instanceof Error ? error.message : JSON.stringify(error)))
         }
     }
