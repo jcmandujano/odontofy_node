@@ -2,9 +2,10 @@
 import { Request, Response } from "express";
 import Appointment from "../models/appointment.model";
 import { Op } from "sequelize";
-import { createGoogleCalendarEvent, deleteGoogleCalendarEvent, getAuthorizedGoogleClient, listGoogleCalendarEvents, updateGoogleCalendarEvent } from "../utils/googleCalendar";
+import { createGoogleCalendarEvent, deleteGoogleCalendarEvent, getAuthorizedGoogleClient, getValidGoogleClient, listGoogleCalendarEvents, updateGoogleCalendarEvent } from "../utils/googleCalendar";
 import { errorResponse, successResponse } from "../utils/response";
 import Patient from "../models/patient.model";
+import moment from "moment-timezone";
 
 
 /**
@@ -13,160 +14,105 @@ import Patient from "../models/patient.model";
  * @param {Response} res - La respuesta HTTP
  * @returns {Response} Respuesta con la lista de citas o un mensaje de error
  */
-/* export const _listAppointments = async (req: Request, res: Response) => {
-  try {
-    const { authorUid } = req;
-    const { startDate, endDate } = req.query;
-
-    // Configuración de paginación
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const offset = (page - 1) * limit;
-
-    // Convertir startDate y endDate a string si son arrays o ParsedQs
-    const start = Array.isArray(startDate) ? startDate[0] : (typeof startDate === 'object' ? '' : startDate);
-    const end = Array.isArray(endDate) ? endDate[0] : (typeof endDate === 'object' ? '' : endDate);
-
-    // Construcción de condiciones de búsqueda
-    const whereCondition: Record<string, unknown> = {
-      user_id: authorUid,
-      appointment_date: {
-        [Op.between]: [start as string, end as string],
-      },
-    };
-
-    // Búsqueda con conteo total para paginación
-    const { count, rows: dbAppointments } = await Appointment.findAndCountAll({
-      where: whereCondition,
-      limit,
-      offset,
-      order: [["appointment_date", "ASC"], ["appointment_time", "ASC"]],
-    });
-
-    // Intentar obtener eventos de Google Calendar
-    let googleEvents: unknown[] = [];
-    const oauth2Client = await getAuthorizedGoogleClient(authorUid!);
-    console.log('OAuth2 Client:', oauth2Client ? 'Available' : 'Not available');
-    if (oauth2Client) {
-      try {
-        googleEvents = await listGoogleCalendarEvents(oauth2Client, 30);
-        console.log(`Fetched ${googleEvents.length} events from Google Calendar`);
-      } catch (err) {
-        console.warn('No se pudieron obtener eventos de Google Calendar:', err);
-      }
-    }
-
-    // Respuesta estandarizada
-    const response: PaginatedResponse<typeof dbAppointments[number]> = {
-      total: count,
-      page,
-      perPage: limit,
-      totalPages: Math.ceil(count / limit),
-      results: dbAppointments
-    };
-
-    return successResponse(res, { ...response, googleEvents }, 'Appointments fetched successfully');
-  } catch (error) {
-    console.error('Error in listAppointments:', error);
-    return errorResponse(res, 'Failed to fetch appointments', 500, error);
-  }
-}; */
-
-
-
 export const listAppointments = async (req: Request, res: Response) => {
   try {
     const { authorUid } = req;
-    const { startDate, endDate } = req.query;
+     const { startDate, endDate, timezone } = req.query;
 
     if (!startDate || !endDate) {
-      return errorResponse(res, "Debes enviar startDate y endDate en la consulta", 400);
+      return errorResponse(res, "El rango de busqueda no es correcto", 400);
     }
 
-    // Convertir startDate y endDate a string si son arrays o ParsedQs
-    const start = Array.isArray(startDate) ? startDate[0] : (typeof startDate === 'object' ? '' : startDate);
-    const end = Array.isArray(endDate) ? endDate[0] : (typeof endDate === 'object' ? '' : endDate);
+    const userTimeZone = timezone ? String(timezone) : "America/Mexico_City";
+    if (!moment.tz.zone(userTimeZone)) {
+      return errorResponse(res, "Timezone no válido", 400);
+    }
+
+    const start = moment.tz(startDate as string, userTimeZone).startOf("day").toDate();
+    const end = moment.tz(endDate as string, userTimeZone).endOf("day").toDate();
 
 
-    // 1. Obtener citas locales de la DB dentro del rango
+    // 1. Citas locales (desde BD)
     const dbAppointments = await Appointment.findAll({
+      subQuery: false, // evita el UNION ALL
       where: {
         user_id: authorUid,
-        appointment_date: {
-          [Op.between]: [start as string, end as string],
-        },
+        appointment_datetime: { [Op.between]: [start, end] },
       },
       include: [{ model: Patient, attributes: ["id", "name"] }],
+      order: [["appointment_datetime", "ASC"]],
     });
 
-    const localEvents = dbAppointments.map((a: any) => ({
-      id: a.id.toString(),
-      source: "local",
-      title:
-        a.patient_id === 0
-          ? "Cita sin paciente asignado"
-          : `Cita con paciente: ${a.Patient?.name || a.patient_id}`,
-      start: new Date(`${a.appointment_date}T${a.appointment_time}`),
-      end: new Date(`${a.appointment_date}T${a.appointment_time}`),
-      note: a.note,
-      status: a.status,
-      google_event_id: a.google_event_id,
-    }));
+    // 2. Intentar obtener eventos de Google
+    let googleEvents: Appointment[] = [];
+    try {
+      const oauth2Client = await getValidGoogleClient(authorUid!);
+      if (oauth2Client) {
+        const events = await listGoogleCalendarEvents(
+          oauth2Client,
+          start.toISOString(),
+          end.toISOString(),
+          userTimeZone
+        );
+        console.log('start :', start.toISOString(), 'end:', end.toISOString());
+        console.log(`Obtenidos ${events.length} eventos de Google Calendar`);
 
-    // 2. Obtener eventos de Google Calendar en el mismo rango
-    // Intentar obtener eventos de Google Calendar
-    let googleEvents: unknown[] = [];
-    const oauth2Client = await getAuthorizedGoogleClient(authorUid!);
-    console.log('OAuth2 Client:', oauth2Client ? 'Available' : 'Not available');
-    if (oauth2Client) {
-      try {
-        googleEvents = await listGoogleCalendarEvents(oauth2Client, new Date(startDate as string).toISOString(), new Date(endDate as string).toISOString());
-        console.log(`Fetched ${googleEvents.length} events from Google Calendar`);
-      } catch (err) {
-        console.warn('No se pudieron obtener eventos de Google Calendar:', err);
+        // Convertimos los eventos de Google al formato del modelo Appointment
+        googleEvents = events.map((e) => {
+          const appointmentDatetime = e.start?.dateTime
+            ? new Date(e.start.dateTime)
+              : null;
+          const appointmentEndDatetime = e.end?.dateTime
+          const appointment = Appointment.build({
+            id: undefined, // No tiene ID en la BD local
+            user_id: authorUid!,
+            reason: e.summary || null,
+            google_event_id: e.id,
+            source: "google", // <- agregamos un campo virtual
+            patient_id: null,
+            status: "",
+            appointment_datetime: appointmentDatetime,
+            appointment_end_datetime: appointmentEndDatetime ? new Date(appointmentEndDatetime) : null,
+          }) as Appointment & { source?: string };
+
+          // Adjuntamos un paciente "fantasma" si el evento tiene nombre
+          (appointment as any).Patient = { id: null, name: e.summary || "Evento de Google" };
+          return appointment;
+        });
+      }
+    } catch (err) {
+      console.warn("No se pudieron obtener los eventos de Google Calendar:", err);
+    }
+
+    // 3. Unificar sin duplicar (priorizar Google)
+    const merged = new Map<string, Appointment>();
+
+    // Primero citas locales
+    for (const local of dbAppointments) {
+      const key = local.google_event_id || `local-${local.id}`;
+      merged.set(key, local);
+    }
+
+    // Luego citas de Google (reemplazan si ya hay una local con ese google_event_id)
+    for (const gEvent of googleEvents) {
+      const key = gEvent.google_event_id || `google-${gEvent.google_event_id}`;
+
+      // Si ya existe una cita local con ese evento, NO la reemplazamos
+      if (!merged.has(key)) {
+        merged.set(key, gEvent);
       }
     }
 
-    let googleMapped = googleEvents.map((ev) => {
-      const event = ev as {
-        id?: string;
-        summary?: string;
-        start?: { dateTime?: string; date?: string };
-        end?: { dateTime?: string; date?: string };
-        description?: string;
-        status?: string;
-      };
-      return {
-        id: event.id!,
-        source: "google",
-        title: event.summary || "Evento de Google",
-        start: event.start?.dateTime
-          ? new Date(event.start.dateTime)
-          : new Date(event.start?.date || ""),
-        end: event.end?.dateTime
-          ? new Date(event.end.dateTime)
-          : new Date(event.end?.date || ""),
-        note: event.description || null,
-        status: event.status,
-        google_event_id: event.id,
-      };
-    });
+    // Convertimos a array final
+    const mergedAppointments = Array.from(merged.values());
 
-    // 3. Filtrar duplicados → si ya existe en DB (google_event_id), no lo mostramos de Google
-    const dbGoogleIds = new Set(
-      localEvents.map((ev) => ev.google_event_id).filter((id) => !!id)
-    );
-    googleMapped = googleMapped.filter((ev) => !dbGoogleIds.has(ev.id));
-
-    // 4. Unificar
-    const unifiedEvents = [...localEvents, ...googleMapped];
-
-    return successResponse(res, unifiedEvents, "Appointments fetched successfully");
-  } catch (error) {
+    return successResponse(res, mergedAppointments, "Appointments fetched successfully");
+  } catch (error: any) {
     console.error("Error en listAppointments:", error);
     return errorResponse(res, "Error al obtener citas", 500);
   }
 };
+
 
 
 /**
@@ -217,12 +163,16 @@ export const createAppointment = async (req: Request, res: Response) => {
     appointment.user_id = authorUid || 0;
     appointment.patient_id = parseInt(patientId);
 
+    console.log("Creating appointment | uid:", appointment.user_id);
+    console.log("patient_id:" + appointment.patient_id);
+    console.log("appointment:" + appointment.dataValues);
     const newAppointment = await Appointment.create(appointment.dataValues);
-
+    console.log ("New appointment created:", newAppointment.dataValues);
     // Intentar sincronizar con Google Calendar
-    const oauth2Client = await getAuthorizedGoogleClient(authorUid!);
+    const oauth2Client = await getValidGoogleClient (authorUid!);
     if (oauth2Client) {
       try {
+        //como mejora añadir nombre de paciente
         const googleEventId = await createGoogleCalendarEvent(oauth2Client, newAppointment);
         // Actualizar el ID del evento de Google Calendar en la cita
         await newAppointment.update({ google_event_id: googleEventId });

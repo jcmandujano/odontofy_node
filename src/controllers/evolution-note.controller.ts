@@ -2,6 +2,7 @@ import { Request, Response } from "express"
 import EvolutionNote from "../models/evolution-note.model";
 import { errorResponse, successResponse } from "../utils/response";
 import { PaginatedResponse } from "../types/api-response";
+import { Op } from "sequelize";
 
 /**
  * Obtener una lista paginada de notas evolutivas asociadas a un paciente
@@ -16,15 +17,23 @@ export const listNotes = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
-
+    const search = (req.query.search as string)?.trim() || '';  
     try {
-        const { count, rows: notes } = await EvolutionNote.findAndCountAll({
-            where: {
-                patient_id: patientId
-            },
-            limit,
-            offset
-        });
+       // Construcción dinámica del WHERE
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       const whereClause: any = { patient_id: patientId };
+
+       if (search) {
+           whereClause.note = { [Op.like]: `%${search}%` };
+       }
+
+       // Consulta con paginación y filtro
+       const { count, rows: notes } = await EvolutionNote.findAndCountAll({
+           where: whereClause,
+           limit,
+           offset,
+           order: [['createdAt', 'DESC']]
+       });
 
         const response: PaginatedResponse<typeof notes[number]> = {
             total: count,

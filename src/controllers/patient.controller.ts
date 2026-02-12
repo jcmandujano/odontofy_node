@@ -13,39 +13,48 @@ import { PaginatedResponse } from "../types/api-response";
  */
 export const listPatient = async (req: Request, res: Response) => {
     try {
-        // Obtiene el identificador del usuario autenticado desde el JWT
         const { authorUid } = req;
 
-        // Configuración de paginación: página actual y límite de resultados
+        // Parámetros de paginación y búsqueda
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const offset = (page - 1) * limit;
-        console.log(`Fetching users: page=${page}, limit=${limit}, offset=${offset}`);
-        // Obtiene los pacientes asociados al usuario autenticado con citas futuras
+        const search = (req.query.search as string)?.trim() || '';
+
+        // Construcción dinámica del WHERE
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const whereClause: any = {
+            user_id: authorUid
+        };
+
+        if (search) {
+            whereClause[Op.or] = [
+                { middle_name: { [Op.like]: `%${search}%` } },
+                { last_name: { [Op.like]: `%${search}%` } },
+                { name: { [Op.like]: `%${search}%` } } // opcional si tienes campo combinado
+            ];
+        }
+
         const { count, rows: patients } = await Patient.findAndCountAll({
-            where: {
-                user_id: authorUid
-            },
+            where: whereClause,
             include: [
                 {
                     model: Appointment,
                     where: {
-                        appointment_date: {
-                            [Op.gte]: new Date() // solo citas futuras
-                        }
+                        appointment_datetime: { [Op.gte]: new Date() }
                     },
                     required: false,
                     limit: 1,
-                    order: [['appointment_date', 'ASC']],
-                    attributes: ['appointment_date', 'appointment_time', 'status']
+                    order: [['appointment_datetime', 'ASC']],
+                    attributes: ['appointment_datetime', 'status']
                 }
             ],
             limit,
             offset,
-            distinct: true // para contar correctamente con joins
+            distinct: true,
+            order: [['createdAt', 'DESC']]
         });
 
-        // Respuesta paginada
         const response: PaginatedResponse<typeof patients[number]> = {
             total: count,
             page,
@@ -54,14 +63,13 @@ export const listPatient = async (req: Request, res: Response) => {
             results: patients
         };
 
-        // Devuelve la respuesta exitosa con los datos
         return successResponse(res, response, 'Patients fetched successfully');
     } catch (err) {
-        // Manejo de errores
         console.error('Error in listPatient:', err);
         return errorResponse(res, 'Failed to fetch patients', 500, err);
     }
 };
+
 
 /**
  * Obtener un paciente específico por su ID

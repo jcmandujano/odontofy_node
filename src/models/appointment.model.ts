@@ -4,14 +4,16 @@ import Patient from "./patient.model";
 
 // Definir los atributos del modelo
 interface AppointmentAttributes {
-    id: number;
+id: number;
     user_id: number;
-    patient_id: number;
-    appointment_date: Date;
-    appointment_time: string;
+    patient_id: number | null; // null si viene de Google
+    appointment_datetime: Date | null; // null si viene de Google
+    appointment_end_datetime: Date | null;
     status: string;
-    note: string | null; // Nueva propiedad para contenido HTML
-    google_event_id: string | null; // Nueva propiedad para almacenar el ID del evento de Google Calendar
+    reason: string | null;
+    note: string | null;
+    google_event_id: string | null;
+    source: 'local' | 'google';
 }
 
 // Definir los atributos opcionales al crear una nueva instancia (id es opcional porque es auto-incremental)
@@ -22,11 +24,15 @@ class Appointment extends Model<AppointmentAttributes, AppointmentCreationAttrib
     public id!: number;
     public user_id!: number;
     public patient_id!: number;
-    public appointment_date!: Date;
-    public appointment_time!: string;
+    public appointment_datetime!: Date;
+    public appointment_end_datetime!: Date | null;
     public status!: string;
+    public reason!: string | null;
     public note!: string | null; // Inicializar la propiedad "note"
     public google_event_id!: string | null; // Inicializar la propiedad "google_event_id"
+    public source!: 'local' | 'google';
+    public Patient? : Patient;
+
 }
 
 // Inicializar el modelo
@@ -44,13 +50,18 @@ Appointment.init({
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    appointment_date: {
-        type: DataTypes.DATEONLY,
+    appointment_datetime: {
+        type: DataTypes.DATE,
         allowNull: false,
+        comment: "Fecha y hora de la cita en UTC",
     },
-    appointment_time: {
-        type: DataTypes.TIME,
-        allowNull: false,
+    appointment_end_datetime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    reason: {
+        type: DataTypes.STRING,
+        allowNull: true,
     },
     note: {
         type: DataTypes.TEXT, // Usamos TEXT para almacenar el contenido HTML
@@ -65,6 +76,11 @@ Appointment.init({
         type: DataTypes.STRING,
         allowNull: true, // Permitir valores nulos para cuando no haya un evento de Google Calendar
     },
+  source: {
+    type: DataTypes.ENUM('local', 'google'),
+    allowNull: false,
+    defaultValue: 'local',
+  }
 }, {
     sequelize: db,
     tableName: "appointments",
