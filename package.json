@@ -44,9 +44,11 @@
     "dayjs": "^1.11.13",
     "dotenv": "^16.3.1",
     "express": "4.18.2",
-    "express-validator": "^7.0.1",
+    "express-rate-limit": "^8.4.1",
+    "express-validator": "^7.3.2",
     "google-auth-library": "^9.15.1",
     "googleapis": "^148.0.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.6.0",
     "multer": "^2.0.1",
@@ -55,6 +57,7 @@
     "sequelize": "^6.35.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
     "yamljs": "^0.3.0"
   }
 }

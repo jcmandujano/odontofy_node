@@ -5,6 +5,8 @@ interface TokenAttributes {
     id: number
     userId: number
     token: string
+    expiresAt: Date
+    used: boolean
 }
 
 interface TokenCreationAttributes extends Optional<TokenAttributes, "id"> {}
@@ -13,6 +15,8 @@ class Token extends Model<TokenAttributes, TokenCreationAttributes> implements T
     id!: number;
     userId!: number;
     token!: string;
+    expiresAt!: Date;
+    used!: boolean;
 }
 
 Token.init({
@@ -24,7 +28,17 @@ Token.init({
     userId: {
         type: DataTypes.INTEGER
     },
-    token: {
+    t,
+    expiresAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 horas
+    },
+    used: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    }oken: {
         type: DataTypes.STRING
     }
 },{

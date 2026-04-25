@@ -10,6 +10,7 @@ import { accountConfirmationTemplate } from "../utils/email-templates/confirm-ac
 import { accountActivatedTemplate } from "../utils/email-templates/activated-account.template";
 import PasswordReset from "../models/password-reset.model";
 import { resetPasswordTemplate } from "../utils/email-templates/reset-password.template";
+import { logAuthEvent, logSecurityEvent } from "../utils/security-logger";
 
 /**
  * Handles user login by verifying credentials and generating a JWT token.
@@ -26,8 +27,10 @@ import { resetPasswordTemplate } from "../utils/email-templates/reset-password.t
  */
 export const doLogin = async (req: Request, res: Response) => {
     const { username, password } = req.body;
-    try {
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
+    try {
         //verify if email exist
         const user = await User.findOne({
             where: {
@@ -36,11 +39,22 @@ export const doLogin = async (req: Request, res: Response) => {
         });
 
         if (!user) {
+            logSecurityEvent('LOGIN_FAILED_USER_NOT_FOUND', 'low', {
+                email: username,
+                ip: clientIP,
+                userAgent
+            });
             return errorResponse(res, 'Usuario o contraseña no son correctos', 400)
         }
 
         //if user is active
         if (!user.status) {
+            logSecurityEvent('LOGIN_FAILED_USER_INACTIVE', 'low', {
+                userId: user.id,
+                email: username,
+                ip: clientIP,
+                userAgent
+            });
             return errorResponse(res, 'El usuario con el que intentas acceder no existe', 400)
         }
 
@@ -48,15 +62,29 @@ export const doLogin = async (req: Request, res: Response) => {
         const validPassword = bcryptjs.compareSync(password, user.password)
 
         if (!validPassword) {
+            logSecurityEvent('LOGIN_FAILED_INVALID_PASSWORD', 'medium', {
+                userId: user.id,
+                email: username,
+                ip: clientIP,
+                userAgent
+            });
             return errorResponse(res, 'Usuario o contraseña no son correctos', 400)
         }
 
         //generate JWT
         const token = await generarJWT(user.id);
 
+        logAuthEvent('LOGIN_SUCCESS', user.id, username, clientIP, userAgent);
+
         return successResponse(res, { user: user.toSafeJSON(), token }, "User logged in successfully")
 
     } catch (error) {
+        logSecurityEvent('LOGIN_ERROR', 'medium', {
+            email: username,
+            ip: clientIP,
+            userAgent,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
         console.error('Error in doLogin:', error);
         // Handle server error
         return errorResponse(res, 'Error del servidor', 500, error);
@@ -89,13 +117,20 @@ export const register = async (req: Request, res: Response) => {
         password,
     } = req.body;
 
-    const status = false; // Default status to false for new users until verified 
+    const status = false; // Default status to false for new users until verified
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
     try {
         // Validar si el correo ya existe
         const existEmail = await User.findOne({ where: { email } });
 
         if (existEmail) {
+            logSecurityEvent('REGISTER_FAILED_EMAIL_EXISTS', 'low', {
+                email,
+                ip: clientIP,
+                userAgent
+            });
             return errorResponse(res, 'El email que deseas registrar ya existe', 400);
         }
 
@@ -115,11 +150,15 @@ export const register = async (req: Request, res: Response) => {
             status,
         });
 
-        // Crear token de verificación
+        // Crear token de verificación con expiración
         const token = randomBytes(16).toString('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+
         await Token.create({
             userId: newUser.id,
             token,
+            expiresAt,
+            used: false
         });
 
         // Generar enlace de confirmación
@@ -127,14 +166,25 @@ export const register = async (req: Request, res: Response) => {
 
         // Enviar correo
         await sendEmail({
-            to: 'carlosmandujano.v@gmail.com', //newUser.email || '', //testing with my email, uncomment this line to use the user's email
+            to: newUser.email!,
             subject: 'Confirma tu cuenta en Odontofy',
             html: accountConfirmationTemplate(newUser.name, confirmationUrl),
+        });
+
+        logAuthEvent('REGISTER_SUCCESS', newUser.id, email, clientIP, userAgent, {
+            name: newUser.name,
+            requiresConfirmation: true
         });
 
         return successResponse(res, newUser.toSafeJSON(), 'Usuario registrado correctamente. Revisa tu correo para confirmar tu cuenta.');
 
     } catch (error) {
+        logSecurityEvent('REGISTER_ERROR', 'medium', {
+            email,
+            ip: clientIP,
+            userAgent,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
         console.error('Error en register:', error);
         return errorResponse(res, 'Ocurrió un problema al registrar el usuario', 500, error);
     }
@@ -195,26 +245,64 @@ export const verifyPassword = async (req: Request, res: Response) => {
 
 export const confirmAccount = async (req: Request, res: Response) => {
     const { userId, token } = req.params;
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
     try {
         // Find the user by ID
         const user = await User.findByPk(userId);
         if (!user) {
+            logSecurityEvent('CONFIRM_ACCOUNT_FAILED_USER_NOT_FOUND', 'low', {
+                userId,
+                token: token.substring(0, 8) + '...',
+                ip: clientIP,
+                userAgent
+            });
             return errorResponse(res, 'Usuario no encontrado', 404);
         }
 
-        // Check if the token exists for the user
-        const tokenRecord = await Token.findOne({ where: { userId: user.id, token } });
+        // Check if the token exists for the user and is valid
+        const tokenRecord = await Token.findOne({
+            where: {
+                userId: user.id,
+                token,
+                used: false
+            }
+        });
+
         if (!tokenRecord) {
-            return errorResponse(res, 'Token de verificación no válido', 400);
+            logSecurityEvent('CONFIRM_ACCOUNT_FAILED_INVALID_TOKEN', 'medium', {
+                userId: user.id,
+                email: user.email,
+                token: token.substring(0, 8) + '...',
+                ip: clientIP,
+                userAgent
+            });
+            return errorResponse(res, 'Token de verificación no válido o ya utilizado', 400);
+        }
+
+        // Check if token has expired
+        if (tokenRecord.expiresAt < new Date()) {
+            logSecurityEvent('CONFIRM_ACCOUNT_FAILED_TOKEN_EXPIRED', 'low', {
+                userId: user.id,
+                email: user.email,
+                token: token.substring(0, 8) + '...',
+                expiresAt: tokenRecord.expiresAt,
+                ip: clientIP,
+                userAgent
+            });
+            return errorResponse(res, 'El token de verificación ha expirado. Solicita un nuevo registro.', 400);
         }
 
         // Update user's status to active
         user.status = true;
         await user.save();
 
-        // Delete the token record after successful verification
-        await Token.destroy({ where: { id: tokenRecord.id } });
+        // Mark token as used after successful verification
+        tokenRecord.used = true;
+        await tokenRecord.save();
+
+        logAuthEvent('ACCOUNT_CONFIRMED', user.id, user.email, clientIP, userAgent);
 
         //return succes html message
         //send to frontend html template accountActivatedTemplate
@@ -222,6 +310,13 @@ export const confirmAccount = async (req: Request, res: Response) => {
 
         //return successResponse(res, user.toSafeJSON(), 'Cuenta verificada exitosamente');
     } catch (error) {
+        logSecurityEvent('CONFIRM_ACCOUNT_ERROR', 'medium', {
+            userId,
+            token: token?.substring(0, 8) + '...',
+            ip: clientIP,
+            userAgent,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
         console.error('Error in confirmAccount:', error);
         return errorResponse(res, 'Error del servidor', 500, error);
     }
@@ -253,8 +348,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
         // Send the password reset email
         await sendEmail({
-            to: 'carlosmandujano.v@gmail.com', //newUser.email || '', //testing with my email, uncomment this line to use the user's email
-            subject: 'Confirma tu cuenta en Odontofy',
+            to: user.email!, // Usar el email del usuario
+            subject: 'Restablece tu contraseña en Odontofy',
             html: resetPasswordTemplate(user.name, resetPasswordUrl),
         });
 

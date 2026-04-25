@@ -1,4 +1,3 @@
-//inyeccion de dependencias
 import express, { Application } from "express";
 import userRoutes from '../routes/user.route'
 import authRoutes from '../routes/auth.route';
@@ -19,6 +18,7 @@ import cors from 'cors'
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import db from "../db/connection";
+import { securityMiddleware } from '../middlewares/security';
 
 class Server {
 
@@ -75,11 +75,14 @@ class Server {
 
     //middlewares que se ejecutan antes de la ruta
     middlewares() {
+        // Seguridad general
+        this.app.use(securityMiddleware);
+
         //cors
         this.app.use(cors())
 
         //lectura del body
-        this.app.use(express.json())
+        this.app.use(express.json({ limit: '10mb' }))
 
         //carpeta publica
         this.app.use(express.static('public'))
