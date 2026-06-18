@@ -14,6 +14,7 @@ import appointmentRoutes from '../routes/appointment.route';
 import calendarRoutes from '../routes/google.route';
 import fileUploadRoute from '../routes/upload.route';
 import mailingRoutes from '../routes/mailing.route';
+import treatmentPlanRoutes from '../routes/treatment-plan.route';
 import '../models/treatment-plan.model';
 import '../models/treatment-plan-item.model';
 
@@ -41,7 +42,8 @@ class Server {
         userInformedConsentRoutes: '/api/user-informed-consents',
         calendarRoutes: '/api/google',
         fileUploadRoutes: '/api/upload',
-        mailingRoutes: '/api/mailing'
+        mailingRoutes: '/api/mailing',
+        treatmentPlanRoutes: '/api'
     }
 
     constructor() {
@@ -72,6 +74,7 @@ class Server {
         this.app.use(this.apiRoutes.calendarRoutes, calendarRoutes)
         this.app.use(this.apiRoutes.fileUploadRoutes, fileUploadRoute)
         this.app.use(this.apiRoutes.mailingRoutes, mailingRoutes)
+        this.app.use(this.apiRoutes.treatmentPlanRoutes, treatmentPlanRoutes)
         this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(this.swaggerDocument));
     }
 
