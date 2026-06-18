@@ -14,6 +14,8 @@ import appointmentRoutes from '../routes/appointment.route';
 import calendarRoutes from '../routes/google.route';
 import fileUploadRoute from '../routes/upload.route';
 import mailingRoutes from '../routes/mailing.route';
+import '../models/treatment-plan.model';
+import '../models/treatment-plan-item.model';
 
 import cors from 'cors'
 import swaggerUi from 'swagger-ui-express';
