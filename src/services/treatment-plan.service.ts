@@ -43,7 +43,7 @@ const ensurePatientBelongsToUser = async (userId: number, patientId: number) => 
   return patient;
 };
 
-const getTreatmentPlanForUser = async (userId: number, treatmentPlanId: number) => {
+export const getTreatmentPlanForUser = async (userId: number, treatmentPlanId: number) => {
   const treatmentPlan = await TreatmentPlan.findOne({
     where: {
       id: treatmentPlanId,

@@ -1,5 +1,9 @@
 import { body, param } from 'express-validator';
-import { TREATMENT_PLAN_STATUSES } from '../types/treatment-plan.enums';
+import {
+  TREATMENT_PLAN_ITEM_PRIORITIES,
+  TREATMENT_PLAN_ITEM_STATUSES,
+  TREATMENT_PLAN_STATUSES,
+} from '../types/treatment-plan.enums';
 import { validarCampos } from './validarCampos';
 
 const validateIdParam = (name: string, label: string) =>
@@ -76,5 +80,82 @@ export const validateUpdateTreatmentPlanStatus = [
     .isIn(TREATMENT_PLAN_STATUSES)
     .withMessage('El estado del plan de tratamiento no es válido'),
   optionalString('acceptance_notes', 'Las notas de aceptación'),
+  validarCampos,
+];
+
+const validateTreatmentPlanItemParams = [
+  validateIdParam('id', 'El plan de tratamiento'),
+  validateIdParam('itemId', 'El ítem del plan de tratamiento'),
+];
+
+const treatmentPlanItemOptionalBodyValidators = [
+  body('user_concept_id')
+    .optional({ values: 'null' })
+    .isInt({ min: 1 })
+    .withMessage('El concepto debe ser un número entero válido'),
+  optionalString('description', 'La descripción'),
+  optionalString('tooth', 'El diente'),
+  optionalString('area', 'El área'),
+  optionalString('phase', 'La fase'),
+  body('priority')
+    .optional({ values: 'null' })
+    .isIn(TREATMENT_PLAN_ITEM_PRIORITIES)
+    .withMessage('La prioridad del ítem no es válida'),
+  optionalString('notes', 'Las notas'),
+  body('sort_order')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('El orden debe ser un número entero válido'),
+];
+
+export const validateCreateTreatmentPlanItem = [
+  validateIdParam('id', 'El plan de tratamiento'),
+  body('name')
+    .isString()
+    .withMessage('El nombre del ítem debe ser texto')
+    .trim()
+    .notEmpty()
+    .withMessage('El nombre del ítem es obligatorio'),
+  body('quantity')
+    .isFloat({ gt: 0 })
+    .withMessage('La cantidad debe ser mayor a 0'),
+  body('unit_price')
+    .isFloat({ min: 0 })
+    .withMessage('El precio unitario no puede ser negativo'),
+  ...treatmentPlanItemOptionalBodyValidators,
+  validarCampos,
+];
+
+export const validateUpdateTreatmentPlanItem = [
+  ...validateTreatmentPlanItemParams,
+  body('name')
+    .optional()
+    .isString()
+    .withMessage('El nombre del ítem debe ser texto')
+    .trim()
+    .notEmpty()
+    .withMessage('El nombre del ítem no puede estar vacío'),
+  body('quantity')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('La cantidad debe ser mayor a 0'),
+  body('unit_price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('El precio unitario no puede ser negativo'),
+  ...treatmentPlanItemOptionalBodyValidators,
+  validarCampos,
+];
+
+export const validateDeleteTreatmentPlanItem = [
+  ...validateTreatmentPlanItemParams,
+  validarCampos,
+];
+
+export const validateUpdateTreatmentPlanItemStatus = [
+  ...validateTreatmentPlanItemParams,
+  body('status')
+    .isIn(TREATMENT_PLAN_ITEM_STATUSES)
+    .withMessage('El estado del ítem no es válido'),
   validarCampos,
 ];

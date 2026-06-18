@@ -7,12 +7,22 @@ import {
   updateTreatmentPlan,
   updateTreatmentPlanStatus,
 } from '../controllers/treatment-plan.controller';
+import {
+  createTreatmentPlanItem,
+  deleteTreatmentPlanItem,
+  updateTreatmentPlanItem,
+  updateTreatmentPlanItemStatus,
+} from '../controllers/treatment-plan-item.controller';
 import { validarJWT } from '../middlewares/validar-jwt';
 import {
   validateCreateTreatmentPlan,
+  validateCreateTreatmentPlanItem,
+  validateDeleteTreatmentPlanItem,
   validatePatientTreatmentPlansParams,
   validateTreatmentPlanIdParam,
   validateUpdateTreatmentPlan,
+  validateUpdateTreatmentPlanItem,
+  validateUpdateTreatmentPlanItemStatus,
   validateUpdateTreatmentPlanStatus,
 } from '../middlewares/treatment-plan.validators';
 
@@ -47,5 +57,25 @@ router.patch('/treatment-plans/:id/status', [
   validarJWT,
   ...validateUpdateTreatmentPlanStatus,
 ], updateTreatmentPlanStatus);
+
+router.post('/treatment-plans/:id/items', [
+  validarJWT,
+  ...validateCreateTreatmentPlanItem,
+], createTreatmentPlanItem);
+
+router.put('/treatment-plans/:id/items/:itemId', [
+  validarJWT,
+  ...validateUpdateTreatmentPlanItem,
+], updateTreatmentPlanItem);
+
+router.delete('/treatment-plans/:id/items/:itemId', [
+  validarJWT,
+  ...validateDeleteTreatmentPlanItem,
+], deleteTreatmentPlanItem);
+
+router.patch('/treatment-plans/:id/items/:itemId/status', [
+  validarJWT,
+  ...validateUpdateTreatmentPlanItemStatus,
+], updateTreatmentPlanItemStatus);
 
 export default router;
