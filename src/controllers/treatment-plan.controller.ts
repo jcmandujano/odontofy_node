@@ -44,10 +44,17 @@ export const createTreatmentPlan = async (req: Request, res: Response) => {
 
 export const getTreatmentPlansByPatient = async (req: Request, res: Response) => {
   const { patientId } = req.params;
+  const page = parseInt(req.query.page as string, 10) || 1;
+  const limit = parseInt(req.query.limit as string, 10) || 10;
 
   try {
     const authorUid = getAuthorUid(req);
-    const treatmentPlans = await getTreatmentPlansByPatientService(authorUid, parseInt(patientId, 10));
+    const treatmentPlans = await getTreatmentPlansByPatientService(
+      authorUid,
+      parseInt(patientId, 10),
+      page,
+      limit
+    );
 
     return successResponse(res, treatmentPlans, 'Planes de tratamiento obtenidos correctamente');
   } catch (error) {

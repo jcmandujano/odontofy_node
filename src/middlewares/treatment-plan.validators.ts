@@ -1,4 +1,4 @@
-import { body, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import {
   TREATMENT_PLAN_ITEM_PRIORITIES,
   TREATMENT_PLAN_ITEM_STATUSES,
@@ -41,6 +41,14 @@ const treatmentPlanBodyValidators = [
 
 export const validatePatientTreatmentPlansParams = [
   validateIdParam('patientId', 'El paciente'),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('La pÃ¡gina debe ser un nÃºmero entero mayor a 0'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El lÃ­mite debe ser un nÃºmero entero mayor a 0'),
   validarCampos,
 ];
 

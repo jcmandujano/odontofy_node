@@ -9,6 +9,7 @@ import type {
   UpdateTreatmentPlanInput,
   UpdateTreatmentPlanStatusInput,
 } from '../dtos/treatment-plan.dto';
+import type { PaginatedResponse } from '../types/api-response';
 
 export class TreatmentPlanServiceError extends Error {
   public statusCode: number;
@@ -89,16 +90,32 @@ export const createTreatmentPlan = async (
   });
 };
 
-export const getTreatmentPlansByPatient = async (userId: number, patientId: number) => {
+export const getTreatmentPlansByPatient = async (
+  userId: number,
+  patientId: number,
+  page = 1,
+  limit = 10
+): Promise<PaginatedResponse<TreatmentPlan>> => {
   await ensurePatientBelongsToUser(userId, patientId);
 
-  return TreatmentPlan.findAll({
+  const offset = (page - 1) * limit;
+  const { count, rows: treatmentPlans } = await TreatmentPlan.findAndCountAll({
     where: {
       user_id: userId,
       patient_id: patientId,
     },
+    limit,
+    offset,
     order: [['created_at', 'DESC']],
   });
+
+  return {
+    total: count,
+    page,
+    perPage: limit,
+    totalPages: Math.ceil(count / limit),
+    results: treatmentPlans,
+  };
 };
 
 export const getTreatmentPlanById = async (userId: number, treatmentPlanId: number) => {
