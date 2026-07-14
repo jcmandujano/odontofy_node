@@ -1,153 +1,121 @@
-import { Request, Response } from "express"
-import EvolutionNote from "../models/evolution-note.model";
+import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/response";
-import { PaginatedResponse } from "../types/api-response";
-import { Op } from "sequelize";
+import {
+    EvolutionNoteServiceError,
+    createEvolutionNote as createEvolutionNoteService,
+    deleteEvolutionNote as deleteEvolutionNoteService,
+    getEvolutionNoteById as getEvolutionNoteByIdService,
+    listEvolutionNotes as listEvolutionNotesService,
+    updateEvolutionNote as updateEvolutionNoteService,
+} from "../services/evolution-note.service";
+
+const getAuthorUid = (req: Request) => {
+    if (typeof req.authorUid !== "number") {
+        throw new EvolutionNoteServiceError("Usuario autenticado no valido", 401);
+    }
+
+    return req.authorUid;
+};
+
+const handleEvolutionNoteError = (res: Response, error: unknown) => {
+    console.error("Error in evolution-note.controller:", error);
+
+    if (error instanceof EvolutionNoteServiceError) {
+        return errorResponse(res, error.message, error.statusCode);
+    }
+
+    return errorResponse(res, "An error ocurred while processing notes", 500, error);
+};
 
 /**
- * Obtener una lista paginada de notas evolutivas asociadas a un paciente
- * @param {Request} req - La solicitud HTTP
- * @param {Response} res - La respuesta HTTP
- * @returns {Response} Respuesta con la lista de notas o un mensaje de error
+ * Obtener una lista paginada de notas evolutivas asociadas a un paciente.
  */
 export const listNotes = async (req: Request, res: Response) => {
-    const patientId = req.params.patient_id
-
-    // Configuración de paginación: página actual y límite de resultados
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const offset = (page - 1) * limit;
-    const search = (req.query.search as string)?.trim() || '';  
-    try {
-       // Construcción dinámica del WHERE
-       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-       const whereClause: any = { patient_id: patientId };
-
-       if (search) {
-           whereClause.note = { [Op.like]: `%${search}%` };
-       }
-
-       // Consulta con paginación y filtro
-       const { count, rows: notes } = await EvolutionNote.findAndCountAll({
-           where: whereClause,
-           limit,
-           offset,
-           order: [['createdAt', 'DESC']]
-       });
-
-        const response: PaginatedResponse<typeof notes[number]> = {
-            total: count,
-            page,
-            perPage: limit,
-            totalPages: Math.ceil(count / limit),
-            results: notes
-        };
-
-        // Respuesta estandarizada
-        return successResponse(res, response, 'Notes list fetched successfully');
-    } catch (error) {
-        console.log("Error in listNotes:", error);
-        return errorResponse(res, 'An error ocurred while fetching notes', 500);
-    }
-
-}
-
-/**
- * Obtener una nota evolutiva por su ID asociada a un paciente
- * @param {Request} req - La solicitud HTTP
- * @param {Response} res - La respuesta HTTP
- * @return {Response} Respuesta con la nota o un mensaje de error
- * */
-export const getNote = async (req: Request, res: Response) => {
-    const patientId = req.params.patient_id
-    const { id } = req.params;
+    const patientId = parseInt(req.params.patient_id, 10);
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const search = (req.query.search as string)?.trim() || "";
 
     try {
-        // Verifica si la nota existe
-        // y pertenece al paciente autenticado
-        const note = await EvolutionNote.findOne({
-            where: {
-                id: id,
-                patient_id: patientId
-            }
+        const authorUid = getAuthorUid(req);
+        const response = await listEvolutionNotesService(authorUid, patientId, page, limit, search, {
+            treatment_plan_id: req.query.treatment_plan_id
+                ? parseInt(req.query.treatment_plan_id as string, 10)
+                : undefined,
+            treatment_plan_item_id: req.query.treatment_plan_item_id
+                ? parseInt(req.query.treatment_plan_item_id as string, 10)
+                : undefined,
         });
-        // Si la nota no existe, devuelve un error 404
-        // Si la nota existe, devuelve la nota
-        if (note) {
-            return successResponse(res, note, 'Note fetched successfully');
-        } else {
-            return errorResponse(res, 'Note not found', 404);
-        }
 
+        return successResponse(res, response, "Notes list fetched successfully");
     } catch (error) {
-        console.log("Error in getNote:", error);
-        return errorResponse(res, 'An error ocurred while fetching notes', 500);
-
+        return handleEvolutionNoteError(res, error);
     }
-}
+};
 
 /**
- * Crear una nueva nota evolutiva asociada a un paciente
- * @param {Request} req - La solicitud HTTP
- * @param {Response} res - La respuesta HTTP
- * @returns {Response} Respuesta con la nota creada o un mensaje de error
+ * Obtener una nota evolutiva por ID asociada a un paciente.
+ */
+export const getNote = async (req: Request, res: Response) => {
+    const patientId = parseInt(req.params.patient_id, 10);
+    const id = parseInt(req.params.id, 10);
+
+    try {
+        const authorUid = getAuthorUid(req);
+        const note = await getEvolutionNoteByIdService(authorUid, patientId, id);
+
+        return successResponse(res, note, "Note fetched successfully");
+    } catch (error) {
+        return handleEvolutionNoteError(res, error);
+    }
+};
+
+/**
+ * Crear una nueva nota evolutiva asociada a un paciente.
  */
 export const createNote = async (req: Request, res: Response) => {
-    const patientId = req.params.patient_id
-    const { body } = req;
-    const note = new EvolutionNote(body)
+    const patientId = parseInt(req.params.patient_id, 10);
+
     try {
-        note.patient_id = parseInt(patientId)
-        const newNote = await EvolutionNote.create(note.dataValues);
-        return successResponse(res, newNote, 'Note created successfully');
+        const authorUid = getAuthorUid(req);
+        const newNote = await createEvolutionNoteService(authorUid, patientId, req.body);
+
+        return successResponse(res, newNote, "Note created successfully");
     } catch (error) {
-        return errorResponse(res, 'An error ocurred while creating the note', 500, error);
+        return handleEvolutionNoteError(res, error);
     }
-}
+};
 
 /**
- * Actualizar una nota evolutiva por su ID asociada a un paciente
- * @param {Request} req - La solicitud HTTP
- * @param {Response} res - La respuesta HTTP
- * @returns {Response} Respuesta con la nota actualizada o un mensaje de error
+ * Actualizar una nota evolutiva por ID asociada a un paciente.
  */
 export const updateNote = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { body } = req;
+    const patientId = parseInt(req.params.patient_id, 10);
+    const id = parseInt(req.params.id, 10);
+
     try {
-        const note = await EvolutionNote.findByPk(id);
+        const authorUid = getAuthorUid(req);
+        const note = await updateEvolutionNoteService(authorUid, patientId, id, req.body);
 
-
-        if (!note) {
-            return errorResponse(res, "No existe una nota con el id" + id, 404);
-        }
-
-        await note.update(body);
-        return successResponse(res, note, 'Note updated successfully');
-
+        return successResponse(res, note, "Note updated successfully");
     } catch (error) {
-        console.log("Error in updateNote:", error);
-        return errorResponse(res, 'An error ocurred while updating the note', 500);
+        return handleEvolutionNoteError(res, error);
     }
-}
+};
 
 /**
- * Eliminar una nota evolutiva por su ID asociada a un paciente
- * @param {Request} req - La solicitud HTTP
- * @param {Response} res - La respuesta HTTP
- * @returns {Response} Respuesta con un mensaje de éxito o un mensaje de error
+ * Eliminar una nota evolutiva por ID asociada a un paciente.
  */
 export const deleteNote = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const patientId = parseInt(req.params.patient_id, 10);
+    const id = parseInt(req.params.id, 10);
+
     try {
-        const note = await EvolutionNote.findByPk(id);
-        if (!note) {
-            return errorResponse(res, "No existe una nota con el id" + id, 404);
-        }
-        await note.destroy()
-        return successResponse(res, note, 'Note deleted successfully');
+        const authorUid = getAuthorUid(req);
+        const note = await deleteEvolutionNoteService(authorUid, patientId, id);
+
+        return successResponse(res, note, "Note deleted successfully");
     } catch (error) {
-        console.log("Error in deleteNote:", error);
-        return errorResponse(res, 'An error ocurred while deleting the note', 500, error);
+        return handleEvolutionNoteError(res, error);
     }
-}
+};
