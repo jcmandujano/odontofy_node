@@ -70,8 +70,12 @@ Nota: los errores de validacion de `express-validator` se devuelven actualmente 
 | `PUT` | `/api/treatment-plans/:id/items/:itemId` | Actualiza un item del plan. |
 | `DELETE` | `/api/treatment-plans/:id/items/:itemId` | Elimina un item del plan. |
 | `PATCH` | `/api/treatment-plans/:id/items/:itemId/status` | Actualiza el estado de un item. |
+| `GET` | `/api/patients/:patient_id/notes?treatment_plan_id=:id` | Lista notas de evolucion relacionadas a un plan. |
+| `GET` | `/api/patients/:patient_id/notes?treatment_plan_item_id=:itemId` | Lista notas de evolucion relacionadas a un item del plan. |
+| `POST` | `/api/patients/:patient_id/notes` | Crea una nota y puede relacionarla con plan/item. |
+| `PUT` | `/api/patients/:patient_id/notes/:id` | Actualiza una nota y puede cambiar o limpiar su relacion clinica. |
 
-No hay query params definidos para estos endpoints.
+Los endpoints de planes no agregan query params nuevos. Los endpoints de notas aceptan filtros por `treatment_plan_id` y `treatment_plan_item_id`.
 
 ## Contratos por endpoint
 
@@ -104,12 +108,32 @@ No hay query params definidos para estos endpoints.
 | Campo | Detalle |
 | --- | --- |
 | Metodo HTTP | `GET` |
-| Descripcion | Obtiene el detalle de un plan y sus items. |
+| Descripcion | Obtiene el detalle de un plan, sus items y notas de evolucion relacionadas. |
 | Params | `id`: entero mayor a 0. |
 | Query params | No aplica. |
 | Request body | No aplica. |
-| Response body | `ApiResponse<TreatmentPlan>` con `TreatmentPlanItems` incluido por Sequelize. |
+| Response body | `ApiResponse<TreatmentPlan>` con `TreatmentPlanItems`, `evolutionNotes` a nivel plan y `evolutionNotes` dentro de cada item. |
 | Posibles errores | `400` parametro invalido, `401` token invalido, `404` plan inexistente o sin ownership, `500` error interno. |
+
+### Notas de evolucion relacionadas a planes
+
+Las notas de evolucion siguen viviendo bajo el paciente, pero ahora aceptan referencias clinicas opcionales al plan y al item del plan.
+
+| Endpoint | Uso |
+| --- | --- |
+| `GET /api/patients/:patient_id/notes?treatment_plan_id=:id` | Filtra notas relacionadas con un plan. |
+| `GET /api/patients/:patient_id/notes?treatment_plan_item_id=:itemId` | Filtra notas relacionadas con un item especifico. |
+| `POST /api/patients/:patient_id/notes` | Crea una nota general o relacionada con plan/item. |
+| `PUT /api/patients/:patient_id/notes/:id` | Actualiza el texto o referencias de la nota. |
+
+Reglas:
+
+- `treatment_plan_id` y `treatment_plan_item_id` son opcionales.
+- En `POST` y `PUT`, si se envia `treatment_plan_item_id`, debe existir un `treatment_plan_id` relacionado.
+- En `GET`, se puede filtrar solo por `treatment_plan_item_id`.
+- El plan debe pertenecer al mismo paciente y usuario autenticado.
+- El item debe pertenecer al plan indicado.
+- En `PUT`, enviar `treatment_plan_id: null` limpia tambien `treatment_plan_item_id`.
 
 ### PUT `/api/treatment-plans/:id`
 
@@ -229,6 +253,7 @@ export interface TreatmentPlan {
   created_at?: ISODateString;
   updated_at?: ISODateString;
   TreatmentPlanItems?: TreatmentPlanItem[];
+  evolutionNotes?: EvolutionNote[];
 }
 
 export interface TreatmentPlanItem {
@@ -250,6 +275,29 @@ export interface TreatmentPlanItem {
   completed_at: ISODateString | null;
   created_at?: ISODateString;
   updated_at?: ISODateString;
+  evolutionNotes?: EvolutionNote[];
+}
+
+export interface EvolutionNote {
+  id: number;
+  patient_id: number;
+  treatment_plan_id: number | null;
+  treatment_plan_item_id: number | null;
+  note: string;
+  createdAt?: ISODateString;
+  updatedAt?: ISODateString;
+}
+
+export interface CreateEvolutionNoteRequest {
+  note: string;
+  treatment_plan_id?: number | null;
+  treatment_plan_item_id?: number | null;
+}
+
+export interface UpdateEvolutionNoteRequest {
+  note?: string;
+  treatment_plan_id?: number | null;
+  treatment_plan_item_id?: number | null;
 }
 
 export interface CreateTreatmentPlanRequest {
@@ -435,6 +483,16 @@ export const TREATMENT_PLAN_ITEM_PRIORITY_LABELS: Record<TreatmentPlanItemPriori
 }
 ```
 
+### Crear nota vinculada al plan
+
+```json
+{
+  "note": "Se realiza preparacion inicial y se indica control en 7 dias.",
+  "treatment_plan_id": 25,
+  "treatment_plan_item_id": 40
+}
+```
+
 ## Ejemplos de responses JSON
 
 ### Plan creado
@@ -501,7 +559,25 @@ export const TREATMENT_PLAN_ITEM_PRIORITY_LABELS: Record<TreatmentPlanItemPriori
         "status": "PENDING",
         "notes": "Realizar despues de profilaxis",
         "sort_order": 1,
-        "completed_at": null
+        "completed_at": null,
+        "evolutionNotes": [
+          {
+            "id": 12,
+            "patient_id": 10,
+            "treatment_plan_id": 25,
+            "treatment_plan_item_id": 40,
+            "note": "Se realiza preparacion inicial y se indica control en 7 dias."
+          }
+        ]
+      }
+    ],
+    "evolutionNotes": [
+      {
+        "id": 11,
+        "patient_id": 10,
+        "treatment_plan_id": 25,
+        "treatment_plan_item_id": null,
+        "note": "Paciente acepta iniciar fase restaurativa."
       }
     ]
   },
@@ -558,6 +634,7 @@ export const TREATMENT_PLAN_ITEM_PRIORITY_LABELS: Record<TreatmentPlanItemPriori
 - Todos los endpoints requieren token JWT: `Authorization: Bearer <token>`.
 - Los pagos reales siguen en el modulo de pagos. No se debe registrar cobro, ingreso, deuda ni recibo desde Plan de Tratamiento.
 - El plan de tratamiento no representa un pago. Es una propuesta clinica/economica, no una transaccion financiera.
+- Las notas de evolucion pueden relacionarse al plan o a un item, pero crear una nota no cambia automaticamente el estado clinico del plan/item.
 - `DELETE /api/treatment-plans/:id` cancela el plan; no lo elimina fisicamente.
 - `DELETE /api/treatment-plans/:id/items/:itemId` elimina el item y devuelve el plan recalculado.
 - Las fechas pueden enviarse como `YYYY-MM-DD` o ISO 8601; la API responde normalmente como string ISO.

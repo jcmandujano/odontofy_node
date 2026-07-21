@@ -1,4 +1,5 @@
 import Patient from '../models/patient.model';
+import EvolutionNote from '../models/evolution-note.model';
 import TreatmentPlan from '../models/treatment-plan.model';
 import TreatmentPlanItem from '../models/treatment-plan-item.model';
 import {
@@ -129,6 +130,18 @@ export const getTreatmentPlanById = async (userId: number, treatmentPlanId: numb
     include: [
       {
         model: TreatmentPlanItem,
+        required: false,
+        include: [
+          {
+            model: EvolutionNote,
+            as: 'evolutionNotes',
+            required: false,
+          },
+        ],
+      },
+      {
+        model: EvolutionNote,
+        as: 'evolutionNotes',
         required: false,
       },
     ],
