@@ -38,6 +38,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
     toSafeJSON() {
         const data = this.toJSON() as any;
+        delete data.password;
         delete data.google_access_token;
         delete data.google_refresh_token;
         delete data.google_token_expiry_date;

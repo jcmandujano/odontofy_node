@@ -159,6 +159,8 @@ export const createAppointment = async (req: Request, res: Response) => {
   const { body } = req;
 
   try {
+    const patient = await Patient.findOne({ where: { id: patientId, user_id: authorUid } });
+    if (!patient) return errorResponse(res, 'Patient not found', 404);
     const appointment = new Appointment(body);
     appointment.user_id = authorUid || 0;
     appointment.patient_id = parseInt(patientId);
@@ -201,7 +203,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
   const { authorUid } = req;
 
   try {
-    const appointment = await Appointment.findByPk(id);
+    const appointment = await Appointment.findOne({ where: { id, user_id: authorUid } });
     if (!appointment) {
       return res.status(404).json({
         msg: "No existe una cita con el id " + id
@@ -249,7 +251,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
   const { authorUid } = req;
 
   try {
-    const appointment = await Appointment.findByPk(id);
+    const appointment = await Appointment.findOne({ where: { id, user_id: authorUid } });
     if (!appointment) {
       return res.status(404).json({
         msg: "No existe una cita con el id " + id

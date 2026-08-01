@@ -72,6 +72,9 @@ export const getSignedFileUrl = async (req: Request, res: Response) => {
         if (!filePath) {
             return res.status(400).json({ ok: false, msg: 'No se especificó el archivo' });
         }
+        if (!filePath.match(new RegExp(`^storage/.+-${req.authorUid}\\.pdf$`))) {
+            return errorResponse(res, 'File not found', 404);
+        }
 
         const file = bucket.file(filePath);
 

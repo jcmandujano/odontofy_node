@@ -19,12 +19,12 @@ export const errorResponse = (
   res: Response,
   message = 'Something went wrong',
   status = 500,
-  errors: any = null
+  _errors: unknown = null
 ): Response<ApiResponse<null>> => {
   return res.status(status).json({
     success: false,
     message,
     data: null,
-    errors
+    errors: null
   });
 };

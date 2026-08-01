@@ -1,6 +1,7 @@
 //vamos a crear el contorlador de creacion de pagos
 import { Request, Response } from "express"
 import Payment from "../models/payment.model"
+import Patient from "../models/patient.model";
 import PaymentUser from "../models/payment-user.model"
 import Concept from "../models/concept.model"
 import db from "../db/connection";
@@ -18,13 +19,16 @@ import { PaginatedResponse } from "../types/api-response";
  */
 export const listPayments = async (req: Request, res: Response) => {
   const { patient_id } = req.params;
+  const { authorUid } = req;
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const offset = (page - 1) * limit;
 
   try {
+    const patient = await Patient.findOne({ where: { id: patient_id, user_id: authorUid } });
+    if (!patient) return errorResponse(res, 'Patient not found', 404);
     const { count, rows: payments } = await Payment.findAndCountAll({
-      where: { patientId: patient_id },
+      where: { patientId: patient_id, user_id: authorUid },
       limit,
       offset,
       order: [["payment_date", "DESC"]],
@@ -82,9 +86,10 @@ export const listPayments = async (req: Request, res: Response) => {
  */
 export const getPayment = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { authorUid } = req;
 
   try {
-    const payment = await Payment.findByPk(id);
+    const payment = await Payment.findOne({ where: { id, user_id: authorUid } });
 
     if (!payment) {
       return errorResponse(res, "Payment not found", 404);
@@ -157,6 +162,8 @@ export const createPayment = async (req: Request, res: Response) => {
   const { body, authorUid } = req;
 
   try {
+    const patient = await Patient.findOne({ where: { id: patient_id, user_id: authorUid } });
+    if (!patient) return errorResponse(res, 'Patient not found', 404);
     const newPayment = await Payment.create({
       ...body,
       user_id: authorUid,
@@ -193,11 +200,12 @@ export const createPayment = async (req: Request, res: Response) => {
 export const updatePayment = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
+  const { authorUid } = req;
 
   const t = await db.transaction();
 
   try {
-    const payment = await Payment.findOne({ where: { id }, transaction: t });
+    const payment = await Payment.findOne({ where: { id, user_id: authorUid }, transaction: t });
 
     if (!payment) {
       await t.rollback();
@@ -273,9 +281,10 @@ export const updatePayment = async (req: Request, res: Response) => {
  */
 export const deletePayment = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { authorUid } = req;
 
   try {
-    const payment = await Payment.findByPk(id);
+    const payment = await Payment.findOne({ where: { id, user_id: authorUid } });
 
     if (!payment) {
       return errorResponse(res, "Payment not found", 404);

@@ -1,6 +1,7 @@
 //inyeccion de dependencias
 import express, { Application } from "express";
 import userRoutes from '../routes/user.route'
+import meRoutes from '../routes/me.route'
 import authRoutes from '../routes/auth.route';
 import patientRoutes from '../routes/patient.route';
 import noteRoutes from '../routes/evolution-note.route';
@@ -19,6 +20,7 @@ import '../models/treatment-plan.model';
 import '../models/treatment-plan-item.model';
 
 import cors from 'cors'
+import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import db from "../db/connection";
@@ -31,6 +33,7 @@ class Server {
     private apiRoutes = {
         auth: '/api/auth',
         users: '/api/users',
+        me: '/api/me',
         patients: '/api/patients',
         evolutionNotes: '/api/patients',
         payments: '/api/patients',
@@ -61,6 +64,7 @@ class Server {
 
     routes() {
         this.app.use(this.apiRoutes.users, userRoutes)
+        this.app.use(this.apiRoutes.me, meRoutes)
         this.app.use(this.apiRoutes.auth, authRoutes)
         this.app.use(this.apiRoutes.patients, patientRoutes)
         this.app.use(this.apiRoutes.evolutionNotes, noteRoutes)
@@ -80,11 +84,17 @@ class Server {
 
     //middlewares que se ejecutan antes de la ruta
     middlewares() {
-        //cors
-        this.app.use(cors())
+        this.app.use(helmet({
+            // Swagger UI and public assets need a reviewed CSP before enabling it.
+            contentSecurityPolicy: false,
+            // Preserve the current ability to consume public assets from the frontend origin.
+            crossOriginResourcePolicy: false
+        }));
+        const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '').split(',').map((origin) => origin.trim()).filter(Boolean);
+        this.app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : false, credentials: true }))
 
         //lectura del body
-        this.app.use(express.json())
+        this.app.use(express.json({ limit: '1mb' }))
 
         //carpeta publica
         this.app.use(express.static('public'))
