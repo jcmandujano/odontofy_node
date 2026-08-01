@@ -5,6 +5,7 @@ interface TokenAttributes {
     id: number
     userId: number
     token: string
+    expiresAt: Date
 }
 
 interface TokenCreationAttributes extends Optional<TokenAttributes, "id"> {}
@@ -13,6 +14,7 @@ class Token extends Model<TokenAttributes, TokenCreationAttributes> implements T
     id!: number;
     userId!: number;
     token!: string;
+    expiresAt!: Date;
 }
 
 Token.init({
@@ -25,7 +27,11 @@ Token.init({
         type: DataTypes.INTEGER
     },
     token: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING(64)
+    },
+    expiresAt: {
+        type: DataTypes.DATE,
+        allowNull: false
     }
 },{
     sequelize: db,
