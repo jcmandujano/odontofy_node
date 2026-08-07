@@ -7,22 +7,24 @@ interface PaymentAttributes {
   id: number;
   user_id: number;
   patientId: number;
-  payment_date: Date;
+  payment_date: string;
   income: number;
   debt: number;
   total: number;
+  discount: number;
 }
 
-interface PaymentCreationAttributes extends Optional<PaymentAttributes, 'id'> {}
+type PaymentCreationAttributes = Optional<PaymentAttributes, 'id'>;
 
 class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implements PaymentAttributes {
     public id!: number;
     public user_id!: number;
     public patientId!: number;
-    public payment_date!: Date;
+    public payment_date!: string;
     public income!: number;
     public debt!: number;
     public total!: number;
+    public discount!: number;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -59,6 +61,11 @@ Payment.init(
     total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+    },
+    discount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
     },
   },
   {
