@@ -1,64 +1,73 @@
-// models/payment.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
-import db from "../db/connection";
+import db from '../db/connection';
 import Payment from './payment.model';
 import UserConcept from './user_concept.model';
+import type { PaymentMethod } from '../types/payment.enums';
 
 interface PaymentUserAttributes {
   id?: number;
   paymentId: number;
   conceptId: number;
-  paymentMethod: 'CASH' | 'DEBIT' | 'CREDIT' | 'TRANSFERENCE'; // Definirlo como un tipo específico  
+  paymentMethod: PaymentMethod;
   quantity: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface PaymentUserCreationAttributes extends Optional<PaymentUserAttributes, 'createdAt' | 'updatedAt'> {}
+type PaymentUserCreationAttributes = Optional<
+  PaymentUserAttributes,
+  'id' | 'createdAt' | 'updatedAt'
+>;
 
-class PaymentUser extends Model<PaymentUserAttributes, PaymentUserCreationAttributes> implements PaymentUserAttributes {
-  id!: number;
-  paymentId!: number;
-  conceptId!: number;
-  paymentMethod!: 'CASH' | 'DEBIT' | 'CREDIT' | 'TRANSFERENCE';
-  quantity!: number;
+class PaymentUser
+  extends Model<PaymentUserAttributes, PaymentUserCreationAttributes>
+  implements PaymentUserAttributes
+{
+  public id!: number;
+  public paymentId!: number;
+  public conceptId!: number;
+  public paymentMethod!: PaymentMethod;
+  public quantity!: number;
   public createdAt?: Date;
   public updatedAt?: Date;
 
-  public userConcept?: UserConcept; // Sequelize llenará este campo al hacer un include
+  public userConcept?: UserConcept;
 }
 
 PaymentUser.init(
   {
     id: {
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     paymentId: {
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
       primaryKey: true,
-    },
-    conceptId: {
-        type: DataTypes.NUMBER,
-    },
-    paymentMethod: {
-      type: DataTypes.ENUM('CASH', 'DEBIT', 'CREDIT', 'TRANSFERENCE')
-    },
-    quantity: {
-      type: DataTypes.NUMBER,
       allowNull: false,
     },
-
+    conceptId: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('CASH', 'DEBIT', 'CREDIT', 'TRANSFERENCE'),
+      allowNull: false,
+      defaultValue: 'CASH',
+    },
+    quantity: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+    },
   },
   {
     sequelize: db,
     tableName: 'payment_concept',
-    createdAt: "createdAt",
-    updatedAt: "updatedAt",
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
   }
 );
 
-// Definir las relaciones con los modelos Payment y Concept
 PaymentUser.belongsTo(Payment, { foreignKey: 'paymentId' });
 PaymentUser.belongsTo(UserConcept, { foreignKey: 'conceptId', as: 'userConcept' });
 
