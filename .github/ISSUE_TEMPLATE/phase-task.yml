@@ -1,0 +1,46 @@
+name: API v1 phase task
+description: Entregable verificable de una fase del refactor API v1
+title: '[F_] '
+labels:
+  - api-v1
+body:
+  - type: input
+    id: phase
+    attributes:
+      label: Fase
+      placeholder: F0
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objetivo
+      description: Resultado observable que debe producir este issue.
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Entregables
+      placeholder: '- [ ] Entregable'
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptacion
+      placeholder: '- [ ] Criterio verificable'
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencias requeridas
+      description: Pruebas, comandos, documentos, contratos o migraciones esperados.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencias y riesgos
+      description: Issues previos, decisiones abiertas o riesgos conocidos.
