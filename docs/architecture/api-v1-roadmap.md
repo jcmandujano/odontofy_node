@@ -124,7 +124,7 @@ Para cerrar una fase se deben registrar:
 - [x] ESLint y typecheck sin errores.
 - [x] Workflow de GitHub Actions con instalacion reproducible.
 - [x] Inventario de dependencias y riesgo residual documentado.
-- [ ] Ejecucion exitosa del workflow en el PR de F1.
+- [x] Ejecucion exitosa del workflow en el PR de F1.
 - [ ] PR de F1 revisado e integrado.
 
 ### Criterios de salida
@@ -144,6 +144,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-07 | Validacion local             | `npm run check` pasa: lint, typecheck, 4 pruebas y build.                      |
 | 2026-08-07 | Dependencias compatibles     | Alertas npm reducidas a 8 moderadas; no quedan altas ni criticas.             |
 | 2026-08-07 | Riesgo residual              | Dependencias transitivas de `uuid` documentadas sin aplicar cambios forzados. |
+| 2026-08-07 | CI de F1                     | Job `quality` del PR `#27` aprobado en GitHub Actions sobre Node 24.           |
 
 ### Enlaces de trabajo F1
 
@@ -152,6 +153,7 @@ Para cerrar una fase se deben registrar:
 - [#24 Agregar pruebas de caracterizacion HTTP](https://github.com/jcmandujano/odontofy_node/issues/24)
 - [#25 Resolver lint y typecheck](https://github.com/jcmandujano/odontofy_node/issues/25)
 - [#26 Integrar GitHub Actions](https://github.com/jcmandujano/odontofy_node/issues/26)
+- [PR #27 Linea base de calidad](https://github.com/jcmandujano/odontofy_node/pull/27)
 
 ### Riesgos transferidos
 
