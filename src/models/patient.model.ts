@@ -18,14 +18,14 @@ interface PatientAttributes {
     emergency_contact_relationship: string
     reason_for_consultation: string
     rfc: string
-    family_medical_history: {}
-    personal_medical_history: {}
+    family_medical_history: Record<string, unknown>
+    personal_medical_history: Record<string, unknown>
     email: string
     status: boolean
     debt: number
 }
 
-interface PatientCreationAttributes extends Optional<PatientAttributes, "id"> {}
+type PatientCreationAttributes = Optional<PatientAttributes, "id">;
 
 class Patient extends Model<PatientAttributes, PatientCreationAttributes> implements PatientAttributes {
     id!: number;
@@ -44,8 +44,8 @@ class Patient extends Model<PatientAttributes, PatientCreationAttributes> implem
     emergency_contact_relationship!: string
     reason_for_consultation!: string
     rfc!: string
-    family_medical_history!: {}
-    personal_medical_history!: {}
+    family_medical_history!: Record<string, unknown>
+    personal_medical_history!: Record<string, unknown>
     email!: string
     status!: boolean
     debt!: number

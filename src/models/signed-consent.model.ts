@@ -14,7 +14,7 @@ interface SignedConsentAttributes {
   file_url: string | null;
 }
 
-interface SignedConsentCreationAttributes extends Optional<SignedConsentAttributes, 'id'> {}
+type SignedConsentCreationAttributes = Optional<SignedConsentAttributes, 'id'>;
 
 class SignedConsent extends Model<SignedConsentAttributes, SignedConsentCreationAttributes> implements SignedConsentAttributes {
   public id!: number;

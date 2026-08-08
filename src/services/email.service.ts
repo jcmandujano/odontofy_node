@@ -21,13 +21,6 @@ export const sendEmail = async ({ to, subject, html }: SendEmailOptions) => {
 
 import * as Brevo from "@getbrevo/brevo";
 
-const brevoClient = new Brevo.TransactionalEmailsApi();
-
-brevoClient.setApiKey(
-    Brevo.TransactionalEmailsApiApiKeys.apiKey,
-    process.env.BREVO_API_KEY!
-);
-
 interface SendEmailOptions {
     to: string;
     subject: string;
@@ -35,8 +28,19 @@ interface SendEmailOptions {
 }
 
 export const sendEmail = async ({ to, subject, html }: SendEmailOptions) => {
+    const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_FROM_EMAIL!;
     const senderName = process.env.BREVO_FROM_NAME || "Odontofy";
+
+    if (!apiKey || !senderEmail) {
+        throw new Error("Brevo email configuration is incomplete");
+    }
+
+    const brevoClient = new Brevo.TransactionalEmailsApi();
+    brevoClient.setApiKey(
+        Brevo.TransactionalEmailsApiApiKeys.apiKey,
+        apiKey
+    );
 
     const msg = {
         sender: { email: senderEmail, name: senderName },

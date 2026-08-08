@@ -11,7 +11,7 @@ interface EvolutionNoteAttributes {
     note: string
 }
 
-interface NoteCreationAttributes extends Optional<EvolutionNoteAttributes, "id"> {}
+type NoteCreationAttributes = Optional<EvolutionNoteAttributes, "id">;
 
 class EvolutionNote extends Model<EvolutionNoteAttributes, NoteCreationAttributes> implements EvolutionNoteAttributes {
     id!: number;
