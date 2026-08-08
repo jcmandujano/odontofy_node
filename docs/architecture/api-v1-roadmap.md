@@ -32,21 +32,21 @@ Para cerrar una fase se deben registrar:
 
 ## Resumen de fases
 
-| ID  | Fase                               | Estado      | Objetivo de salida                                           |
-| --- | ---------------------------------- | ----------- | ------------------------------------------------------------ |
-| F0  | Gobierno e higiene                 | IN_PROGRESS | Trazabilidad instalada y repositorio sin snapshots de datos. |
-| F1  | Linea base de calidad              | PENDING     | Build, lint, pruebas y CI reproducibles.                     |
-| F2  | Base de datos reproducible         | PENDING     | Esquema normalizado creado solo desde migraciones.           |
-| F3  | Plataforma HTTP y contrato v1      | PENDING     | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
-| F4  | Identidad y acceso                 | PENDING     | Auth, sesiones y perfil migrados al primer modulo v1.        |
-| F5  | Pacientes                          | PENDING     | Pacientes migrados con ownership y DTOs estrictos.           |
-| F6  | Planes de tratamiento              | PENDING     | Planes e items transaccionales en v1.                        |
-| F7  | Expediente clinico                 | PENDING     | Notas y relaciones clinicas migradas.                        |
-| F8  | Facturacion y catalogos            | PENDING     | Pagos y conceptos transaccionales migrados.                  |
-| F9  | Agenda y Google Calendar           | PENDING     | Agenda desacoplada del proveedor externo.                    |
-| F10 | Consentimientos, archivos y correo | PENDING     | Integraciones restantes encapsuladas.                        |
-| F11 | Migracion Angular y retiro legacy  | PENDING     | UI en v1 y rutas legacy retiradas por modulo.                |
-| F12 | Cierre arquitectonico              | PENDING     | Reglas de arquitectura y validacion integral en CI.          |
+| ID  | Fase                               | Estado     | Objetivo de salida                                           |
+| --- | ---------------------------------- | ---------- | ------------------------------------------------------------ |
+| F0  | Gobierno e higiene                 | VALIDATING | Trazabilidad instalada y repositorio sin snapshots de datos. |
+| F1  | Linea base de calidad              | PENDING    | Build, lint, pruebas y CI reproducibles.                     |
+| F2  | Base de datos reproducible         | PENDING    | Esquema normalizado creado solo desde migraciones.           |
+| F3  | Plataforma HTTP y contrato v1      | PENDING    | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
+| F4  | Identidad y acceso                 | PENDING    | Auth, sesiones y perfil migrados al primer modulo v1.        |
+| F5  | Pacientes                          | PENDING    | Pacientes migrados con ownership y DTOs estrictos.           |
+| F6  | Planes de tratamiento              | PENDING    | Planes e items transaccionales en v1.                        |
+| F7  | Expediente clinico                 | PENDING    | Notas y relaciones clinicas migradas.                        |
+| F8  | Facturacion y catalogos            | PENDING    | Pagos y conceptos transaccionales migrados.                  |
+| F9  | Agenda y Google Calendar           | PENDING    | Agenda desacoplada del proveedor externo.                    |
+| F10 | Consentimientos, archivos y correo | PENDING    | Integraciones restantes encapsuladas.                        |
+| F11 | Migracion Angular y retiro legacy  | PENDING    | UI en v1 y rutas legacy retiradas por modulo.                |
+| F12 | Cierre arquitectonico              | PENDING    | Reglas de arquitectura y validacion integral en CI.          |
 
 ## F0 - Gobierno e higiene
 
@@ -68,6 +68,7 @@ Para cerrar una fase se deben registrar:
 - [x] Eliminacion del dump versionado.
 - [x] [Milestone `API v1 - F0 Gobierno e higiene`](https://github.com/jcmandujano/odontofy_node/milestone/1).
 - [x] Issues de F0 enlazados a este documento.
+- [x] [PR #21 de F0](https://github.com/jcmandujano/odontofy_node/pull/21) publicado y enlazado.
 
 ### Criterios de salida
 
@@ -86,17 +87,25 @@ Para cerrar una fase se deben registrar:
 | 2026-08-07 | Higiene local       | Dump eliminado; `.env.test` y nuevos dumps quedan ignorados; `.env.example` permanece versionable. |
 | 2026-08-07 | Verificacion F0     | Plantillas YAML validas, `git diff --check` limpio y `npm run build` exitoso.                      |
 | 2026-08-07 | Trazabilidad GitHub | Milestone y issues `#18`, `#19` y `#20` creados y clasificados.                                    |
+| 2026-08-07 | Publicacion F0      | Rama remota y PR `#21` creados; F0 pasa a validacion.                                              |
 
 ### Pendientes para cerrar F0
 
-La fase permanece `IN_PROGRESS` hasta publicar y enlazar el PR de esta rama. Despues
-pasara a `VALIDATING` y solo se marcara `DONE` cuando el PR sea integrado a `main`.
+La fase permanece `VALIDATING` y solo se marcara `DONE` cuando el PR `#21` sea
+integrado a `main` y sus tres issues se encuentren cerrados.
 
 ### Enlaces de trabajo F0
 
 - [#18 Configurar trazabilidad GitHub y cerrar la fase](https://github.com/jcmandujano/odontofy_node/issues/18)
 - [#19 Eliminar dump y proteger configuracion local](https://github.com/jcmandujano/odontofy_node/issues/19)
 - [#20 Versionar roadmap y decisiones arquitectonicas](https://github.com/jcmandujano/odontofy_node/issues/20)
+- [PR #21 Establish API v1 refactor governance](https://github.com/jcmandujano/odontofy_node/pull/21)
+
+### Riesgos transferidos
+
+- GitHub reporto 110 alertas de dependencias preexistentes en `main`: 5 criticas,
+  48 altas, 44 moderadas y 13 bajas. Su inventario y remediacion pertenecen a F1;
+  no se mezclan actualizaciones de runtime con la gobernanza de F0.
 
 ## Definicion de terminado para fases posteriores
 
