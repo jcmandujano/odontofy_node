@@ -1,6 +1,11 @@
 # Odontofy API
 Odontofy is a private api for serve content related to management dental clinics, patients and all related to patient information
 
+## API v1 refactor
+
+The incremental architecture refactor is tracked in
+[`docs/architecture/api-v1-roadmap.md`](docs/architecture/api-v1-roadmap.md).
+
 ## Features
 - User registration and authentication.
 - Patients management.
