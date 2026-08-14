@@ -45,32 +45,38 @@ Payment.init(
     patientId: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
+      field: 'patient_id',
     },
     payment_date: {
         type: DataTypes.DATEONLY,
         allowNull: false,
       },
     income: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
+      field: 'amount_received',
     },
     debt: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
+      field: 'balance_after',
     },
     total: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
+      field: 'total_amount',
     },
     discount: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
+      field: 'discount_amount',
     },
   },
   {
     sequelize: db,
-    tableName: 'payment',
+    tableName: 'payments',
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
   }

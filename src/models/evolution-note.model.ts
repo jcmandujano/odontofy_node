@@ -23,12 +23,12 @@ class EvolutionNote extends Model<EvolutionNoteAttributes, NoteCreationAttribute
 
 EvolutionNote.init({
     id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
     },
     patient_id: {
-        type: DataTypes.NUMBER
+        type: DataTypes.INTEGER.UNSIGNED
     },
     treatment_plan_id: {
         type: DataTypes.INTEGER.UNSIGNED,
@@ -39,11 +39,12 @@ EvolutionNote.init({
         allowNull: true,
     },
     note: {
-        type: DataTypes.STRING
+        type: DataTypes.TEXT
     }
 },{
     sequelize: db,
     tableName: "evolution_notes",
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
   });

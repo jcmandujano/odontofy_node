@@ -29,3 +29,46 @@ jobs:
 
       - name: Run quality checks
         run: npm run check
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root-password
+          MYSQL_DATABASE: odontofy_test
+          MYSQL_USER: odontofy_ci
+          MYSQL_PASSWORD: ci-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uodontofy_ci -pci-password --silent"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    env:
+      NODE_ENV: test
+      MYSQL_TEST_HOST: 127.0.0.1
+      MYSQL_TEST_PORT: 3306
+      MYSQL_TEST_DATABASE: odontofy_test
+      MYSQL_TEST_USER: odontofy_ci
+      MYSQL_TEST_PASSWORD: ci-password
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify migrations and database integrity
+        run: npm run db:verify:test

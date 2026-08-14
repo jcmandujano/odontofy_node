@@ -30,15 +30,16 @@ Concept.init(
         type: DataTypes.STRING,
         allowNull: false,
       },
-      unit_price: {
-      type: DataTypes.NUMBER,
+    unit_price: {
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
 
   },
   {
     sequelize: db,
-    tableName: 'concept',
+    tableName: 'concepts',
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
   }

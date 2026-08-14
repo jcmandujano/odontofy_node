@@ -45,7 +45,7 @@ UserConcept.init(
         allowNull: false,
       },
       unit_price: {
-      type: DataTypes.NUMBER,
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
     is_custom: {
@@ -55,7 +55,8 @@ UserConcept.init(
   },
   {
     sequelize: db,
-    tableName: 'user_concept',
+    tableName: 'user_concepts',
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
   }

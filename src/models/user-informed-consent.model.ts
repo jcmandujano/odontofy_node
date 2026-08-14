@@ -62,7 +62,8 @@ UserInformedConsent.init(
   },
   {
     sequelize: db,
-    tableName: 'user_informed_consent',
+    tableName: 'user_informed_consents',
+    underscored: true,
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
   }

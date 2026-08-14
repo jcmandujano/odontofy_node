@@ -1,7 +1,6 @@
 // models/signedConsent.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
 import db from "../db/connection";
-import InformedConsent from './informed-consent.model';
 import Patient from './patient.model';
 import User from './user.model';
 
@@ -39,10 +38,7 @@ SignedConsent.init(
     consent_id: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
-      references: {
-        model: InformedConsent,
-        key: 'id',
-      },
+      field: 'user_informed_consent_id',
     },
     patient_id: {
       type: DataTypes.INTEGER.UNSIGNED,
@@ -64,6 +60,7 @@ SignedConsent.init(
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+      field: 'signed_at',
     },
     file_url: {
       type: DataTypes.STRING,
@@ -72,7 +69,8 @@ SignedConsent.init(
   },
   {
     sequelize: db,
-    tableName: 'signed_consent',
+    tableName: 'signed_consents',
+    underscored: true,
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
   }

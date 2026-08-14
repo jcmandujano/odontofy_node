@@ -51,7 +51,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
 User.init({
     id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
     },
@@ -62,7 +62,10 @@ User.init({
     phone: DataTypes.STRING,
     avatar: DataTypes.STRING,
     email: DataTypes.STRING,
-    password: DataTypes.STRING,
+    password: {
+        type: DataTypes.STRING,
+        field: 'password_hash'
+    },
     status: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
@@ -81,11 +84,13 @@ User.init({
     },
     google_token_expiry_date: {
         type: DataTypes.DATE,
-        allowNull: true
+        allowNull: true,
+        field: 'google_token_expiry_at'
     }
 }, {
     sequelize: db,
     tableName: "users",
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
 });

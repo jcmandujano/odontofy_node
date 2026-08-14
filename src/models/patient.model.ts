@@ -53,12 +53,12 @@ class Patient extends Model<PatientAttributes, PatientCreationAttributes> implem
 
 Patient.init({
     id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
     },
     user_id: {
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER.UNSIGNED
     },
     name: {
         type: DataTypes.STRING
@@ -117,11 +117,13 @@ Patient.init({
     },
     debt: {
         type: DataTypes.DECIMAL,
-        defaultValue: 0
+        defaultValue: 0,
+        field: 'current_balance'
     }
 },{
     sequelize: db,
     tableName: "patients",
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
   });
