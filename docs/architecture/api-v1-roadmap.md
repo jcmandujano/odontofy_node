@@ -187,7 +187,7 @@ Para cerrar una fase se deben registrar:
 - [x] Modelos legacy mapeados a tablas y columnas normalizadas.
 - [x] Nueve pruebas de integridad y compatibilidad contra MySQL.
 - [x] Job de base de datos agregado a GitHub Actions.
-- [ ] Ejecucion exitosa del job `database` en el PR de F2.
+- [x] Ejecucion exitosa del job `database` en el PR de F2.
 - [ ] PR de F2 revisado e integrado.
 
 ### Criterios de salida
@@ -211,6 +211,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-14 | Integridad y mappings        | Nueve pruebas validan tablas, FKs, checks, ownership, cascadas y mappings.      |
 | 2026-08-14 | Rollback y reconstruccion    | Las seis migraciones bajan y vuelven a subir en orden sin intervencion manual.  |
 | 2026-08-14 | Seguridad de operaciones     | Pruebas unitarias rechazan production y nombres de base no autorizados.         |
+| 2026-08-14 | CI de F2                     | Jobs `quality` y `database` del PR `#33` aprobados sobre Node 24 y MySQL 8.4.    |
 
 ### Enlaces de trabajo F2
 
@@ -219,6 +220,7 @@ Para cerrar una fase se deben registrar:
 - [#30 Crear migraciones y seeds](https://github.com/jcmandujano/odontofy_node/issues/30)
 - [#31 Alinear modelos Sequelize](https://github.com/jcmandujano/odontofy_node/issues/31)
 - [#32 Validar integridad y reconstruccion](https://github.com/jcmandujano/odontofy_node/issues/32)
+- [PR #33 Base de datos reproducible](https://github.com/jcmandujano/odontofy_node/pull/33)
 
 ### Riesgos transferidos
 
