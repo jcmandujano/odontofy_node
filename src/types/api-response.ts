@@ -2,7 +2,7 @@ export interface ApiResponse<T> {
     success: boolean;
     message: string;
     data: T | null;
-    errors: any | null;
+    errors: unknown | null;
   }
   
 
@@ -13,4 +13,3 @@ perPage: number;
 totalPages: number;
 results: T[];
 }
-  

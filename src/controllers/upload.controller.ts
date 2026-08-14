@@ -1,6 +1,6 @@
 // src/controllers/upload.controller.ts
 import { Request, Response } from 'express';
-import bucket from '../googleStorageClient';
+import { getGoogleStorageBucket } from '../googleStorageClient';
 import { GetSignedUrlConfig } from '@google-cloud/storage';
 import { errorResponse, successResponse } from '../utils/response';
 
@@ -20,6 +20,7 @@ import { errorResponse, successResponse } from '../utils/response';
 export const uploadFile = async (req: Request, res: Response) => {
     const { authorUid } = req
     try {
+        const bucket = getGoogleStorageBucket();
 
         if (!req.file) {
             return res.status(400).json({ ok: false, msg: 'No se envió ningún archivo' });
@@ -67,6 +68,7 @@ export const uploadFile = async (req: Request, res: Response) => {
  */
 export const getSignedFileUrl = async (req: Request, res: Response) => {
     try {
+        const bucket = getGoogleStorageBucket();
         const { filePath } = req.params;
 
         if (!filePath) {

@@ -8,7 +8,7 @@ interface TokenAttributes {
     expiresAt: Date
 }
 
-interface TokenCreationAttributes extends Optional<TokenAttributes, "id"> {}
+type TokenCreationAttributes = Optional<TokenAttributes, "id">;
 
 class Token extends Model<TokenAttributes, TokenCreationAttributes> implements TokenAttributes{
     id!: number;

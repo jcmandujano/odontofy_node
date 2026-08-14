@@ -12,7 +12,7 @@ interface AuthSessionAttributes {
   ip_address: string | null;
 }
 
-interface AuthSessionCreationAttributes extends Optional<AuthSessionAttributes, 'id' | 'revoked_at' | 'user_agent' | 'ip_address'> {}
+type AuthSessionCreationAttributes = Optional<AuthSessionAttributes, 'id' | 'revoked_at' | 'user_agent' | 'ip_address'>;
 
 class AuthSession extends Model<AuthSessionAttributes, AuthSessionCreationAttributes> implements AuthSessionAttributes {
   id!: number;

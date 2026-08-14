@@ -4,15 +4,15 @@ import db from "../db/connection";
 
 interface ConceptAttributes {
   id: number;
-  description: String;
+  description: string;
   unit_price: number;
 }
 
-interface ConceptCreationAttributes extends Optional<ConceptAttributes, 'id'> {}
+type ConceptCreationAttributes = Optional<ConceptAttributes, 'id'>;
 
 class Concept extends Model<ConceptAttributes, ConceptCreationAttributes> implements ConceptAttributes {
     id!: number;
-    description!: String;
+    description!: string;
     unit_price!: number;
   // Timestamps
   public readonly createdAt!: Date;

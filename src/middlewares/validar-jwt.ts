@@ -1,17 +1,8 @@
 import  jwt  from "jsonwebtoken";
-import { Request, Response } from "express"
+import { NextFunction, Request, Response } from "express"
 import User from "../models/user.model";
 
-// Extender la interfaz Request de Express para incluir la propiedad authorUid
-declare global {
-    namespace Express {
-        interface Request {
-            authorUid?: number;
-        }
-    }
-}
-
-export const validarJWT = async (req: Request, res:  Response, next: any) => {
+export const validarJWT = async (req: Request, res: Response, next: NextFunction) => {
 
     const token = req.header('Authorization');
 
@@ -42,7 +33,7 @@ export const validarJWT = async (req: Request, res:  Response, next: any) => {
             });
         }
 
-    } catch (error) {
+    } catch {
         return res.status(401).json({
             msg: "Token no valido",
         })

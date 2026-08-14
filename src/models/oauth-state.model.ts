@@ -2,7 +2,7 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import db from '../db/connection';
 
 interface OAuthStateAttributes { id: number; user_id: number; state_hash: string; expires_at: Date; used_at: Date | null; }
-interface OAuthStateCreationAttributes extends Optional<OAuthStateAttributes, 'id' | 'used_at'> {}
+type OAuthStateCreationAttributes = Optional<OAuthStateAttributes, 'id' | 'used_at'>;
 
 class OAuthState extends Model<OAuthStateAttributes, OAuthStateCreationAttributes> implements OAuthStateAttributes {
   id!: number;

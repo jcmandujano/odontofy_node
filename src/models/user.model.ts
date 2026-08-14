@@ -18,7 +18,7 @@ interface UserAttributes {
     google_token_expiry_date?: Date | null;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, "id"> {}
+type UserCreationAttributes = Optional<UserAttributes, "id">;
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
     id!: number;
@@ -37,13 +37,15 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     google_token_expiry_date!: Date | null;
 
     toSafeJSON() {
-        const data = this.toJSON() as any;
+        const data: Partial<UserAttributes> = { ...this.toJSON() };
         delete data.password;
         delete data.google_access_token;
         delete data.google_refresh_token;
         delete data.google_token_expiry_date;
-        data.is_google_synced = !!this.google_refresh_token;
-        return data;
+        return {
+            ...data,
+            is_google_synced: Boolean(this.google_refresh_token),
+        };
     }
 }
 

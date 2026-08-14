@@ -13,7 +13,7 @@ interface UserInformedConsentAttributes {
   is_custom: boolean;
 }
 
-interface UserInformedConsentCreationAttributes extends Optional<UserInformedConsentAttributes, 'id'> { }
+type UserInformedConsentCreationAttributes = Optional<UserInformedConsentAttributes, 'id'>;
 
 class UserInformedConsent extends Model<UserInformedConsentAttributes, UserInformedConsentCreationAttributes> implements UserInformedConsentAttributes {
   public id!: number;

@@ -6,18 +6,18 @@ interface UserConceptAttributes {
   id: number;
   user_id: number;
   concept_id: number | null;
-  description: String;
+  description: string;
   unit_price: number;
   is_custom: boolean;
 }
 
-interface UserConceptCreationAttributes extends Optional<UserConceptAttributes, 'id'> {}
+type UserConceptCreationAttributes = Optional<UserConceptAttributes, 'id'>;
 
 class UserConcept extends Model<UserConceptAttributes, UserConceptCreationAttributes> implements UserConceptAttributes {
     id!: number;
     user_id!: number;
     concept_id!: number | null;
-    description!: String;
+    description!: string;
     unit_price!: number;
     is_custom!: boolean;
   // Timestamps

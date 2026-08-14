@@ -5,6 +5,7 @@ build
 !.env.example
 keys/
 dist
+coverage
 docs/db/dump-*.sql
 *.dump
 *.sql.gz

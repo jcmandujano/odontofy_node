@@ -34,8 +34,8 @@ Para cerrar una fase se deben registrar:
 
 | ID  | Fase                               | Estado     | Objetivo de salida                                           |
 | --- | ---------------------------------- | ---------- | ------------------------------------------------------------ |
-| F0  | Gobierno e higiene                 | VALIDATING | Trazabilidad instalada y repositorio sin snapshots de datos. |
-| F1  | Linea base de calidad              | PENDING    | Build, lint, pruebas y CI reproducibles.                     |
+| F0  | Gobierno e higiene                 | DONE       | Trazabilidad instalada y repositorio sin snapshots de datos. |
+| F1  | Linea base de calidad              | VALIDATING | Build, lint, pruebas y CI reproducibles.                     |
 | F2  | Base de datos reproducible         | PENDING    | Esquema normalizado creado solo desde migraciones.           |
 | F3  | Plataforma HTTP y contrato v1      | PENDING    | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
 | F4  | Identidad y acceso                 | PENDING    | Auth, sesiones y perfil migrados al primer modulo v1.        |
@@ -88,11 +88,8 @@ Para cerrar una fase se deben registrar:
 | 2026-08-07 | Verificacion F0     | Plantillas YAML validas, `git diff --check` limpio y `npm run build` exitoso.                      |
 | 2026-08-07 | Trazabilidad GitHub | Milestone y issues `#18`, `#19` y `#20` creados y clasificados.                                    |
 | 2026-08-07 | Publicacion F0      | Rama remota y PR `#21` creados; F0 pasa a validacion.                                              |
-
-### Pendientes para cerrar F0
-
-La fase permanece `VALIDATING` y solo se marcara `DONE` cuando el PR `#21` sea
-integrado a `main` y sus tres issues se encuentren cerrados.
+| 2026-08-07 | Cierre F0           | PR `#21` integrado, issues `#18` a `#20` cerrados y milestone completado.                          |
+| 2026-08-07 | Punto de retorno    | Tag remoto `pre-api-v1-refactor` creado sobre el commit anterior al programa de refactor.          |
 
 ### Enlaces de trabajo F0
 
@@ -106,6 +103,65 @@ integrado a `main` y sus tres issues se encuentren cerrados.
 - GitHub reporto 110 alertas de dependencias preexistentes en `main`: 5 criticas,
   48 altas, 44 moderadas y 13 bajas. Su inventario y remediacion pertenecen a F1;
   no se mezclan actualizaciones de runtime con la gobernanza de F0.
+
+## F1 - Linea base de calidad
+
+### Objetivos
+
+- Fijar un runtime reproducible para desarrollo y CI.
+- Separar la construccion de Express del arranque de red y base de datos.
+- Instalar pruebas de caracterizacion para proteger el contrato legacy.
+- Convertir lint, typecheck, pruebas y build en una validacion unica.
+- Reducir y documentar el riesgo de dependencias sin introducir cambios mayores.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f1-quality-baseline`.
+- [x] Node 24 y npm 11 declarados en el repositorio.
+- [x] Fabrica `createApp()` importable sin abrir puertos ni autenticar MySQL.
+- [x] Clientes externos inicializados solo cuando una operacion los requiere.
+- [x] Vitest y Supertest con pruebas HTTP de caracterizacion.
+- [x] ESLint y typecheck sin errores.
+- [x] Workflow de GitHub Actions con instalacion reproducible.
+- [x] Inventario de dependencias y riesgo residual documentado.
+- [x] Ejecucion exitosa del workflow en el PR de F1.
+- [ ] PR de F1 revisado e integrado.
+
+### Criterios de salida
+
+- `npm ci` puede reconstruir las dependencias con Node 24.
+- `npm run check` ejecuta lint, typecheck, pruebas y build sin errores.
+- Importar `createApp()` no conecta MySQL, no abre un puerto y no exige secretos.
+- El comportamiento legacy cubierto por las pruebas permanece sin cambios.
+- Las vulnerabilidades no corregibles sin cambios mayores tienen responsable y fase.
+
+### Evidencias
+
+| Fecha      | Evidencia                    | Resultado                                                                    |
+| ---------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| 2026-08-07 | Bootstrap testeable          | `createApp()` separado de `server.ts`; DB autentica antes de `listen`.        |
+| 2026-08-07 | Pruebas de caracterizacion   | 4 pruebas HTTP pasan sin MySQL ni credenciales de integraciones.              |
+| 2026-08-07 | Validacion local             | `npm run check` pasa: lint, typecheck, 4 pruebas y build.                      |
+| 2026-08-07 | Dependencias compatibles     | Alertas npm reducidas a 8 moderadas; no quedan altas ni criticas.             |
+| 2026-08-07 | Riesgo residual              | Dependencias transitivas de `uuid` documentadas sin aplicar cambios forzados. |
+| 2026-08-07 | CI de F1                     | Job `quality` del PR `#27` aprobado en GitHub Actions sobre Node 24.           |
+
+### Enlaces de trabajo F1
+
+- [#22 Fijar runtime y sanear dependencias](https://github.com/jcmandujano/odontofy_node/issues/22)
+- [#23 Separar createApp del arranque](https://github.com/jcmandujano/odontofy_node/issues/23)
+- [#24 Agregar pruebas de caracterizacion HTTP](https://github.com/jcmandujano/odontofy_node/issues/24)
+- [#25 Resolver lint y typecheck](https://github.com/jcmandujano/odontofy_node/issues/25)
+- [#26 Integrar GitHub Actions](https://github.com/jcmandujano/odontofy_node/issues/26)
+- [PR #27 Linea base de calidad](https://github.com/jcmandujano/odontofy_node/pull/27)
+
+### Riesgos transferidos
+
+- La actualizacion mayor de Express 5 se evaluara en F3 junto con la plataforma
+  HTTP para evitar mezclar cambios de framework con esta linea base.
+- Las rutas transitivas de `uuid` se resolveran al actualizar Sequelize en F2 y
+  las integraciones Google en F9/F10. El detalle esta en
+  [`f1-dependency-audit.md`](./f1-dependency-audit.md).
 
 ## Definicion de terminado para fases posteriores
 

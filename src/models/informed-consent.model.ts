@@ -9,7 +9,7 @@ interface InformedConsentAttributes {
   file_url: string | null;
 }
 
-interface InformedConsentCreationAttributes extends Optional<InformedConsentAttributes, 'id'> {}
+type InformedConsentCreationAttributes = Optional<InformedConsentAttributes, 'id'>;
 
 class InformedConsent extends Model<InformedConsentAttributes, InformedConsentCreationAttributes> implements InformedConsentAttributes {
   public id!: number;
