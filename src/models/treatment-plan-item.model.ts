@@ -89,11 +89,13 @@ TreatmentPlanItem.init(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      field: 'unit_price_amount',
     },
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      field: 'subtotal_amount',
     },
     phase: {
       type: DataTypes.STRING,

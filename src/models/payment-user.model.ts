@@ -37,23 +37,25 @@ class PaymentUser
 PaymentUser.init(
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
     },
     paymentId: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
+      field: 'payment_id',
     },
     conceptId: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
+      field: 'user_concept_id',
     },
     paymentMethod: {
       type: DataTypes.ENUM('CASH', 'DEBIT', 'CREDIT', 'TRANSFERENCE'),
       allowNull: false,
       defaultValue: 'CASH',
+      field: 'payment_method',
     },
     quantity: {
       type: DataTypes.INTEGER.UNSIGNED,
@@ -62,7 +64,8 @@ PaymentUser.init(
   },
   {
     sequelize: db,
-    tableName: 'payment_concept',
+    tableName: 'payment_items',
+    underscored: true,
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
   }

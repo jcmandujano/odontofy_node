@@ -35,8 +35,8 @@ Para cerrar una fase se deben registrar:
 | ID  | Fase                               | Estado     | Objetivo de salida                                           |
 | --- | ---------------------------------- | ---------- | ------------------------------------------------------------ |
 | F0  | Gobierno e higiene                 | DONE       | Trazabilidad instalada y repositorio sin snapshots de datos. |
-| F1  | Linea base de calidad              | VALIDATING | Build, lint, pruebas y CI reproducibles.                     |
-| F2  | Base de datos reproducible         | PENDING    | Esquema normalizado creado solo desde migraciones.           |
+| F1  | Linea base de calidad              | DONE       | Build, lint, pruebas y CI reproducibles.                     |
+| F2  | Base de datos reproducible         | VALIDATING | Esquema normalizado creado solo desde migraciones.           |
 | F3  | Plataforma HTTP y contrato v1      | PENDING    | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
 | F4  | Identidad y acceso                 | PENDING    | Auth, sesiones y perfil migrados al primer modulo v1.        |
 | F5  | Pacientes                          | PENDING    | Pacientes migrados con ownership y DTOs estrictos.           |
@@ -125,7 +125,7 @@ Para cerrar una fase se deben registrar:
 - [x] Workflow de GitHub Actions con instalacion reproducible.
 - [x] Inventario de dependencias y riesgo residual documentado.
 - [x] Ejecucion exitosa del workflow en el PR de F1.
-- [ ] PR de F1 revisado e integrado.
+- [x] PR de F1 revisado e integrado.
 
 ### Criterios de salida
 
@@ -145,6 +145,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-07 | Dependencias compatibles     | Alertas npm reducidas a 8 moderadas; no quedan altas ni criticas.             |
 | 2026-08-07 | Riesgo residual              | Dependencias transitivas de `uuid` documentadas sin aplicar cambios forzados. |
 | 2026-08-07 | CI de F1                     | Job `quality` del PR `#27` aprobado en GitHub Actions sobre Node 24.           |
+| 2026-08-14 | Cierre F1                    | PR `#27` integrado, issues `#22` a `#26` cerrados y milestone completado.      |
 
 ### Enlaces de trabajo F1
 
@@ -159,9 +160,74 @@ Para cerrar una fase se deben registrar:
 
 - La actualizacion mayor de Express 5 se evaluara en F3 junto con la plataforma
   HTTP para evitar mezclar cambios de framework con esta linea base.
-- Las rutas transitivas de `uuid` se resolveran al actualizar Sequelize en F2 y
-  las integraciones Google en F9/F10. El detalle esta en
-  [`f1-dependency-audit.md`](./f1-dependency-audit.md).
+- Las rutas transitivas de `uuid` fueron reevaluadas en F2. Sequelize v6 aun las
+  incluye; Google se revisara en F9/F10 y la modernizacion final del ORM en F12.
+  El detalle esta en [`f1-dependency-audit.md`](./f1-dependency-audit.md).
+
+## F2 - Base de datos reproducible
+
+### Objetivos
+
+- Reemplazar scripts SQL manuales por migraciones versionadas y reversibles.
+- Crear un esquema nuevo con naming, tipos, constraints e indices consistentes.
+- Probar el esquema sobre un MySQL real y aislado.
+- Mantener la API legacy mediante mappings Sequelize, no mediante nombres fisicos
+  heredados.
+- Impedir que los comandos destructivos apunten a una base no reconocida.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f2-reproducible-database`.
+- [x] [Milestone `API v1 - F2 Base de datos reproducible`](https://github.com/jcmandujano/odontofy_node/milestone/3).
+- [x] Esquema objetivo y deuda diferida documentados.
+- [x] Sequelize CLI y configuracion separada para development/test.
+- [x] MySQL 8.4 local aislado mediante Docker Compose.
+- [x] Seis migraciones reversibles para 17 tablas.
+- [x] Seed versionado con cinco registros sinteticos de catalogo.
+- [x] Modelos legacy mapeados a tablas y columnas normalizadas.
+- [x] Nueve pruebas de integridad y compatibilidad contra MySQL.
+- [x] Job de base de datos agregado a GitHub Actions.
+- [x] Ejecucion exitosa del job `database` en el PR de F2.
+- [ ] PR de F2 revisado e integrado.
+
+### Criterios de salida
+
+- Una base vacia se migra y puebla sin dumps ni pasos SQL manuales.
+- `npm run db:verify:test` prueba migracion, seed, integridad, rollback completo,
+  reconstruccion y una segunda ejecucion de pruebas.
+- Todas las foreign keys usan IDs `INT UNSIGNED` compatibles y acciones de
+  borrado explicitas.
+- Los checks rechazan rangos de fechas, cantidades y montos invalidos.
+- La configuracion rechaza `production` y nombres fuera de `_dev`/`_test`.
+- Los endpoints legacy no cambian su contrato por el naming fisico nuevo.
+
+### Evidencias
+
+| Fecha      | Evidencia                    | Resultado                                                                      |
+| ---------- | ---------------------------- | ------------------------------------------------------------------------------ |
+| 2026-08-14 | Inventario legacy            | 17 modelos/tablas y cinco scripts SQL manuales incorporados al diseño objetivo. |
+| 2026-08-14 | Migracion desde cero         | Seis migraciones aplicadas correctamente sobre MySQL 8.4 limpio.               |
+| 2026-08-14 | Seed sintetico               | Tres conceptos y dos consentimientos ficticios, sin datos reales.              |
+| 2026-08-14 | Integridad y mappings        | Nueve pruebas validan tablas, FKs, checks, ownership, cascadas y mappings.      |
+| 2026-08-14 | Rollback y reconstruccion    | Las seis migraciones bajan y vuelven a subir en orden sin intervencion manual.  |
+| 2026-08-14 | Seguridad de operaciones     | Pruebas unitarias rechazan production y nombres de base no autorizados.         |
+| 2026-08-14 | CI de F2                     | Jobs `quality` y `database` del PR `#33` aprobados sobre Node 24 y MySQL 8.4.    |
+
+### Enlaces de trabajo F2
+
+- [#28 Disenar esquema y compatibilidad](https://github.com/jcmandujano/odontofy_node/issues/28)
+- [#29 Configurar migraciones y MySQL aislado](https://github.com/jcmandujano/odontofy_node/issues/29)
+- [#30 Crear migraciones y seeds](https://github.com/jcmandujano/odontofy_node/issues/30)
+- [#31 Alinear modelos Sequelize](https://github.com/jcmandujano/odontofy_node/issues/31)
+- [#32 Validar integridad y reconstruccion](https://github.com/jcmandujano/odontofy_node/issues/32)
+- [PR #33 Base de datos reproducible](https://github.com/jcmandujano/odontofy_node/pull/33)
+
+### Riesgos transferidos
+
+- Historiales clinicos JSON se evaluan en F7; finanzas y snapshots en F8.
+- Credenciales e integraciones Google permanecen diferidas a F9/F10.
+- El advisory moderado de `uuid` requiere modernizar dependencias que aun no
+  ofrecen una ruta compatible estable; se mantiene visible para F12.
 
 ## Definicion de terminado para fases posteriores
 

@@ -23,8 +23,8 @@ type AppointmentCreationAttributes = Optional<AppointmentAttributes, "id">
 class Appointment extends Model<AppointmentAttributes, AppointmentCreationAttributes> implements AppointmentAttributes {
     public id!: number;
     public user_id!: number;
-    public patient_id!: number;
-    public appointment_datetime!: Date;
+    public patient_id!: number | null;
+    public appointment_datetime!: Date | null;
     public appointment_end_datetime!: Date | null;
     public status!: string;
     public reason!: string | null;
@@ -38,26 +38,28 @@ class Appointment extends Model<AppointmentAttributes, AppointmentCreationAttrib
 // Inicializar el modelo
 Appointment.init({
     id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
     },
     user_id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,
     },
     patient_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
     },
     appointment_datetime: {
         type: DataTypes.DATE,
         allowNull: false,
+        field: 'starts_at',
         comment: "Fecha y hora de la cita en UTC",
     },
     appointment_end_datetime: {
         type: DataTypes.DATE,
         allowNull: true,
+        field: 'ends_at',
     },
     reason: {
         type: DataTypes.STRING,
@@ -75,6 +77,7 @@ Appointment.init({
     google_event_id: {
         type: DataTypes.STRING,
         allowNull: true, // Permitir valores nulos para cuando no haya un evento de Google Calendar
+        field: 'external_event_id',
     },
   source: {
     type: DataTypes.ENUM('local', 'google'),
@@ -85,6 +88,7 @@ Appointment.init({
     sequelize: db,
     tableName: "appointments",
     timestamps: true, // Para crear automáticamente las columnas createdAt y updatedAt
+    underscored: true,
     createdAt: "createdAt",
     updatedAt: "updatedAt",
 });

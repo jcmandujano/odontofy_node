@@ -119,16 +119,19 @@ TreatmentPlan.init(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      field: 'subtotal_amount',
     },
     discount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      field: 'discount_amount',
     },
     total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      field: 'total_amount',
     },
   },
   {

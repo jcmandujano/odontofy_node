@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: odontofy-mysql-local
+    environment:
+      MYSQL_ROOT_PASSWORD: local-root-password
+      MYSQL_DATABASE: odontofy_test
+      MYSQL_USER: odontofy_local
+      MYSQL_PASSWORD: local-password
+    ports:
+      - "3307:3306"
+    volumes:
+      - odontofy_mysql_data:/var/lib/mysql
+      - ./database/docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  odontofy_mysql_data:
