@@ -254,7 +254,8 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1.1 y Swagger UI v1 separados del documento legacy.
 - [x] Validacion OpenAPI incorporada a `npm run check`.
 - [x] Pruebas HTTP de plataforma y regresion legacy.
-- [ ] Ejecucion exitosa de CI y PR de F3 integrado.
+- [x] Ejecucion exitosa de los jobs `quality` y `database` en el PR de F3.
+- [ ] PR de F3 revisado e integrado.
 
 ### Criterios de salida
 
@@ -277,6 +278,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-15 | Contrato OpenAPI            | Documento 3.1.1 validado automaticamente con Swagger Parser.     |
 | 2026-08-15 | Suite local                 | 15 pruebas aprobadas sin abrir puerto ni requerir MySQL.         |
 | 2026-08-15 | Regresion de base de datos  | Nueve pruebas pasan antes y despues de reconstruir seis migraciones. |
+| 2026-08-15 | CI de F3                    | Jobs `quality` y `database` del PR `#39` aprobados.               |
 
 ### Enlaces de trabajo F3
 
@@ -285,6 +287,7 @@ Para cerrar una fase se deben registrar:
 - [#36 Agregar observabilidad, health checks y cierre ordenado](https://github.com/jcmandujano/odontofy_node/issues/36)
 - [#37 Publicar y validar OpenAPI 3.1](https://github.com/jcmandujano/odontofy_node/issues/37)
 - [#38 Validar plataforma HTTP y documentar evidencia](https://github.com/jcmandujano/odontofy_node/issues/38)
+- [PR #39 Plataforma HTTP y contrato v1](https://github.com/jcmandujano/odontofy_node/pull/39)
 
 ### Riesgos transferidos
 
