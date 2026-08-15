@@ -11,6 +11,6 @@ router.post('/', [
 ],
     upload.single('file'),
     uploadFile);
-router.get('/:filePath(*)', validarJWT, getSignedFileUrl);
+router.get('/*filePath', validarJWT, getSignedFileUrl);
 
 export default router;

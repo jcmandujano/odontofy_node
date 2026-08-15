@@ -1,0 +1,181 @@
+openapi: 3.1.1
+info:
+  title: Odontofy API
+  version: 1.0.0
+  description: Contrato de la API v1 de Odontofy.
+servers:
+  - url: /api/v1
+tags:
+  - name: Platform
+    description: Estado y metadatos de la plataforma HTTP.
+paths:
+  /:
+    get:
+      operationId: getApiVersion
+      tags: [Platform]
+      summary: Obtiene la version activa de la API.
+      responses:
+        '200':
+          description: Version activa.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+  /health/live:
+    get:
+      operationId: getLiveness
+      tags: [Platform]
+      summary: Confirma que el proceso HTTP esta activo.
+      responses:
+        '200':
+          description: Proceso activo.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+  /health/ready:
+    get:
+      operationId: getReadiness
+      tags: [Platform]
+      summary: Confirma que las dependencias necesarias estan disponibles.
+      responses:
+        '200':
+          description: Servicio listo para recibir trafico.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Una dependencia requerida no esta disponible.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /openapi.json:
+    get:
+      operationId: getOpenApiContract
+      tags: [Platform]
+      summary: Obtiene el contrato OpenAPI v1 sin envelope.
+      responses:
+        '200':
+          description: Documento OpenAPI 3.1.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                additionalProperties: true
+components:
+  headers:
+    RequestId:
+      description: Identificador de correlacion de la solicitud.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+  schemas:
+    BaseResponse:
+      type: object
+      required: [success, message, data, errors, requestId]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data: {}
+        errors:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/ErrorItem'
+            - type: 'null'
+        requestId:
+          type: string
+        meta:
+          type: object
+          additionalProperties: true
+    ErrorItem:
+      type: object
+      required: [code, details]
+      properties:
+        code:
+          type: string
+        details: {}
+      additionalProperties: false
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: false
+            data:
+              type: 'null'
+            errors:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ErrorItem'
+    VersionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              required: [version]
+              properties:
+                version:
+                  const: v1
+              additionalProperties: false
+            errors:
+              type: 'null'
+    LivenessResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  const: ok
+              additionalProperties: false
+            errors:
+              type: 'null'
+    ReadinessResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  const: ready
+              additionalProperties: false
+            errors:
+              type: 'null'

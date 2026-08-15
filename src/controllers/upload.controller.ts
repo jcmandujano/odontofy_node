@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { getGoogleStorageBucket } from '../googleStorageClient';
 import { GetSignedUrlConfig } from '@google-cloud/storage';
 import { errorResponse, successResponse } from '../utils/response';
+import { getWildcardRouteParam } from '../utils/route-param';
 
 /**
  * Handles file upload requests, saving the uploaded file to Google Cloud Storage.
@@ -69,7 +70,7 @@ export const uploadFile = async (req: Request, res: Response) => {
 export const getSignedFileUrl = async (req: Request, res: Response) => {
     try {
         const bucket = getGoogleStorageBucket();
-        const { filePath } = req.params;
+        const filePath = getWildcardRouteParam(req, 'filePath');
 
         if (!filePath) {
             return res.status(400).json({ ok: false, msg: 'No se especificó el archivo' });

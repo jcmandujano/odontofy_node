@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import UserInformedConsent from "../models/user-informed-consent.model";
 import { PaginatedResponse } from "../types/api-response";
 import { errorResponse, successResponse } from "../utils/response";
+import { getRouteParam } from "../utils/route-param";
 
 
 // Listar todos los consentimientos informados
@@ -32,7 +33,7 @@ export const listUserConsents = async (req: Request, res: Response) => {
 
 // Obtener un consentimiento informado
 export const getUserConsents = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     const { authorUid } = req;
     try {
         // Buscar en la tabla de consentimientos personalizados
@@ -73,7 +74,7 @@ export const createUserConsent = async (req: Request, res: Response) => {
 // Editar un consentimiento informado
 export const updateUserConsent = async (req: Request, res: Response) => {
     const { authorUid } = req;
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(getRouteParam(req, 'id'), 10);
     const { name, description, file_url } = req.body;
 
     try {
@@ -104,7 +105,7 @@ export const updateUserConsent = async (req: Request, res: Response) => {
 
 // Eliminar un consentimiento informado
 export const deleteUserConsent = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     const { authorUid } = req;
     try {
         const userInformedConsent = await UserInformedConsent.findOne({ where: { id, user_id: authorUid } });

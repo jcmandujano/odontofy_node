@@ -7,6 +7,7 @@ import {
 } from '../services/treatment-plan-item.service';
 import { TreatmentPlanServiceError } from '../services/treatment-plan.service';
 import { errorResponse, successResponse } from '../utils/response';
+import { getRouteParam } from '../utils/route-param';
 
 const getAuthorUid = (req: Request) => {
   if (typeof req.authorUid !== 'number') {
@@ -27,7 +28,7 @@ const handleTreatmentPlanItemError = (res: Response, error: unknown) => {
 };
 
 export const createTreatmentPlanItem = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getRouteParam(req, 'id');
   const { body } = req;
 
   try {
@@ -41,7 +42,8 @@ export const createTreatmentPlanItem = async (req: Request, res: Response) => {
 };
 
 export const updateTreatmentPlanItem = async (req: Request, res: Response) => {
-  const { id, itemId } = req.params;
+  const id = getRouteParam(req, 'id');
+  const itemId = getRouteParam(req, 'itemId');
   const { body } = req;
 
   try {
@@ -60,7 +62,8 @@ export const updateTreatmentPlanItem = async (req: Request, res: Response) => {
 };
 
 export const deleteTreatmentPlanItem = async (req: Request, res: Response) => {
-  const { id, itemId } = req.params;
+  const id = getRouteParam(req, 'id');
+  const itemId = getRouteParam(req, 'itemId');
 
   try {
     const authorUid = getAuthorUid(req);
@@ -73,7 +76,8 @@ export const deleteTreatmentPlanItem = async (req: Request, res: Response) => {
 };
 
 export const updateTreatmentPlanItemStatus = async (req: Request, res: Response) => {
-  const { id, itemId } = req.params;
+  const id = getRouteParam(req, 'id');
+  const itemId = getRouteParam(req, 'itemId');
   const { body } = req;
 
   try {
