@@ -37,8 +37,8 @@ Para cerrar una fase se deben registrar:
 | F0  | Gobierno e higiene                 | DONE       | Trazabilidad instalada y repositorio sin snapshots de datos. |
 | F1  | Linea base de calidad              | DONE       | Build, lint, pruebas y CI reproducibles.                     |
 | F2  | Base de datos reproducible         | DONE       | Esquema normalizado creado solo desde migraciones.           |
-| F3  | Plataforma HTTP y contrato v1      | IN PROGRESS | `/api/v1`, errores, observabilidad y OpenAPI disponibles.   |
-| F4  | Identidad y acceso                 | PENDING    | Auth, sesiones y perfil migrados al primer modulo v1.        |
+| F3  | Plataforma HTTP y contrato v1      | DONE       | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
+| F4  | Identidad y acceso                 | IN PROGRESS | Auth, sesiones y perfil migrados al primer modulo v1.       |
 | F5  | Pacientes                          | PENDING    | Pacientes migrados con ownership y DTOs estrictos.           |
 | F6  | Planes de tratamiento              | PENDING    | Planes e items transaccionales en v1.                        |
 | F7  | Expediente clinico                 | PENDING    | Notas y relaciones clinicas migradas.                        |
@@ -255,7 +255,7 @@ Para cerrar una fase se deben registrar:
 - [x] Validacion OpenAPI incorporada a `npm run check`.
 - [x] Pruebas HTTP de plataforma y regresion legacy.
 - [x] Ejecucion exitosa de los jobs `quality` y `database` en el PR de F3.
-- [ ] PR de F3 revisado e integrado.
+- [x] [PR #39 de F3](https://github.com/jcmandujano/odontofy_node/pull/39) revisado e integrado.
 
 ### Criterios de salida
 
@@ -279,6 +279,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-15 | Suite local                 | 15 pruebas aprobadas sin abrir puerto ni requerir MySQL.         |
 | 2026-08-15 | Regresion de base de datos  | Nueve pruebas pasan antes y despues de reconstruir seis migraciones. |
 | 2026-08-15 | CI de F3                    | Jobs `quality` y `database` del PR `#39` aprobados.               |
+| 2026-08-15 | Integracion de F3           | PR `#39` integrado en `main` mediante commit `5f5e461`.           |
 
 ### Enlaces de trabajo F3
 
@@ -298,6 +299,79 @@ Para cerrar una fase se deben registrar:
   correlacion del monolito.
 - El documento OpenAPI y los esquemas Zod son artefactos distintos. Cada modulo
   debera incorporar pruebas de contrato para impedir divergencia.
+
+## F4 - Identidad y acceso
+
+### Objetivos
+
+- Migrar autenticacion, sesiones, ciclo de cuenta y perfil a `/api/v1`.
+- Crear el primer modulo vertical con HTTP, aplicacion y persistencia agrupados.
+- Evitar enumeracion de cuentas, asignacion masiva y exposicion de credenciales.
+- Detectar replay de refresh tokens e invalidar sesiones ante cambios de clave.
+- Mantener disponibles las rutas legacy hasta la migracion Angular de F11.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f4-identity-access`.
+- [x] [Milestone `API v1 - F4 Identidad y acceso`](https://github.com/jcmandujano/odontofy_node/milestone/5).
+- [x] Modulo `identity` con schemas, HTTP, aplicacion y repositorio Sequelize.
+- [x] JWT HS256 con `typ`, `iss`, `aud`, `sub`, `exp`, `jti` y `authVersion`.
+- [x] Middleware Bearer que comprueba token y usuario activo.
+- [x] Refresh tokens aleatorios, hasheados, rotatorios y agrupados por familia.
+- [x] Cookie refresh HttpOnly, SameSite Strict, Secure en production y path limitado.
+- [x] Registro, activacion y recuperacion con respuestas anti-enumeracion.
+- [x] Passwords bcrypt asincronos, costo minimo 10 y limite de 72 bytes.
+- [x] Reset de password de un solo uso que revoca refresh e invalida access tokens.
+- [x] Perfil `/api/v1/me` con DTO camelCase y PATCH de campos permitidos.
+- [x] Rate limits con headers estandar y store reemplazable.
+- [x] Contrato OpenAPI 3.1 actualizado para diez endpoints de identidad.
+- [x] Validacion local integral de F4.
+- [ ] CI y PR de F4 integrado.
+
+### Criterios de salida
+
+- Tokens JWT alterados, expirados, con tipo, issuer o audience distintos se rechazan.
+- Login y recuperacion no distinguen cuentas inexistentes, inactivas o passwords
+  incorrectos mediante mensaje o codigo de error.
+- Un refresh token solo se usa una vez; su replay revoca toda la familia activa.
+- Password reset consume un token hasheado, incrementa `auth_version` y revoca
+  todas las sesiones refresh del usuario dentro de una transaccion.
+- Los DTOs nunca contienen password hashes ni credenciales OAuth.
+- Zod rechaza propiedades desconocidas y el perfil no permite cambiar email,
+  estado, version de autenticacion ni flags por asignacion masiva.
+- El proveedor de correo se sustituye en pruebas y no requiere credenciales reales.
+- OpenAPI, pruebas rapidas, pruebas MySQL, rollback y build pasan en CI.
+
+### Evidencias
+
+| Fecha      | Evidencia                  | Resultado                                                          |
+| ---------- | -------------------------- | ------------------------------------------------------------------ |
+| 2026-08-15 | Politica y JWT             | Seis pruebas cubren schemas, claims, secretos y anti-enumeracion.   |
+| 2026-08-15 | Ciclo identity sobre MySQL | Diez pruebas cubren cuenta, sesion, replay, perfil y recovery.      |
+| 2026-08-15 | Esquema                    | Migracion reversible agrega `users.auth_version`.                   |
+| 2026-08-15 | Contrato                   | OpenAPI 3.1 valida los diez endpoints y dos esquemas de seguridad.  |
+| 2026-08-15 | Calidad local              | Lint, tipos, contrato, 21 pruebas rapidas y build pasan.            |
+| 2026-08-15 | Reconstruccion MySQL       | 19 pruebas pasan antes y despues del rollback de siete migraciones. |
+
+### Enlaces de trabajo F4
+
+- [#40 Definir contrato y politica de identidad](https://github.com/jcmandujano/odontofy_node/issues/40)
+- [#41 Implementar JWT v1 y autenticacion central](https://github.com/jcmandujano/odontofy_node/issues/41)
+- [#42 Implementar sesiones refresh rotatorias](https://github.com/jcmandujano/odontofy_node/issues/42)
+- [#43 Migrar ciclo de cuenta y recuperacion](https://github.com/jcmandujano/odontofy_node/issues/43)
+- [#44 Migrar perfil autenticado](https://github.com/jcmandujano/odontofy_node/issues/44)
+- [#45 Validar contrato, seguridad y regresion](https://github.com/jcmandujano/odontofy_node/issues/45)
+
+### Riesgos transferidos
+
+- El access token se entrega al cliente y no debe persistirse en Web Storage; la
+  adaptacion Angular y su almacenamiento solo en memoria pertenecen a F11.
+- El rate limiter usa memoria en desarrollo. Su interfaz admite un store externo;
+  Redis se incorporara cuando exista mas de una instancia de API.
+- Logout invalida el refresh actual; el access token puede vivir hasta diez
+  minutos. Cambios de password si lo invalidan inmediatamente con `authVersion`.
+- MFA e integracion con un proveedor de identidad no se agregan sin un requisito
+  de producto; el modulo mantiene limites para incorporarlos posteriormente.
 
 ## Definicion de terminado para fases posteriores
 

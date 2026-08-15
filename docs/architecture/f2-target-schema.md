@@ -40,6 +40,7 @@ mapea a nombres fisicos consistentes:
 | Atributo legacy | Columna o tabla nueva |
 | --- | --- |
 | `User.password` | `users.password_hash` |
+| `User.auth_version` | `users.auth_version` (agregada en F4 para invalidar tokens de acceso) |
 | `Token.userId`, `token`, `expiresAt` | `account_verification_tokens.user_id`, `token_hash`, `expires_at` |
 | `Appointment.appointment_datetime` | `appointments.starts_at` |
 | `Appointment.google_event_id` | `appointments.external_event_id` |

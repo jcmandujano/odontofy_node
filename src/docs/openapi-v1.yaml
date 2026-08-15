@@ -8,6 +8,8 @@ servers:
 tags:
   - name: Platform
     description: Estado y metadatos de la plataforma HTTP.
+  - name: Identity
+    description: Autenticacion, ciclo de cuenta y perfil del usuario actual.
 paths:
   /:
     get:
@@ -63,6 +65,202 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Identity]
+      summary: Inicia una sesion y crea una cookie refresh protegida.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SessionCreated'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      tags: [Identity]
+      summary: Rota la sesion refresh y emite un access token nuevo.
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SessionCreated'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [Identity]
+      summary: Revoca la sesion refresh actual y elimina su cookie.
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+  /auth/register:
+    post:
+      operationId: register
+      tags: [Identity]
+      summary: Solicita el registro de una cuenta.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/account-verification/request:
+    post:
+      operationId: requestAccountVerification
+      tags: [Identity]
+      summary: Solicita instrucciones de activacion sin revelar la cuenta.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/account-verification/confirm:
+    post:
+      operationId: confirmAccount
+      tags: [Identity]
+      summary: Consume un token de activacion de un solo uso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountVerificationRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/password/forgot:
+    post:
+      operationId: forgotPassword
+      tags: [Identity]
+      summary: Solicita recuperacion sin revelar si la cuenta existe.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/password/reset:
+    post:
+      operationId: resetPassword
+      tags: [Identity]
+      summary: Cambia la contrasena con un token de un solo uso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/password/verify:
+    post:
+      operationId: verifyPassword
+      tags: [Identity]
+      summary: Reautentica al usuario para una operacion sensible.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyPasswordRequest'
+      responses:
+        '200':
+          description: Contrasena verificada.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordVerifiedResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /me:
+    get:
+      operationId: getCurrentUser
+      tags: [Identity]
+      summary: Obtiene el perfil autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      operationId: updateCurrentUser
+      tags: [Identity]
+      summary: Actualiza campos permitidos del perfil autenticado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserProfile'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /openapi.json:
     get:
       operationId: getOpenApiContract
@@ -81,6 +279,83 @@ paths:
                 required: [openapi, info, paths]
                 additionalProperties: true
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: odontofy_refresh_v1
+  responses:
+    SessionCreated:
+      description: Sesion autenticada.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        Set-Cookie:
+          description: Cookie refresh HttpOnly y SameSite Strict.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SessionResponse'
+    UserProfile:
+      description: Perfil seguro del usuario actual.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserResponse'
+    EmptySuccess:
+      description: Operacion completada.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EmptySuccessResponse'
+    Accepted:
+      description: Solicitud aceptada con respuesta anti-enumeracion.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EmptySuccessResponse'
+    InvalidRequest:
+      description: Payload o token de accion invalido.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Credenciales o sesion no validas.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Limite de solicitudes excedido.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   headers:
     RequestId:
       description: Identificador de correlacion de la solicitud.
@@ -131,6 +406,220 @@ components:
               minItems: 1
               items:
                 $ref: '#/components/schemas/ErrorItem'
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 72
+      additionalProperties: false
+    RegisterRequest:
+      type: object
+      required: [name, lastName, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middleName:
+          type: string
+          maxLength: 100
+          default: ''
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        dateOfBirth:
+          type: string
+          format: date
+        phone:
+          type: string
+          maxLength: 30
+          default: ''
+        avatar:
+          type: string
+          maxLength: 2048
+          default: ''
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          maxLength: 72
+      additionalProperties: false
+    EmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      additionalProperties: false
+    AccountVerificationRequest:
+      type: object
+      required: [userId, token]
+      properties:
+        userId:
+          type: integer
+          minimum: 1
+        token:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+      additionalProperties: false
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        password:
+          type: string
+          minLength: 12
+          maxLength: 72
+      additionalProperties: false
+    VerifyPasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 72
+      additionalProperties: false
+    UpdateProfileRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middleName:
+          type: string
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        dateOfBirth:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        phone:
+          type: string
+          maxLength: 30
+        avatar:
+          type: string
+          maxLength: 2048
+      additionalProperties: false
+    PublicUser:
+      type: object
+      required:
+        - id
+        - name
+        - middleName
+        - lastName
+        - dateOfBirth
+        - phone
+        - avatar
+        - email
+        - showFinanceStats
+        - isGoogleSynced
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        middleName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        phone:
+          type: string
+        avatar:
+          type: string
+        email:
+          type: string
+          format: email
+        showFinanceStats:
+          type: boolean
+        isGoogleSynced:
+          type: boolean
+      additionalProperties: false
+    SessionData:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/PublicUser'
+      additionalProperties: false
+    SessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/SessionData'
+            errors:
+              type: 'null'
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/PublicUser'
+            errors:
+              type: 'null'
+    EmptySuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: 'null'
+            errors:
+              type: 'null'
+    PasswordVerifiedResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              required: [valid]
+              properties:
+                valid:
+                  const: true
+              additionalProperties: false
+            errors:
+              type: 'null'
     VersionResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

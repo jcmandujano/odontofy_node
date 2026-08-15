@@ -86,7 +86,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (owner) await owner.destroy();
-  await db.close();
 });
 
 describe('reproducible database schema', () => {
@@ -106,6 +105,7 @@ describe('reproducible database schema', () => {
     const paymentColumns = await db.getQueryInterface().describeTable('payments');
 
     expect(userColumns).toHaveProperty('password_hash');
+    expect(userColumns).toHaveProperty('auth_version');
     expect(userColumns).not.toHaveProperty('password');
     expect(User.getAttributes().createdAt.field).toBe('created_at');
     expect(owner.toJSON()).toHaveProperty('createdAt');
