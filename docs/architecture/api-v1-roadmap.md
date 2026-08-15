@@ -326,7 +326,8 @@ Para cerrar una fase se deben registrar:
 - [x] Rate limits con headers estandar y store reemplazable.
 - [x] Contrato OpenAPI 3.1 actualizado para diez endpoints de identidad.
 - [x] Validacion local integral de F4.
-- [ ] CI y PR de F4 integrado.
+- [x] CI remoto de F4 y PR abierto.
+- [ ] PR de F4 integrado.
 
 ### Criterios de salida
 
@@ -352,6 +353,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-15 | Contrato                   | OpenAPI 3.1 valida los diez endpoints y dos esquemas de seguridad.  |
 | 2026-08-15 | Calidad local              | Lint, tipos, contrato, 21 pruebas rapidas y build pasan.            |
 | 2026-08-15 | Reconstruccion MySQL       | 19 pruebas pasan antes y despues del rollback de siete migraciones. |
+| 2026-08-15 | CI remoto                  | Jobs `quality` y `database` pasan en el PR #46.                     |
 
 ### Enlaces de trabajo F4
 
@@ -361,6 +363,7 @@ Para cerrar una fase se deben registrar:
 - [#43 Migrar ciclo de cuenta y recuperacion](https://github.com/jcmandujano/odontofy_node/issues/43)
 - [#44 Migrar perfil autenticado](https://github.com/jcmandujano/odontofy_node/issues/44)
 - [#45 Validar contrato, seguridad y regresion](https://github.com/jcmandujano/odontofy_node/issues/45)
+- [PR #46 Identidad y acceso en API v1](https://github.com/jcmandujano/odontofy_node/pull/46)
 
 ### Riesgos transferidos
 
