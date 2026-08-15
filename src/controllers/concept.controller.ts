@@ -2,6 +2,7 @@
 import { Request, Response } from "express"
 import Concept from "../models/concept.model"
 import { errorResponse, successResponse } from "../utils/response";
+import { getRouteParam } from "../utils/route-param";
 
 export const listConcepts = async (req: Request, res: Response) => {
     const concepts = await Concept.findAll();
@@ -9,7 +10,7 @@ export const listConcepts = async (req: Request, res: Response) => {
 }
 
 export const getConcept = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     const concept = await Concept.findByPk(id);
     if (concept) {
         return successResponse(res, concept, 'concept obtained successfully');

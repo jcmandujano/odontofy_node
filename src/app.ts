@@ -4,6 +4,7 @@ import express, { Application } from 'express';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
+import { Logger } from 'pino';
 
 import appointmentRoutes from './routes/appointment.route';
 import authRoutes from './routes/auth.route';
@@ -21,6 +22,15 @@ import userConceptRoutes from './routes/user-concept.route';
 import userInformedConsentRoutes from './routes/user-informed-consent.route';
 import userRoutes from './routes/user.route';
 import fileUploadRoute from './routes/upload.route';
+import db from './db/connection';
+import { attachRequestContext } from './platform/http/request-context.middleware';
+import {
+  applicationLogger,
+  createRequestLogger,
+} from './platform/http/logger';
+import { loadOpenApiV1 } from './platform/http/openapi';
+import { createV1Router } from './platform/http/v1.router';
+import { ReadinessCheck } from './platform/http/health.router';
 import './models/treatment-plan.model';
 import './models/treatment-plan-item.model';
 
@@ -43,11 +53,23 @@ const apiRoutes = {
   treatmentPlans: '/api',
 } as const;
 
-export const createApp = (): Application => {
+export interface AppOptions {
+  logger?: Logger;
+  readinessCheck?: ReadinessCheck;
+}
+
+const defaultReadinessCheck: ReadinessCheck = async () => {
+  await db.authenticate();
+};
+
+export const createApp = (options: AppOptions = {}): Application => {
   const app = express();
+  const logger = options.logger ?? applicationLogger;
+  const readinessCheck = options.readinessCheck ?? defaultReadinessCheck;
   const swaggerDocument = YAML.load(
     path.resolve(process.cwd(), 'src/docs/swagger.yaml')
   ) as object;
+  const openApiV1Document = loadOpenApiV1();
 
   app.use(
     helmet({
@@ -69,8 +91,16 @@ export const createApp = (): Application => {
     cors({
       origin: allowedOrigins.length ? allowedOrigins : false,
       credentials: true,
+      exposedHeaders: ['X-Request-Id'],
     })
   );
+  app.use(
+    '/api/v1',
+    createRequestLogger(logger),
+    attachRequestContext,
+    createV1Router(readinessCheck)
+  );
+
   app.use(express.json({ limit: '1mb' }));
   app.use(express.static('public'));
 
@@ -90,6 +120,11 @@ export const createApp = (): Application => {
   app.use(apiRoutes.fileUpload, fileUploadRoute);
   app.use(apiRoutes.mailing, mailingRoutes);
   app.use(apiRoutes.treatmentPlans, treatmentPlanRoutes);
+  app.use(
+    '/api-docs/v1',
+    swaggerUi.serve,
+    swaggerUi.setup(openApiV1Document)
+  );
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
   return app;

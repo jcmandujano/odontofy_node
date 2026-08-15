@@ -2,6 +2,7 @@ import { Request, Response } from "express"
 import User from "../models/user.model"
 import { errorResponse, successResponse } from "../utils/response";
 import { PaginatedResponse } from "../types/api-response";
+import { getRouteParam } from "../utils/route-param";
 
 /**
  * Retrieves a paginated list of users (patients) associated with the authenticated user.
@@ -65,7 +66,7 @@ export const getUsers = async (req: Request, res: Response) => {
  * - Returns a 500 status code if an internal server error occurs.
  */
 export const getUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
 
     try {
         const user = await User.findByPk(id);
@@ -135,7 +136,7 @@ export const createUser = async (req: Request, res: Response) => {
  * @throws 500 if an unexpected error occurs during the update process.
  */
 export const updateUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     const { body } = req;
     try {
         const user = await User.findByPk(id);
@@ -178,7 +179,7 @@ export const updateUser = async (req: Request, res: Response) => {
  * - Handles and logs any errors that occur during the process, responding with a 500 error if needed.
  */
 export const deleteUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     try {
         const user = await User.findByPk(id);
         if (!user) {

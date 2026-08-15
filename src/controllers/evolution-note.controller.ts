@@ -8,6 +8,7 @@ import {
     listEvolutionNotes as listEvolutionNotesService,
     updateEvolutionNote as updateEvolutionNoteService,
 } from "../services/evolution-note.service";
+import { getRouteParam } from "../utils/route-param";
 
 const getAuthorUid = (req: Request) => {
     if (typeof req.authorUid !== "number") {
@@ -31,7 +32,7 @@ const handleEvolutionNoteError = (res: Response, error: unknown) => {
  * Obtener una lista paginada de notas evolutivas asociadas a un paciente.
  */
 export const listNotes = async (req: Request, res: Response) => {
-    const patientId = parseInt(req.params.patient_id, 10);
+    const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
     const search = (req.query.search as string)?.trim() || "";
@@ -57,8 +58,8 @@ export const listNotes = async (req: Request, res: Response) => {
  * Obtener una nota evolutiva por ID asociada a un paciente.
  */
 export const getNote = async (req: Request, res: Response) => {
-    const patientId = parseInt(req.params.patient_id, 10);
-    const id = parseInt(req.params.id, 10);
+    const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
+    const id = parseInt(getRouteParam(req, 'id'), 10);
 
     try {
         const authorUid = getAuthorUid(req);
@@ -74,7 +75,7 @@ export const getNote = async (req: Request, res: Response) => {
  * Crear una nueva nota evolutiva asociada a un paciente.
  */
 export const createNote = async (req: Request, res: Response) => {
-    const patientId = parseInt(req.params.patient_id, 10);
+    const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
 
     try {
         const authorUid = getAuthorUid(req);
@@ -90,8 +91,8 @@ export const createNote = async (req: Request, res: Response) => {
  * Actualizar una nota evolutiva por ID asociada a un paciente.
  */
 export const updateNote = async (req: Request, res: Response) => {
-    const patientId = parseInt(req.params.patient_id, 10);
-    const id = parseInt(req.params.id, 10);
+    const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
+    const id = parseInt(getRouteParam(req, 'id'), 10);
 
     try {
         const authorUid = getAuthorUid(req);
@@ -107,8 +108,8 @@ export const updateNote = async (req: Request, res: Response) => {
  * Eliminar una nota evolutiva por ID asociada a un paciente.
  */
 export const deleteNote = async (req: Request, res: Response) => {
-    const patientId = parseInt(req.params.patient_id, 10);
-    const id = parseInt(req.params.id, 10);
+    const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
+    const id = parseInt(getRouteParam(req, 'id'), 10);
 
     try {
         const authorUid = getAuthorUid(req);

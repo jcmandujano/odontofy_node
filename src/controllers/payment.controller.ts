@@ -9,6 +9,7 @@ import {
   updatePayment as updatePaymentService,
 } from '../services/payment.service';
 import { errorResponse, successResponse } from '../utils/response';
+import { getRouteParam } from '../utils/route-param';
 
 const getAuthorUid = (req: Request) => {
   if (typeof req.authorUid !== 'number') {
@@ -29,7 +30,7 @@ const handlePaymentError = (res: Response, error: unknown) => {
 };
 
 export const listPayments = async (req: Request, res: Response) => {
-  const patientId = parseInt(req.params.patient_id, 10);
+  const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
 
@@ -42,8 +43,8 @@ export const listPayments = async (req: Request, res: Response) => {
 };
 
 export const getPayment = async (req: Request, res: Response) => {
-  const patientId = parseInt(req.params.patient_id, 10);
-  const paymentId = parseInt(req.params.id, 10);
+  const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
+  const paymentId = parseInt(getRouteParam(req, 'id'), 10);
 
   try {
     const payment = await getPaymentByIdService(getAuthorUid(req), patientId, paymentId);
@@ -54,7 +55,7 @@ export const getPayment = async (req: Request, res: Response) => {
 };
 
 export const createPayment = async (req: Request, res: Response) => {
-  const patientId = parseInt(req.params.patient_id, 10);
+  const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
 
   try {
     const payment = await createPaymentService(getAuthorUid(req), patientId, req.body);
@@ -65,8 +66,8 @@ export const createPayment = async (req: Request, res: Response) => {
 };
 
 export const updatePayment = async (req: Request, res: Response) => {
-  const patientId = parseInt(req.params.patient_id, 10);
-  const paymentId = parseInt(req.params.id, 10);
+  const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
+  const paymentId = parseInt(getRouteParam(req, 'id'), 10);
 
   try {
     const payment = await updatePaymentService(
@@ -82,8 +83,8 @@ export const updatePayment = async (req: Request, res: Response) => {
 };
 
 export const deletePayment = async (req: Request, res: Response) => {
-  const patientId = parseInt(req.params.patient_id, 10);
-  const paymentId = parseInt(req.params.id, 10);
+  const patientId = parseInt(getRouteParam(req, 'patient_id'), 10);
+  const paymentId = parseInt(getRouteParam(req, 'id'), 10);
 
   try {
     await deletePaymentService(getAuthorUid(req), patientId, paymentId);

@@ -3,6 +3,7 @@ import UserConcept from "../models/user_concept.model";
 import PaymentUser from "../models/payment-user.model";
 import { errorResponse, successResponse } from "../utils/response";
 import { PaginatedResponse } from "../types/api-response";
+import { getRouteParam } from "../utils/route-param";
 
 // Listar todos los conceptos (globales y personalizados del usuario)
 export const listUserConcepts = async (req: Request, res: Response) => {
@@ -32,7 +33,7 @@ export const listUserConcepts = async (req: Request, res: Response) => {
 
 // Obtener un concepto (global o personalizado)
 export const getUserConcept = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     const { authorUid } = req;
     try {
         // Buscar en la tabla de conceptos personalizados primero
@@ -75,7 +76,7 @@ export const createUserConcept = async (req: Request, res: Response) => {
 // Editar un concepto global (crea una copia en los personalizados si no existe)
 export const updateUserConcept = async (req: Request, res: Response) => {
     const { authorUid } = req;
-    const id = parseInt(req.params.id, 10); // ID del concepto global
+    const id = parseInt(getRouteParam(req, 'id'), 10); // ID del concepto global
     const { description, unit_price } = req.body;
 
     try {
@@ -107,7 +108,7 @@ export const updateUserConcept = async (req: Request, res: Response) => {
 
 // Eliminar un concepto personalizado
 export const deleteUserConcept = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getRouteParam(req, 'id');
     const { authorUid } = req;
     try {
         const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid } });

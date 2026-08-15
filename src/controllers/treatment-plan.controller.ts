@@ -9,6 +9,7 @@ import {
   updateTreatmentPlanStatus as updateTreatmentPlanStatusService,
 } from '../services/treatment-plan.service';
 import { errorResponse, successResponse } from '../utils/response';
+import { getRouteParam } from '../utils/route-param';
 
 const getAuthorUid = (req: Request) => {
   if (typeof req.authorUid !== 'number') {
@@ -29,7 +30,7 @@ const handleTreatmentPlanError = (res: Response, error: unknown) => {
 };
 
 export const createTreatmentPlan = async (req: Request, res: Response) => {
-  const { patientId } = req.params;
+  const patientId = getRouteParam(req, 'patientId');
   const { body } = req;
 
   try {
@@ -43,7 +44,7 @@ export const createTreatmentPlan = async (req: Request, res: Response) => {
 };
 
 export const getTreatmentPlansByPatient = async (req: Request, res: Response) => {
-  const { patientId } = req.params;
+  const patientId = getRouteParam(req, 'patientId');
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
 
@@ -63,7 +64,7 @@ export const getTreatmentPlansByPatient = async (req: Request, res: Response) =>
 };
 
 export const getTreatmentPlanById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getRouteParam(req, 'id');
 
   try {
     const authorUid = getAuthorUid(req);
@@ -76,7 +77,7 @@ export const getTreatmentPlanById = async (req: Request, res: Response) => {
 };
 
 export const updateTreatmentPlan = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getRouteParam(req, 'id');
   const { body } = req;
 
   try {
@@ -90,7 +91,7 @@ export const updateTreatmentPlan = async (req: Request, res: Response) => {
 };
 
 export const deleteTreatmentPlan = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getRouteParam(req, 'id');
 
   try {
     const authorUid = getAuthorUid(req);
@@ -103,7 +104,7 @@ export const deleteTreatmentPlan = async (req: Request, res: Response) => {
 };
 
 export const updateTreatmentPlanStatus = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getRouteParam(req, 'id');
   const { body } = req;
 
   try {

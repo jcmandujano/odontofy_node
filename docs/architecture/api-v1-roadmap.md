@@ -36,8 +36,8 @@ Para cerrar una fase se deben registrar:
 | --- | ---------------------------------- | ---------- | ------------------------------------------------------------ |
 | F0  | Gobierno e higiene                 | DONE       | Trazabilidad instalada y repositorio sin snapshots de datos. |
 | F1  | Linea base de calidad              | DONE       | Build, lint, pruebas y CI reproducibles.                     |
-| F2  | Base de datos reproducible         | VALIDATING | Esquema normalizado creado solo desde migraciones.           |
-| F3  | Plataforma HTTP y contrato v1      | PENDING    | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
+| F2  | Base de datos reproducible         | DONE       | Esquema normalizado creado solo desde migraciones.           |
+| F3  | Plataforma HTTP y contrato v1      | IN PROGRESS | `/api/v1`, errores, observabilidad y OpenAPI disponibles.   |
 | F4  | Identidad y acceso                 | PENDING    | Auth, sesiones y perfil migrados al primer modulo v1.        |
 | F5  | Pacientes                          | PENDING    | Pacientes migrados con ownership y DTOs estrictos.           |
 | F6  | Planes de tratamiento              | PENDING    | Planes e items transaccionales en v1.                        |
@@ -188,7 +188,7 @@ Para cerrar una fase se deben registrar:
 - [x] Nueve pruebas de integridad y compatibilidad contra MySQL.
 - [x] Job de base de datos agregado a GitHub Actions.
 - [x] Ejecucion exitosa del job `database` en el PR de F2.
-- [ ] PR de F2 revisado e integrado.
+- [x] [PR #33 de F2](https://github.com/jcmandujano/odontofy_node/pull/33) revisado e integrado.
 
 ### Criterios de salida
 
@@ -212,6 +212,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-14 | Rollback y reconstruccion    | Las seis migraciones bajan y vuelven a subir en orden sin intervencion manual.  |
 | 2026-08-14 | Seguridad de operaciones     | Pruebas unitarias rechazan production y nombres de base no autorizados.         |
 | 2026-08-14 | CI de F2                     | Jobs `quality` y `database` del PR `#33` aprobados sobre Node 24 y MySQL 8.4.    |
+| 2026-08-14 | Integracion de F2            | PR `#33` integrado en `main` mediante commit `0e8e032`.                         |
 
 ### Enlaces de trabajo F2
 
@@ -228,6 +229,75 @@ Para cerrar una fase se deben registrar:
 - Credenciales e integraciones Google permanecen diferidas a F9/F10.
 - El advisory moderado de `uuid` requiere modernizar dependencias que aun no
   ofrecen una ruta compatible estable; se mantiene visible para F12.
+
+## F3 - Plataforma HTTP y contrato v1
+
+### Objetivos
+
+- Crear una superficie `/api/v1` aislada que coexista con las rutas legacy.
+- Estandarizar respuestas, errores y validacion estricta para los modulos v1.
+- Incorporar correlacion y logging estructurado sin registrar secretos HTTP.
+- Separar liveness de readiness y cerrar ordenadamente HTTP y base de datos.
+- Publicar OpenAPI 3.1 como contrato verificable de cada endpoint v1.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f3-http-platform`.
+- [x] [Milestone `API v1 - F3 Plataforma HTTP y contrato v1`](https://github.com/jcmandujano/odontofy_node/milestone/4).
+- [x] Express 5 y compatibilidad de parametros legacy validada.
+- [x] Router `/api/v1` independiente de los routers `/api`.
+- [x] Envelope v1 con `requestId`, errores tipados y metadata opcional.
+- [x] Middleware Zod reutilizable para esquemas estrictos.
+- [x] Logging JSON con redaccion de authorization, cookies y set-cookie.
+- [x] Endpoints separados de liveness y readiness.
+- [x] Cierre ordenado de HTTP y Sequelize ante `SIGTERM`/`SIGINT`.
+- [x] Contrato OpenAPI 3.1.1 y Swagger UI v1 separados del documento legacy.
+- [x] Validacion OpenAPI incorporada a `npm run check`.
+- [x] Pruebas HTTP de plataforma y regresion legacy.
+- [x] Ejecucion exitosa de los jobs `quality` y `database` en el PR de F3.
+- [ ] PR de F3 revisado e integrado.
+
+### Criterios de salida
+
+- Las rutas `/api` conservan su comportamiento caracterizado.
+- Todas las respuestas de aplicacion bajo `/api/v1` incluyen `requestId` y los
+  errores exponen codigos estables sin stacks ni causas internas.
+- IDs entrantes invalidos se reemplazan y `X-Request-Id` queda expuesto por CORS.
+- Liveness no consulta dependencias; readiness responde `503` cuando MySQL falla.
+- Los esquemas Zod estrictos rechazan propiedades desconocidas.
+- `/api/v1/openapi.json` entrega un documento valido para tooling y
+  `/api-docs/v1` ofrece la interfaz navegable.
+- `npm run check` valida lint, tipos, OpenAPI, pruebas y build.
+
+### Evidencias
+
+| Fecha      | Evidencia                  | Resultado                                                        |
+| ---------- | -------------------------- | ---------------------------------------------------------------- |
+| 2026-08-15 | Migracion a Express 5      | Suite legacy aprobada y wildcard de archivos adaptado y probado. |
+| 2026-08-15 | Pruebas HTTP de plataforma | Ocho escenarios cubren IDs, errores, health, Zod y shutdown.     |
+| 2026-08-15 | Contrato OpenAPI            | Documento 3.1.1 validado automaticamente con Swagger Parser.     |
+| 2026-08-15 | Suite local                 | 15 pruebas aprobadas sin abrir puerto ni requerir MySQL.         |
+| 2026-08-15 | Regresion de base de datos  | Nueve pruebas pasan antes y despues de reconstruir seis migraciones. |
+| 2026-08-15 | CI de F3                    | Jobs `quality` y `database` del PR `#39` aprobados.               |
+
+### Enlaces de trabajo F3
+
+- [#34 Establecer plataforma HTTP versionada y Express 5](https://github.com/jcmandujano/odontofy_node/issues/34)
+- [#35 Unificar errores, envelopes y validacion estricta](https://github.com/jcmandujano/odontofy_node/issues/35)
+- [#36 Agregar observabilidad, health checks y cierre ordenado](https://github.com/jcmandujano/odontofy_node/issues/36)
+- [#37 Publicar y validar OpenAPI 3.1](https://github.com/jcmandujano/odontofy_node/issues/37)
+- [#38 Validar plataforma HTTP y documentar evidencia](https://github.com/jcmandujano/odontofy_node/issues/38)
+- [PR #39 Plataforma HTTP y contrato v1](https://github.com/jcmandujano/odontofy_node/pull/39)
+
+### Riesgos transferidos
+
+- F3 publica solo endpoints de plataforma; identidad comienza la migracion de
+  negocio y el uso de DTOs v1 en F4.
+- La propagacion W3C `traceparent` se agregara cuando una integracion saliente o
+  un segundo proceso requiera trazas distribuidas; hoy `requestId` cubre la
+  correlacion del monolito.
+- El documento OpenAPI y los esquemas Zod son artefactos distintos. Cada modulo
+  debera incorporar pruebas de contrato para impedir divergencia.
 
 ## Definicion de terminado para fases posteriores
 

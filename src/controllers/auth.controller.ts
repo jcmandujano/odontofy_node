@@ -11,6 +11,7 @@ import { accountActivatedTemplate } from '../utils/email-templates/activated-acc
 import PasswordReset from '../models/password-reset.model';
 import { resetPasswordTemplate } from '../utils/email-templates/reset-password.template';
 import { clearRefreshCookie, createRefreshSession, getRefreshToken, revokeRefreshSession, revokeUserSessions, rotateRefreshSession, setRefreshCookie } from '../services/auth-session.service';
+import { getRouteParam } from '../utils/route-param';
 
 const PASSWORD_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 const tokenHash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -89,9 +90,9 @@ export const verifyPassword = async (req: Request, res: Response) => {
 };
 
 export const confirmAccount = async (req: Request, res: Response) => {
-  const user = await User.findByPk(req.params.userId);
+  const user = await User.findByPk(getRouteParam(req, 'userId'));
   if (!user) return errorResponse(res, 'Enlace no valido', 400);
-  const tokenRecord = await Token.findOne({ where: { userId: user.id, token: tokenHash(req.params.token) } });
+  const tokenRecord = await Token.findOne({ where: { userId: user.id, token: tokenHash(getRouteParam(req, 'token')) } });
   if (!tokenRecord || tokenRecord.expiresAt < new Date()) return errorResponse(res, 'Enlace no valido o expirado', 400);
   user.status = true;
   await user.save();
