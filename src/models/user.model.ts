@@ -6,12 +6,13 @@ interface UserAttributes {
     name: string;
     middle_name: string;
     last_name: string;
-    date_of_birth: Date;
+    date_of_birth: Date | null;
     phone: string;
     avatar: string;
-    email: string | null;
+    email: string;
     password: string;
     status: boolean;
+    auth_version?: number;
     show_finance_stats?: boolean;
     google_access_token?: string | null;
     google_refresh_token?: string | null;
@@ -25,12 +26,13 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     name!: string;
     middle_name!: string;
     last_name!: string;
-    date_of_birth!: Date;
+    date_of_birth!: Date | null;
     phone!: string;
     avatar!: string;
-    email!: string | null;
+    email!: string;
     password!: string;
     status!: boolean;
+    auth_version!: number;
     show_finance_stats!: boolean;
     google_access_token!: string | null;
     google_refresh_token!: string | null;
@@ -58,17 +60,29 @@ User.init({
     name: DataTypes.STRING,
     middle_name: DataTypes.STRING,
     last_name: DataTypes.STRING,
-    date_of_birth: DataTypes.DATE,
+    date_of_birth: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
     phone: DataTypes.STRING,
     avatar: DataTypes.STRING,
-    email: DataTypes.STRING,
+    email: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
     password: {
         type: DataTypes.STRING,
         field: 'password_hash'
     },
     status: {
         type: DataTypes.BOOLEAN,
-        defaultValue: true
+        allowNull: false,
+        defaultValue: false
+    },
+    auth_version: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0
     },
     show_finance_stats: {
         type: DataTypes.BOOLEAN,

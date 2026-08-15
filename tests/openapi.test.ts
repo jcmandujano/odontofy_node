@@ -12,5 +12,9 @@ describe('OpenAPI v1 contract', () => {
     expect(document.paths).toHaveProperty('/health/live');
     expect(document.paths).toHaveProperty('/health/ready');
     expect(document.paths).toHaveProperty('/openapi.json');
+    expect(document.paths).toHaveProperty('/auth/login');
+    expect(document.paths).toHaveProperty('/auth/refresh');
+    expect(document.paths).toHaveProperty('/auth/password/reset');
+    expect(document.paths).toHaveProperty('/me');
   });
 });

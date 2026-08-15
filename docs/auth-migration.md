@@ -1,16 +1,31 @@
-# Auth migration
+# Migracion de identidad API v1
 
-1. Back up the database and apply `docs/db/202607-auth-hardening.sql` once.
-2. Configure `SECRETORPRIVATEKEY`, `JWT_ISSUER`, `JWT_AUDIENCE`, `CORS_ORIGINS`, `FRONTEND_URL`, `BACKEND_URL`, `BCRYPT_ROUNDS=12`, and `NODE_ENV=production` in production.
-3. Deploy API and UI together over HTTPS. The UI sends `withCredentials`; CORS must list the exact UI origin.
-4. Existing password-reset and confirmation links are intentionally invalidated. Existing JWTs expire naturally within their former lifetime.
+F4 agrega identidad bajo `/api/v1` sin retirar `/api/auth` ni `/api/me`. Angular
+seguira consumiendo legacy hasta F11 y migrara todos los endpoints de identidad en
+un cambio coordinado.
 
-## API contract
+## Configuracion
 
-- `POST /api/auth/login`: returns `data.user` and temporary compatibility `data.token`; also sets `odontofy_refresh` as an HttpOnly cookie.
-- `POST /api/auth/refresh`: rotates the refresh token and returns a new short-lived access token.
-- `POST /api/auth/logout`: revokes the current refresh token and clears its cookie.
-- `GET|PUT /api/me`: authenticated profile endpoints.
-- `GET /api/google/init`: authenticated; returns `data.url` to open in a popup.
+- `JWT_SECRET`: secreto v1 de al menos 32 bytes. `SECRETORPRIVATEKEY` permanece
+  como fallback temporal para facilitar desarrollo y se retirara con legacy.
+- `JWT_ISSUER` y `JWT_AUDIENCE`: valores esperados al emitir y verificar JWT.
+- `JWT_ACCESS_TTL_SECONDS`: entre 60 y 3600; el valor recomendado es 600.
+- `BCRYPT_ROUNDS`: entre 10 y 15; desarrollo y production usan 12 por defecto.
+- `REFRESH_TOKEN_TTL_DAYS`: entre 1 y 90; el valor por defecto es 30.
+- `FRONTEND_URL`: origen usado en enlaces de activacion y password reset.
 
-`/api/users` is retired. The API never returns password hashes or OAuth credentials.
+No se requiere SQL manual. `users.auth_version` se crea mediante la migracion
+`202608150001-add-user-auth-version.js`.
+
+## Contrato v1
+
+- `POST /api/v1/auth/login`, `/refresh`, `/logout`.
+- `POST /api/v1/auth/register`.
+- `POST /api/v1/auth/account-verification/request|confirm`.
+- `POST /api/v1/auth/password/forgot|reset|verify`.
+- `GET|PATCH /api/v1/me`.
+
+El contrato completo esta en `src/docs/openapi-v1.yaml`. La cookie
+`odontofy_refresh_v1` es HttpOnly, SameSite Strict y usa Secure en production. El
+access token debe mantenerse solo en memoria y enviarse como `Authorization:
+Bearer <token>`.

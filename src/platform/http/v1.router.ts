@@ -4,8 +4,13 @@ import { apiErrorHandler, notFoundHandler } from './error.middleware';
 import { createHealthRouter, ReadinessCheck } from './health.router';
 import { loadOpenApiV1 } from './openapi';
 import { sendSuccess } from './response';
+import { createIdentityRouter } from '../../modules/identity/identity.router';
+import { IdentityServiceDependencies } from '../../modules/identity/identity.service';
 
-export const createV1Router = (readinessCheck: ReadinessCheck): Router => {
+export const createV1Router = (
+  readinessCheck: ReadinessCheck,
+  identityDependencies: IdentityServiceDependencies = {}
+): Router => {
   const router = Router();
   const openApiDocument = loadOpenApiV1();
 
@@ -20,6 +25,7 @@ export const createV1Router = (readinessCheck: ReadinessCheck): Router => {
     )
   );
   router.use('/health', createHealthRouter(readinessCheck));
+  router.use(createIdentityRouter(identityDependencies));
   router.get('/openapi.json', (_req, res) => res.json(openApiDocument));
 
   router.use(notFoundHandler);
