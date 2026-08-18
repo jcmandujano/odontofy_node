@@ -18,5 +18,12 @@ describe('OpenAPI v1 contract', () => {
     expect(document.paths).toHaveProperty('/me');
     expect(document.paths).toHaveProperty('/patients');
     expect(document.paths).toHaveProperty('/patients/{patientId}');
+    expect(document.paths).toHaveProperty(
+      '/patients/{patientId}/treatment-plans'
+    );
+    expect(document.paths).toHaveProperty('/treatment-plans/{treatmentPlanId}');
+    expect(document.paths).toHaveProperty(
+      '/treatment-plans/{treatmentPlanId}/items/{itemId}/status'
+    );
   });
 });

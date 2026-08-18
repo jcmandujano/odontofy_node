@@ -23,9 +23,9 @@ interface TreatmentPlanAttributes {
   accepted_at: Date | null;
   rejected_at: Date | null;
   acceptance_notes: string | null;
-  subtotal: number;
-  discount: number;
-  total: number;
+  subtotal: string | number;
+  discount: string | number;
+  total: string | number;
 }
 
 type TreatmentPlanCreationAttributes = Optional<TreatmentPlanAttributes, 'id'>;
@@ -46,9 +46,11 @@ class TreatmentPlan extends Model<TreatmentPlanAttributes, TreatmentPlanCreation
   public accepted_at!: Date | null;
   public rejected_at!: Date | null;
   public acceptance_notes!: string | null;
-  public subtotal!: number;
-  public discount!: number;
-  public total!: number;
+  public subtotal!: string | number;
+  public discount!: string | number;
+  public total!: string | number;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 }
 
 TreatmentPlan.init(
@@ -116,19 +118,19 @@ TreatmentPlan.init(
       allowNull: true,
     },
     subtotal: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
       field: 'subtotal_amount',
     },
     discount: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
       field: 'discount_amount',
     },
     total: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
       field: 'total_amount',
