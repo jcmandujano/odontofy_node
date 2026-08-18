@@ -5,14 +5,26 @@ import { createHealthRouter, ReadinessCheck } from './health.router';
 import { loadOpenApiV1 } from './openapi';
 import { sendSuccess } from './response';
 import { createIdentityRouter } from '../../modules/identity/identity.router';
-import { IdentityServiceDependencies } from '../../modules/identity/identity.service';
+import {
+  IdentityService,
+  IdentityServiceDependencies,
+} from '../../modules/identity/identity.service';
+import { identityErrorHandler } from '../../modules/identity/identity.middleware';
+import { createPatientRouter } from '../../modules/patients/patient.router';
+import { PatientServiceDependencies } from '../../modules/patients/patient.service';
+
+export interface V1RouterDependencies {
+  identity?: IdentityServiceDependencies;
+  patients?: PatientServiceDependencies;
+}
 
 export const createV1Router = (
   readinessCheck: ReadinessCheck,
-  identityDependencies: IdentityServiceDependencies = {}
+  dependencies: V1RouterDependencies = {}
 ): Router => {
   const router = Router();
   const openApiDocument = loadOpenApiV1();
+  const identityService = new IdentityService(dependencies.identity);
 
   router.use(express.json({ limit: '1mb' }));
 
@@ -25,10 +37,12 @@ export const createV1Router = (
     )
   );
   router.use('/health', createHealthRouter(readinessCheck));
-  router.use(createIdentityRouter(identityDependencies));
+  router.use(createIdentityRouter(identityService));
+  router.use(createPatientRouter(identityService, dependencies.patients));
   router.get('/openapi.json', (_req, res) => res.json(openApiDocument));
 
   router.use(notFoundHandler);
+  router.use(identityErrorHandler);
   router.use(apiErrorHandler);
 
   return router;

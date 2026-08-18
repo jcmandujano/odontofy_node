@@ -32,6 +32,7 @@ import { loadOpenApiV1 } from './platform/http/openapi';
 import { createV1Router } from './platform/http/v1.router';
 import { ReadinessCheck } from './platform/http/health.router';
 import { IdentityServiceDependencies } from './modules/identity/identity.service';
+import { PatientServiceDependencies } from './modules/patients/patient.service';
 import './models/treatment-plan.model';
 import './models/treatment-plan-item.model';
 
@@ -57,6 +58,7 @@ const apiRoutes = {
 export interface AppOptions {
   identity?: IdentityServiceDependencies;
   logger?: Logger;
+  patients?: PatientServiceDependencies;
   readinessCheck?: ReadinessCheck;
 }
 
@@ -100,7 +102,10 @@ export const createApp = (options: AppOptions = {}): Application => {
     '/api/v1',
     createRequestLogger(logger),
     attachRequestContext,
-    createV1Router(readinessCheck, options.identity)
+    createV1Router(readinessCheck, {
+      identity: options.identity,
+      patients: options.patients,
+    })
   );
 
   app.use(express.json({ limit: '1mb' }));

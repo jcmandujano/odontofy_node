@@ -1,12 +1,11 @@
 import { Router } from 'express';
 
+import { noStore } from '../../platform/http/cache.middleware';
 import { validateRequest } from '../../platform/http/validate.middleware';
 import { createIdentityController } from './identity.controller';
 import {
   authRateLimit,
   authenticate,
-  identityErrorHandler,
-  noStore,
 } from './identity.middleware';
 import {
   accountVerificationConfirmSchema,
@@ -19,18 +18,12 @@ import {
   updateProfileSchema,
   verifyPasswordSchema,
 } from './identity.schemas';
-import {
-  IdentityService,
-  IdentityServiceDependencies,
-} from './identity.service';
+import { IdentityService } from './identity.service';
 
 const minute = 60 * 1000;
 
-export const createIdentityRouter = (
-  dependencies: IdentityServiceDependencies = {}
-): Router => {
+export const createIdentityRouter = (service: IdentityService): Router => {
   const router = Router();
-  const service = new IdentityService(dependencies);
   const controller = createIdentityController(service);
   const requireAuth = authenticate(service);
 
@@ -97,8 +90,6 @@ export const createIdentityRouter = (
     validateRequest({ body: updateProfileSchema }),
     controller.updateProfile
   );
-
-  router.use(identityErrorHandler);
 
   return router;
 };
