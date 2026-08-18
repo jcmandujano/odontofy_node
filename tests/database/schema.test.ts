@@ -7,7 +7,9 @@ import Appointment from '../../src/models/appointment.model';
 import AuthSession from '../../src/models/auth-session.model';
 import Concept from '../../src/models/concept.model';
 import EvolutionNote from '../../src/models/evolution-note.model';
+import EvolutionNoteRevision from '../../src/models/evolution-note-revision.model';
 import InformedConsent from '../../src/models/informed-consent.model';
+import MedicalHistoryRevision from '../../src/models/medical-history-revision.model';
 import OAuthState from '../../src/models/oauth-state.model';
 import PasswordReset from '../../src/models/password-reset.model';
 import Patient from '../../src/models/patient.model';
@@ -28,7 +30,9 @@ const expectedTables = [
   'auth_sessions',
   'concepts',
   'evolution_notes',
+  'evolution_note_revisions',
   'informed_consents',
+  'medical_history_revisions',
   'oauth_states',
   'password_resets',
   'patients',
@@ -144,7 +148,9 @@ describe('reproducible database schema', () => {
       [AuthSession.getTableName(), 'auth_sessions'],
       [Concept.getTableName(), 'concepts'],
       [EvolutionNote.getTableName(), 'evolution_notes'],
+      [EvolutionNoteRevision.getTableName(), 'evolution_note_revisions'],
       [InformedConsent.getTableName(), 'informed_consents'],
+      [MedicalHistoryRevision.getTableName(), 'medical_history_revisions'],
       [OAuthState.getTableName(), 'oauth_states'],
       [PasswordReset.getTableName(), 'password_resets'],
       [Patient.getTableName(), 'patients'],

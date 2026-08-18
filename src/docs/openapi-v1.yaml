@@ -14,6 +14,8 @@ tags:
     description: Pacientes propiedad del usuario autenticado.
   - name: Treatment Plans
     description: Planes de tratamiento e items propiedad del usuario autenticado.
+  - name: Clinical Records
+    description: Historial medico y notas clinicas versionadas de pacientes propios.
 paths:
   /:
     get:
@@ -631,6 +633,244 @@ paths:
           $ref: '#/components/responses/TreatmentPlanNotFound'
         '409':
           $ref: '#/components/responses/TreatmentPlanConflict'
+  /patients/{patientId}/medical-history:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: getMedicalHistory
+      tags: [Clinical Records]
+      summary: Obtiene el snapshot actual del historial medico estructurado.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/MedicalHistoryResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+    put:
+      operationId: updateMedicalHistory
+      tags: [Clinical Records]
+      summary: Reemplaza el snapshot y agrega una revision inmutable.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMedicalHistoryRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MedicalHistoryResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+  /patients/{patientId}/medical-history/revisions:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: listMedicalHistoryRevisions
+      tags: [Clinical Records]
+      summary: Lista revisiones inmutables del historial medico.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/MedicalHistoryRevisionList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+  /patients/{patientId}/evolution-notes:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: listEvolutionNotes
+      tags: [Clinical Records]
+      summary: Lista notas clinicas propias con filtros y paginacion acotada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+            default: ''
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, all]
+            default: active
+        - name: treatmentPlanId
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 4294967295
+        - name: treatmentPlanItemId
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 4294967295
+      responses:
+        '200':
+          $ref: '#/components/responses/EvolutionNoteList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+    post:
+      operationId: createEvolutionNote
+      tags: [Clinical Records]
+      summary: Crea una nota y opcionalmente completa su item en una transaccion.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEvolutionNoteRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/EvolutionNoteResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+        '409':
+          $ref: '#/components/responses/ClinicalRecordConflict'
+  /patients/{patientId}/evolution-notes/{noteId}:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/EvolutionNoteId'
+    get:
+      operationId: getEvolutionNote
+      tags: [Clinical Records]
+      summary: Obtiene una nota propia por ID.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/EvolutionNoteResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+    patch:
+      operationId: updateEvolutionNote
+      tags: [Clinical Records]
+      summary: Corrige una nota activa y agrega una revision inmutable.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEvolutionNoteRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EvolutionNoteResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+        '409':
+          $ref: '#/components/responses/ClinicalRecordConflict'
+    delete:
+      operationId: archiveEvolutionNote
+      tags: [Clinical Records]
+      summary: Archiva una nota de forma idempotente sin borrado fisico.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicalRecordLifecycleRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EvolutionNoteResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+  /patients/{patientId}/evolution-notes/{noteId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/EvolutionNoteId'
+    post:
+      operationId: restoreEvolutionNote
+      tags: [Clinical Records]
+      summary: Restaura una nota archivada de forma idempotente.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicalRecordLifecycleRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/EvolutionNoteResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
+  /patients/{patientId}/evolution-notes/{noteId}/revisions:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/EvolutionNoteId'
+    get:
+      operationId: listEvolutionNoteRevisions
+      tags: [Clinical Records]
+      summary: Lista el historial inmutable de una nota propia.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/EvolutionNoteRevisionList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ClinicalRecordNotFound'
   /openapi.json:
     get:
       operationId: getOpenApiContract
@@ -798,7 +1038,102 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    MedicalHistoryResource:
+      description: Snapshot actual del historial medico versionado.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MedicalHistoryResponse'
+    MedicalHistoryRevisionList:
+      description: Pagina de revisiones del historial medico.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MedicalHistoryRevisionListResponse'
+    EvolutionNoteResource:
+      description: Nota de evolucion propia y versionada.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EvolutionNoteResponse'
+    EvolutionNoteList:
+      description: Pagina de notas de evolucion propias.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EvolutionNoteListResponse'
+    EvolutionNoteRevisionList:
+      description: Pagina de revisiones inmutables de una nota.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EvolutionNoteRevisionListResponse'
+    ClinicalRecordNotFound:
+      description: Paciente, plan, item o nota inexistente o ajeno.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ClinicalRecordConflict:
+      description: La operacion viola el ciclo de vida o una referencia clinica.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   parameters:
+    PatientId:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
+    EvolutionNoteId:
+      name: noteId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000000
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
     TreatmentPlanId:
       name: treatmentPlanId
       in: path
@@ -1028,16 +1363,6 @@ components:
             - type: string
               pattern: '^[A-Z&\u00d1]{3,4}\d{6}[A-Z0-9]{3}$'
             - type: 'null'
-        familyMedicalHistory:
-          oneOf:
-            - type: object
-              additionalProperties: true
-            - type: 'null'
-        personalMedicalHistory:
-          oneOf:
-            - type: object
-              additionalProperties: true
-            - type: 'null'
         email:
           oneOf:
             - type: string
@@ -1141,15 +1466,9 @@ components:
             - type: string
             - type: 'null'
         familyMedicalHistory:
-          oneOf:
-            - type: object
-              additionalProperties: true
-            - type: 'null'
+          $ref: '#/components/schemas/MedicalFamilySnapshot'
         personalMedicalHistory:
-          oneOf:
-            - type: object
-              additionalProperties: true
-            - type: 'null'
+          $ref: '#/components/schemas/MedicalPersonalSnapshot'
         email:
           oneOf:
             - type: string
@@ -1561,6 +1880,413 @@ components:
           type: string
           format: date-time
       additionalProperties: false
+    MedicalQuestionId:
+      type: string
+      enum:
+        - MEDICAL_TREATMENT
+        - PRIOR_SURGERY
+        - SUBSTANCE_USE
+        - HYPERTENSION
+        - HEPATITIS
+        - HIV
+        - STI
+        - HEART_DISEASE
+        - RHEUMATIC_FEVER
+        - ASTHMA
+        - DIABETES
+        - PEPTIC_ULCER
+        - THYROID_DISEASE
+        - ALLERGIES
+        - EPILEPSY
+        - GASTRITIS
+        - PREGNANCY
+    MedicalAnswer:
+      type: object
+      required: [questionId, answer, notes]
+      properties:
+        questionId:
+          $ref: '#/components/schemas/MedicalQuestionId'
+        answer:
+          type: string
+          enum: [YES, NO, UNKNOWN]
+        notes:
+          oneOf:
+            - type: string
+              maxLength: 2000
+            - type: 'null'
+      additionalProperties: false
+    MedicalFamilySnapshot:
+      type: object
+      required: [schemaVersion, summary]
+      properties:
+        schemaVersion:
+          const: '1.0'
+        summary:
+          oneOf:
+            - type: string
+              maxLength: 10000
+            - type: 'null'
+      additionalProperties: false
+    MedicalPersonalSnapshot:
+      type: object
+      required: [schemaVersion, answers, otherNotes]
+      properties:
+        schemaVersion:
+          const: '1.0'
+        answers:
+          type: array
+          maxItems: 17
+          items:
+            $ref: '#/components/schemas/MedicalAnswer'
+        otherNotes:
+          oneOf:
+            - type: string
+              maxLength: 10000
+            - type: 'null'
+      additionalProperties: false
+    ClinicalActor:
+      type: object
+      required: [userId, name]
+      properties:
+        userId:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 350
+      additionalProperties: false
+    UpdateMedicalHistoryRequest:
+      type: object
+      required: [questionnaireVersion, answers, changeReason]
+      properties:
+        questionnaireVersion:
+          const: '1.0'
+        familyHistory:
+          oneOf:
+            - type: string
+              maxLength: 10000
+            - type: 'null'
+        answers:
+          type: array
+          maxItems: 17
+          items:
+            $ref: '#/components/schemas/MedicalAnswer'
+        otherNotes:
+          oneOf:
+            - type: string
+              maxLength: 10000
+            - type: 'null'
+        changeReason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      additionalProperties: false
+    PublicMedicalHistory:
+      type: object
+      required:
+        - patientId
+        - questionnaireVersion
+        - version
+        - familyHistory
+        - answers
+        - otherNotes
+        - author
+        - changeReason
+        - recordedAt
+      properties:
+        patientId:
+          type: integer
+          minimum: 1
+        questionnaireVersion:
+          const: '1.0'
+        version:
+          type: integer
+          minimum: 0
+        familyHistory:
+          oneOf:
+            - type: string
+            - type: 'null'
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MedicalAnswer'
+        otherNotes:
+          oneOf:
+            - type: string
+            - type: 'null'
+        author:
+          oneOf:
+            - $ref: '#/components/schemas/ClinicalActor'
+            - type: 'null'
+        changeReason:
+          oneOf:
+            - type: string
+            - type: 'null'
+        recordedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      additionalProperties: false
+    CreateEvolutionNoteRequest:
+      type: object
+      required: [note]
+      properties:
+        note:
+          type: string
+          minLength: 1
+          maxLength: 50000
+        treatmentPlanId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        treatmentPlanItemId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        occurredAt:
+          type: string
+          format: date-time
+        completeTreatmentItem:
+          type: boolean
+          default: false
+      additionalProperties: false
+    UpdateEvolutionNoteRequest:
+      type: object
+      required: [changeReason]
+      minProperties: 2
+      properties:
+        note:
+          type: string
+          minLength: 1
+          maxLength: 50000
+        treatmentPlanId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        treatmentPlanItemId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        occurredAt:
+          type: string
+          format: date-time
+        changeReason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      additionalProperties: false
+    ClinicalRecordLifecycleRequest:
+      type: object
+      required: [changeReason]
+      properties:
+        changeReason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      additionalProperties: false
+    PublicEvolutionNote:
+      type: object
+      required:
+        - id
+        - patientId
+        - treatmentPlanId
+        - treatmentPlanItemId
+        - author
+        - note
+        - version
+        - occurredAt
+        - archivedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        patientId:
+          type: integer
+          minimum: 1
+        treatmentPlanId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        treatmentPlanItemId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        author:
+          $ref: '#/components/schemas/ClinicalActor'
+        note:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        occurredAt:
+          type: string
+          format: date-time
+        archivedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    PublicEvolutionNoteRevision:
+      type: object
+      required:
+        - id
+        - evolutionNoteId
+        - version
+        - author
+        - action
+        - note
+        - treatmentPlanId
+        - treatmentPlanItemId
+        - occurredAt
+        - archivedAt
+        - changeReason
+        - recordedAt
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        evolutionNoteId:
+          type: integer
+          minimum: 1
+        version:
+          type: integer
+          minimum: 1
+        author:
+          $ref: '#/components/schemas/ClinicalActor'
+        action:
+          type: string
+          enum: [CREATED, AMENDED, ARCHIVED, RESTORED]
+        note:
+          type: string
+        treatmentPlanId:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        treatmentPlanItemId:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        occurredAt:
+          type: string
+          format: date-time
+        archivedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        changeReason:
+          oneOf:
+            - type: string
+            - type: 'null'
+        recordedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    MedicalHistoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/PublicMedicalHistory'
+            errors:
+              type: 'null'
+    MedicalHistoryRevisionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - $ref: '#/components/schemas/PaginatedMedicalHistoryRevisions'
+    PaginatedMedicalHistoryRevisions:
+      type: object
+      properties:
+        success:
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicMedicalHistory'
+        errors:
+          type: 'null'
+        meta:
+          type: object
+          required: [pagination]
+          properties:
+            pagination:
+              $ref: '#/components/schemas/PaginationMeta'
+          additionalProperties: false
+    EvolutionNoteResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/PublicEvolutionNote'
+            errors:
+              type: 'null'
+    EvolutionNoteListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - $ref: '#/components/schemas/PaginatedEvolutionNotes'
+    PaginatedEvolutionNotes:
+      type: object
+      properties:
+        success:
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicEvolutionNote'
+        errors:
+          type: 'null'
+        meta:
+          type: object
+          required: [pagination]
+          properties:
+            pagination:
+              $ref: '#/components/schemas/PaginationMeta'
+          additionalProperties: false
+    EvolutionNoteRevisionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - $ref: '#/components/schemas/PaginatedEvolutionNoteRevisions'
+    PaginatedEvolutionNoteRevisions:
+      type: object
+      properties:
+        success:
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicEvolutionNoteRevision'
+        errors:
+          type: 'null'
+        meta:
+          type: object
+          required: [pagination]
+          properties:
+            pagination:
+              $ref: '#/components/schemas/PaginationMeta'
+          additionalProperties: false
     PaginationMeta:
       type: object
       required: [page, pageSize, total, totalPages]

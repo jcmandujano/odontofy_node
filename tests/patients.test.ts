@@ -43,7 +43,7 @@ describe('patient v1 schemas', () => {
     ).toBe(false);
   });
 
-  it('bounds pagination, search, and medical history size', () => {
+  it('bounds pagination and keeps clinical history out of generic writes', () => {
     expect(listPatientsQuerySchema.parse({})).toEqual({
       page: 1,
       pageSize: 20,
@@ -60,7 +60,7 @@ describe('patient v1 schemas', () => {
       createPatientSchema.safeParse({
         name: 'Ada',
         lastName: 'Lovelace',
-        familyMedicalHistory: { note: 'a'.repeat(65 * 1024) },
+        familyMedicalHistory: { note: 'legacy write' },
       }).success
     ).toBe(false);
   });

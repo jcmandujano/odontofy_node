@@ -49,30 +49,6 @@ const nullableRfc = z
   ])
   .transform((value) => value === '' ? null : value);
 
-const medicalHistory = z
-  .record(z.string().max(100), z.unknown())
-  .superRefine((value, context) => {
-    let serialized: string;
-    try {
-      serialized = JSON.stringify(value);
-    } catch {
-      context.addIssue({
-        code: 'custom',
-        message: 'El historial debe ser serializable como JSON',
-      });
-      return;
-    }
-
-    if (Buffer.byteLength(serialized, 'utf8') > 64 * 1024) {
-      context.addIssue({
-        code: 'custom',
-        message: 'El historial no debe exceder 64 KiB',
-      });
-    }
-  });
-
-const nullableHistory = medicalHistory.nullable();
-
 const patientFields = {
   name: trimmedText(100),
   middleName: nullableText(100),
@@ -88,8 +64,6 @@ const patientFields = {
   emergencyContactRelationship: nullableText(100),
   reasonForConsultation: nullableText(10_000),
   rfc: nullableRfc,
-  familyMedicalHistory: nullableHistory,
-  personalMedicalHistory: nullableHistory,
   email: nullableEmail,
 } as const;
 
@@ -116,12 +90,6 @@ export const createPatientSchema = z.strictObject({
     .optional()
     .default(null),
   rfc: patientFields.rfc.optional().default(null),
-  familyMedicalHistory: patientFields.familyMedicalHistory
-    .optional()
-    .default(null),
-  personalMedicalHistory: patientFields.personalMedicalHistory
-    .optional()
-    .default(null),
   email: patientFields.email.optional().default(null),
 });
 
@@ -142,8 +110,6 @@ export const updatePatientSchema = z
       patientFields.emergencyContactRelationship.optional(),
     reasonForConsultation: patientFields.reasonForConsultation.optional(),
     rfc: patientFields.rfc.optional(),
-    familyMedicalHistory: patientFields.familyMedicalHistory.optional(),
-    personalMedicalHistory: patientFields.personalMedicalHistory.optional(),
     email: patientFields.email.optional(),
     active: z.boolean().optional(),
   })

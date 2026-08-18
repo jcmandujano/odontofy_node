@@ -40,8 +40,8 @@ Para cerrar una fase se deben registrar:
 | F3  | Plataforma HTTP y contrato v1      | DONE       | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
 | F4  | Identidad y acceso                 | DONE       | Auth, sesiones y perfil migrados al primer modulo v1.        |
 | F5  | Pacientes                          | DONE       | Pacientes migrados con ownership y DTOs estrictos.          |
-| F6  | Planes de tratamiento              | IN PROGRESS | Planes e items transaccionales en v1.                       |
-| F7  | Expediente clinico                 | PENDING    | Notas y relaciones clinicas migradas.                        |
+| F6  | Planes de tratamiento              | DONE       | Planes e items transaccionales en v1.                       |
+| F7  | Expediente clinico                 | IN PROGRESS | Historial y notas versionadas en v1.                        |
 | F8  | Facturacion y catalogos            | PENDING    | Pagos y conceptos transaccionales migrados.                  |
 | F9  | Agenda y Google Calendar           | PENDING    | Agenda desacoplada del proveedor externo.                    |
 | F10 | Consentimientos, archivos y correo | PENDING    | Integraciones restantes encapsuladas.                        |
@@ -471,7 +471,7 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1 y pruebas con dos propietarios.
 - [x] Validacion local integral de F6.
 - [x] CI remoto de F6 y PR abierto.
-- [ ] PR de F6 integrado.
+- [x] PR de F6 integrado.
 
 ### Criterios de salida
 
@@ -496,6 +496,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-17 | Calidad local            | Lint, tipos, contrato, 29 pruebas rapidas y build pasan.          |
 | 2026-08-17 | Reconstruccion MySQL     | 33 pruebas pasan antes y despues de ocho migraciones.             |
 | 2026-08-17 | CI remoto                | Jobs `quality` y `database` pasan en el PR #60.                   |
+| 2026-08-18 | Integracion              | PR #60 integrado en `main` mediante `93bf6b9`.                    |
 
 ### Enlaces de trabajo F6
 
@@ -515,6 +516,73 @@ Para cerrar una fase se deben registrar:
   F6 valida enums y timestamps, pero no impone una maquina de estados.
 - La UI legacy envia numeros para importes y pagina localmente; F11 la adaptara a
   strings decimales y paginacion del servidor.
+
+## F7 - Expediente clinico
+
+### Objetivos
+
+- Estructurar el historial medico y retirar su escritura JSON generica en v1.
+- Conservar autoria, fecha clinica, motivo y versiones append-only.
+- Aplicar ownership uniforme a paciente, plan, item y nota.
+- Completar un item junto con la nota dentro de una sola transaccion.
+- Sustituir borrado fisico por archivado y restauracion idempotentes.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f7-clinical-records`.
+- [x] [Milestone `API v1 - F7 Expediente clinico`](https://github.com/jcmandujano/odontofy_node/milestone/8).
+- [x] Issues #61 a #66 con criterios verificables.
+- [x] ADR de versionado, procedencia y conservacion clinica.
+- [x] Modulo `clinical-records` con schemas, HTTP, servicio y repositorio.
+- [x] Historial medico estructurado con snapshot y revisiones.
+- [x] Notas con autoria, fecha clinica, correcciones y ciclo de archivo.
+- [x] Referencias plan-item autorizadas y cierre atomico opcional.
+- [x] Migracion que normaliza contenido legacy sin descartarlo silenciosamente.
+- [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
+- [x] Validacion local integral de F7.
+- [x] CI remoto de F7 y PR abierto.
+- [ ] PR de F7 integrado.
+
+### Criterios de salida
+
+- El historial solo cambia mediante el endpoint dedicado y cada cambio conserva
+  snapshot, version, autor, fecha y motivo.
+- Cada nota propia es recuperable con sus revisiones; ningun endpoint v1 realiza
+  borrado fisico.
+- IDs ajenos son indistinguibles de IDs inexistentes y no filtran relaciones.
+- Una nota y el cierre opcional del item confirman o revierten juntos.
+- Notas o items cancelados no aceptan mutaciones incompatibles.
+- OpenAPI, pruebas rapidas, pruebas MySQL, rollback y build pasan en CI.
+
+### Evidencias
+
+| Fecha      | Evidencia                 | Resultado                                                       |
+| ---------- | ------------------------- | --------------------------------------------------------------- |
+| 2026-08-18 | Schemas clinicos          | Cuatro pruebas cubren cuestionario, referencias y DTOs estrictos. |
+| 2026-08-18 | Transacciones sobre MySQL | Cinco pruebas cubren BOLA, versionado, archivo y rollback.       |
+| 2026-08-18 | Calidad local             | Lint, tipos, contrato, 33 pruebas rapidas y build pasan.         |
+| 2026-08-18 | Reconstruccion MySQL      | 38 pruebas pasan antes y despues de nueve migraciones.           |
+| 2026-08-18 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #67.                   |
+
+### Enlaces de trabajo F7
+
+- [#61 Definir contrato, retencion y trazabilidad](https://github.com/jcmandujano/odontofy_node/issues/61)
+- [#62 Estructurar y versionar historial medico](https://github.com/jcmandujano/odontofy_node/issues/62)
+- [#63 Versionar notas con ownership](https://github.com/jcmandujano/odontofy_node/issues/63)
+- [#64 Integrar referencias y cierre atomico](https://github.com/jcmandujano/odontofy_node/issues/64)
+- [#65 Implementar consulta y ciclo de archivo](https://github.com/jcmandujano/odontofy_node/issues/65)
+- [#66 Validar contrato, migraciones y regresion](https://github.com/jcmandujano/odontofy_node/issues/66)
+- [PR #67 Expediente clinico versionado](https://github.com/jcmandujano/odontofy_node/pull/67)
+
+### Riesgos transferidos
+
+- La firma clinica, bitacora de lecturas y controles por rol requieren las fases
+  de seguridad y observabilidad; las revisiones F7 representan procedencia, no
+  una firma criptografica.
+- La politica operativa de retencion, exportacion y eliminacion debe validarse
+  con asesoria juridica antes de produccion. F7 impide borrado accidental.
+- La UI legacy conserva sus DTOs hasta F11, aunque sus mutaciones ya delegan al
+  repositorio versionado.
 
 ## Definicion de terminado para fases posteriores
 

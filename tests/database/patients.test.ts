@@ -96,7 +96,6 @@ describe('patients v1 ownership lifecycle', () => {
         dateOfBirth: '1990-12-10',
         email: ' ADA.PATIENT@EXAMPLE.TEST ',
         phone: '+52 555 010 1000',
-        familyMedicalHistory: { diabetes: true },
       });
     const createdB = await request(app)
       .post('/api/v1/patients')
