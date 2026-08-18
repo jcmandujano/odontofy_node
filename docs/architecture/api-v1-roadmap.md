@@ -470,7 +470,7 @@ Para cerrar una fase se deben registrar:
 - [x] Restriccion MySQL para descuentos y totales no negativos.
 - [x] Contrato OpenAPI 3.1 y pruebas con dos propietarios.
 - [x] Validacion local integral de F6.
-- [ ] CI remoto de F6 y PR abierto.
+- [x] CI remoto de F6 y PR abierto.
 - [ ] PR de F6 integrado.
 
 ### Criterios de salida
@@ -495,6 +495,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-17 | Contrato                 | OpenAPI 3.1 valida diez operaciones de planes e items.            |
 | 2026-08-17 | Calidad local            | Lint, tipos, contrato, 29 pruebas rapidas y build pasan.          |
 | 2026-08-17 | Reconstruccion MySQL     | 33 pruebas pasan antes y despues de ocho migraciones.             |
+| 2026-08-17 | CI remoto                | Jobs `quality` y `database` pasan en el PR #60.                   |
 
 ### Enlaces de trabajo F6
 
@@ -504,6 +505,7 @@ Para cerrar una fase se deben registrar:
 - [#57 Migrar mutaciones de planes](https://github.com/jcmandujano/odontofy_node/issues/57)
 - [#58 Implementar items y recalculo atomico](https://github.com/jcmandujano/odontofy_node/issues/58)
 - [#59 Validar contrato y regresion](https://github.com/jcmandujano/odontofy_node/issues/59)
+- [PR #60 Planes de tratamiento transaccionales](https://github.com/jcmandujano/odontofy_node/pull/60)
 
 ### Riesgos transferidos
 
