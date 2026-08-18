@@ -540,7 +540,7 @@ Para cerrar una fase se deben registrar:
 - [x] Migracion que normaliza contenido legacy sin descartarlo silenciosamente.
 - [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
 - [x] Validacion local integral de F7.
-- [ ] CI remoto de F7 y PR abierto.
+- [x] CI remoto de F7 y PR abierto.
 - [ ] PR de F7 integrado.
 
 ### Criterios de salida
@@ -562,6 +562,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-18 | Transacciones sobre MySQL | Cinco pruebas cubren BOLA, versionado, archivo y rollback.       |
 | 2026-08-18 | Calidad local             | Lint, tipos, contrato, 33 pruebas rapidas y build pasan.         |
 | 2026-08-18 | Reconstruccion MySQL      | 38 pruebas pasan antes y despues de nueve migraciones.           |
+| 2026-08-18 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #67.                   |
 
 ### Enlaces de trabajo F7
 
@@ -571,6 +572,7 @@ Para cerrar una fase se deben registrar:
 - [#64 Integrar referencias y cierre atomico](https://github.com/jcmandujano/odontofy_node/issues/64)
 - [#65 Implementar consulta y ciclo de archivo](https://github.com/jcmandujano/odontofy_node/issues/65)
 - [#66 Validar contrato, migraciones y regresion](https://github.com/jcmandujano/odontofy_node/issues/66)
+- [PR #67 Expediente clinico versionado](https://github.com/jcmandujano/odontofy_node/pull/67)
 
 ### Riesgos transferidos
 
