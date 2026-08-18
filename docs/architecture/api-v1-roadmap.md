@@ -38,8 +38,8 @@ Para cerrar una fase se deben registrar:
 | F1  | Linea base de calidad              | DONE       | Build, lint, pruebas y CI reproducibles.                     |
 | F2  | Base de datos reproducible         | DONE       | Esquema normalizado creado solo desde migraciones.           |
 | F3  | Plataforma HTTP y contrato v1      | DONE       | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
-| F4  | Identidad y acceso                 | IN PROGRESS | Auth, sesiones y perfil migrados al primer modulo v1.       |
-| F5  | Pacientes                          | PENDING    | Pacientes migrados con ownership y DTOs estrictos.           |
+| F4  | Identidad y acceso                 | DONE       | Auth, sesiones y perfil migrados al primer modulo v1.        |
+| F5  | Pacientes                          | IN PROGRESS | Pacientes migrados con ownership y DTOs estrictos.          |
 | F6  | Planes de tratamiento              | PENDING    | Planes e items transaccionales en v1.                        |
 | F7  | Expediente clinico                 | PENDING    | Notas y relaciones clinicas migradas.                        |
 | F8  | Facturacion y catalogos            | PENDING    | Pagos y conceptos transaccionales migrados.                  |
@@ -327,7 +327,7 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1 actualizado para diez endpoints de identidad.
 - [x] Validacion local integral de F4.
 - [x] CI remoto de F4 y PR abierto.
-- [ ] PR de F4 integrado.
+- [x] PR de F4 integrado.
 
 ### Criterios de salida
 
@@ -354,6 +354,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-15 | Calidad local              | Lint, tipos, contrato, 21 pruebas rapidas y build pasan.            |
 | 2026-08-15 | Reconstruccion MySQL       | 19 pruebas pasan antes y despues del rollback de siete migraciones. |
 | 2026-08-15 | CI remoto                  | Jobs `quality` y `database` pasan en el PR #46.                     |
+| 2026-08-15 | Integracion                | PR #46 integrado en `beb3a11`; issues y milestone cerrados.        |
 
 ### Enlaces de trabajo F4
 
@@ -375,6 +376,71 @@ Para cerrar una fase se deben registrar:
   minutos. Cambios de password si lo invalidan inmediatamente con `authVersion`.
 - MFA e integracion con un proveedor de identidad no se agregan sin un requisito
   de producto; el modulo mantiene limites para incorporarlos posteriormente.
+
+## F5 - Pacientes
+
+### Objetivos
+
+- Migrar pacientes a `/api/v1` sin modificar las rutas legacy.
+- Aplicar ownership en la consulta SQL de cada lectura y escritura.
+- Evitar BOLA, mass assignment y exposicion de propiedades internas.
+- Acotar busqueda, paginacion y objetos JSON recibidos.
+- Preservar relaciones clinicas mediante archivado logico recuperable.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f5-patients`.
+- [x] [Milestone `API v1 - F5 Pacientes`](https://github.com/jcmandujano/odontofy_node/milestone/6).
+- [x] Issues #47 a #52 con criterios verificables.
+- [x] ADR de ownership, propiedades y ciclo de vida de pacientes.
+- [x] Modulo `patients` con schemas, HTTP, aplicacion y repositorio Sequelize.
+- [x] Listado con busqueda, filtro de estado, orden estable y paginacion acotada.
+- [x] Detalle, alta y PATCH con DTOs camelCase estrictos.
+- [x] Archivado idempotente y restauracion explicita sin borrado fisico v1.
+- [x] Contrato OpenAPI 3.1 y pruebas con dos propietarios.
+- [x] Validacion local integral de F5.
+- [ ] CI remoto y PR de F5 integrado.
+
+### Criterios de salida
+
+- Toda consulta por ID incluye `user_id`; un ID ajeno y uno inexistente responden
+  el mismo `404`.
+- Los payloads desconocidos y los intentos de asignar owner, balance, IDs o
+  timestamps se rechazan antes de persistir.
+- Los DTOs no serializan modelos Sequelize ni exponen `user_id`.
+- `pageSize` tiene un maximo explicito y la busqueda tiene longitud acotada.
+- Los pacientes inactivos se excluyen por defecto, pueden consultarse con un
+  filtro validado y pueden restaurarse mediante PATCH.
+- `DELETE` conserva al paciente y sus relaciones; las rutas legacy no cambian.
+- OpenAPI, pruebas rapidas, pruebas MySQL, rollback y build pasan en CI.
+
+### Evidencias
+
+| Fecha      | Evidencia              | Resultado                                                       |
+| ---------- | ---------------------- | --------------------------------------------------------------- |
+| 2026-08-17 | Schemas y propiedades  | Tres pruebas cubren limites, normalizacion y mass assignment.   |
+| 2026-08-17 | Ownership sobre MySQL  | Seis pruebas con dos owners cubren CRUD, archivo y restauracion. |
+| 2026-08-17 | Contrato               | OpenAPI 3.1 valida cinco operaciones y DTOs de pacientes.        |
+| 2026-08-17 | Calidad local          | Lint, tipos, contrato, 24 pruebas rapidas y build pasan.         |
+| 2026-08-17 | Reconstruccion MySQL   | 25 pruebas pasan antes y despues de siete migraciones.           |
+
+### Enlaces de trabajo F5
+
+- [#47 Definir contrato y politica de acceso](https://github.com/jcmandujano/odontofy_node/issues/47)
+- [#48 Implementar repositorio con ownership](https://github.com/jcmandujano/odontofy_node/issues/48)
+- [#49 Migrar listado y detalle](https://github.com/jcmandujano/odontofy_node/issues/49)
+- [#50 Migrar alta y actualizacion](https://github.com/jcmandujano/odontofy_node/issues/50)
+- [#51 Implementar archivado y restauracion](https://github.com/jcmandujano/odontofy_node/issues/51)
+- [#52 Validar contrato, ownership y regresion](https://github.com/jcmandujano/odontofy_node/issues/52)
+
+### Riesgos transferidos
+
+- La estructura semantica de historiales medicos JSON se revisara en F7. F5
+  conserva objetos compatibles, pero limita tipo y tamano.
+- `current_balance` es de solo lectura en pacientes; sus invariantes pertenecen
+  a facturacion F8.
+- La politica de retencion definitiva requiere una decision de producto. F5 no
+  ofrece borrado fisico y mantiene la operacion recuperable.
 
 ## Definicion de terminado para fases posteriores
 

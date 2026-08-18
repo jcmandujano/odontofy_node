@@ -10,6 +10,8 @@ tags:
     description: Estado y metadatos de la plataforma HTTP.
   - name: Identity
     description: Autenticacion, ciclo de cuenta y perfil del usuario actual.
+  - name: Patients
+    description: Pacientes propiedad del usuario autenticado.
 paths:
   /:
     get:
@@ -261,6 +263,126 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [Patients]
+      summary: Lista pacientes del usuario autenticado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000000
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+            default: ''
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, all]
+            default: active
+      responses:
+        '200':
+          $ref: '#/components/responses/PatientList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createPatient
+      tags: [Patients]
+      summary: Crea un paciente para el usuario autenticado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePatientRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/PatientResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /patients/{patientId}:
+    parameters:
+      - name: patientId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 4294967295
+    get:
+      operationId: getPatient
+      tags: [Patients]
+      summary: Obtiene un paciente propio por ID.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PatientResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PatientNotFound'
+    patch:
+      operationId: updatePatient
+      tags: [Patients]
+      summary: Actualiza campos permitidos o restaura un paciente propio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePatientRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/PatientResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PatientNotFound'
+    delete:
+      operationId: archivePatient
+      tags: [Patients]
+      summary: Archiva un paciente propio sin borrar sus relaciones.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptySuccess'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PatientNotFound'
   /openapi.json:
     get:
       operationId: getOpenApiContract
@@ -349,6 +471,33 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     RateLimited:
       description: Limite de solicitudes excedido.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PatientResource:
+      description: Paciente del usuario autenticado.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PatientResponse'
+    PatientList:
+      description: Pagina de pacientes propios.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PatientListResponse'
+    PatientNotFound:
+      description: El paciente no existe o pertenece a otro usuario.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/RequestId'
@@ -496,6 +645,315 @@ components:
           minLength: 1
           maxLength: 72
       additionalProperties: false
+    PatientWriteFields:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middleName:
+          oneOf:
+            - type: string
+              maxLength: 100
+            - type: 'null'
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        gender:
+          oneOf:
+            - type: string
+              maxLength: 50
+            - type: 'null'
+        dateOfBirth:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        phone:
+          oneOf:
+            - type: string
+              maxLength: 30
+              pattern: '^[0-9+(). -]*$'
+            - type: 'null'
+        maritalStatus:
+          oneOf:
+            - type: string
+              maxLength: 50
+            - type: 'null'
+        occupation:
+          oneOf:
+            - type: string
+              maxLength: 150
+            - type: 'null'
+        address:
+          oneOf:
+            - type: string
+              maxLength: 10000
+            - type: 'null'
+        emergencyContactName:
+          oneOf:
+            - type: string
+              maxLength: 200
+            - type: 'null'
+        emergencyContactPhone:
+          oneOf:
+            - type: string
+              maxLength: 30
+              pattern: '^[0-9+(). -]*$'
+            - type: 'null'
+        emergencyContactRelationship:
+          oneOf:
+            - type: string
+              maxLength: 100
+            - type: 'null'
+        reasonForConsultation:
+          oneOf:
+            - type: string
+              maxLength: 10000
+            - type: 'null'
+        rfc:
+          oneOf:
+            - type: string
+              pattern: '^[A-Z&\u00d1]{3,4}\d{6}[A-Z0-9]{3}$'
+            - type: 'null'
+        familyMedicalHistory:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        personalMedicalHistory:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        email:
+          oneOf:
+            - type: string
+              format: email
+              maxLength: 254
+            - type: 'null'
+    CreatePatientRequest:
+      allOf:
+        - $ref: '#/components/schemas/PatientWriteFields'
+      required: [name, lastName]
+      unevaluatedProperties: false
+    UpdatePatientRequest:
+      allOf:
+        - $ref: '#/components/schemas/PatientWriteFields'
+        - type: object
+          properties:
+            active:
+              type: boolean
+      minProperties: 1
+      unevaluatedProperties: false
+    PublicPatient:
+      type: object
+      required:
+        - id
+        - name
+        - middleName
+        - lastName
+        - gender
+        - dateOfBirth
+        - phone
+        - maritalStatus
+        - occupation
+        - address
+        - emergencyContactName
+        - emergencyContactPhone
+        - emergencyContactRelationship
+        - reasonForConsultation
+        - rfc
+        - familyMedicalHistory
+        - personalMedicalHistory
+        - email
+        - active
+        - currentBalance
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        middleName:
+          oneOf:
+            - type: string
+            - type: 'null'
+        lastName:
+          type: string
+        gender:
+          oneOf:
+            - type: string
+            - type: 'null'
+        dateOfBirth:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        phone:
+          oneOf:
+            - type: string
+            - type: 'null'
+        maritalStatus:
+          oneOf:
+            - type: string
+            - type: 'null'
+        occupation:
+          oneOf:
+            - type: string
+            - type: 'null'
+        address:
+          oneOf:
+            - type: string
+            - type: 'null'
+        emergencyContactName:
+          oneOf:
+            - type: string
+            - type: 'null'
+        emergencyContactPhone:
+          oneOf:
+            - type: string
+            - type: 'null'
+        emergencyContactRelationship:
+          oneOf:
+            - type: string
+            - type: 'null'
+        reasonForConsultation:
+          oneOf:
+            - type: string
+            - type: 'null'
+        rfc:
+          oneOf:
+            - type: string
+            - type: 'null'
+        familyMedicalHistory:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        personalMedicalHistory:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        email:
+          oneOf:
+            - type: string
+              format: email
+            - type: 'null'
+        active:
+          type: boolean
+        currentBalance:
+          type: string
+          pattern: '^-?\d{1,10}\.\d{2}$'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    PublicPatientSummary:
+      type: object
+      required:
+        - id
+        - name
+        - middleName
+        - lastName
+        - dateOfBirth
+        - phone
+        - email
+        - active
+        - currentBalance
+        - createdAt
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        middleName:
+          oneOf:
+            - type: string
+            - type: 'null'
+        lastName:
+          type: string
+        dateOfBirth:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        phone:
+          oneOf:
+            - type: string
+            - type: 'null'
+        email:
+          oneOf:
+            - type: string
+              format: email
+            - type: 'null'
+        active:
+          type: boolean
+        currentBalance:
+          type: string
+          pattern: '^-?\d{1,10}\.\d{2}$'
+        createdAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+    PatientResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/PublicPatient'
+            errors:
+              type: 'null'
+    PatientListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicPatientSummary'
+            errors:
+              type: 'null'
+            meta:
+              type: object
+              required: [pagination]
+              properties:
+                pagination:
+                  $ref: '#/components/schemas/PaginationMeta'
+              additionalProperties: false
     UpdateProfileRequest:
       type: object
       minProperties: 1

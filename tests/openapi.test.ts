@@ -16,5 +16,7 @@ describe('OpenAPI v1 contract', () => {
     expect(document.paths).toHaveProperty('/auth/refresh');
     expect(document.paths).toHaveProperty('/auth/password/reset');
     expect(document.paths).toHaveProperty('/me');
+    expect(document.paths).toHaveProperty('/patients');
+    expect(document.paths).toHaveProperty('/patients/{patientId}');
   });
 });

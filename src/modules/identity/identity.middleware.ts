@@ -40,11 +40,6 @@ export const identityErrorHandler: ErrorRequestHandler = (
   );
 };
 
-export const noStore: RequestHandler = (_req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store');
-  next();
-};
-
 export const requestContext = (req: Request): SessionContext => ({
   ipAddress: req.ip || null,
   userAgent: req.get('user-agent')?.slice(0, 512) || null,
