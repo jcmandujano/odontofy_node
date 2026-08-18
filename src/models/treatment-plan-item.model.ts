@@ -17,9 +17,9 @@ interface TreatmentPlanItemAttributes {
   description: string | null;
   tooth: string | null;
   area: string | null;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
+  quantity: string | number;
+  unit_price: string | number;
+  subtotal: string | number;
   phase: string | null;
   priority: TreatmentPlanItemPriority | null;
   status: TreatmentPlanItemStatus;
@@ -38,15 +38,17 @@ class TreatmentPlanItem extends Model<TreatmentPlanItemAttributes, TreatmentPlan
   public description!: string | null;
   public tooth!: string | null;
   public area!: string | null;
-  public quantity!: number;
-  public unit_price!: number;
-  public subtotal!: number;
+  public quantity!: string | number;
+  public unit_price!: string | number;
+  public subtotal!: string | number;
   public phase!: string | null;
   public priority!: TreatmentPlanItemPriority | null;
   public status!: TreatmentPlanItemStatus;
   public notes!: string | null;
   public sort_order!: number;
   public completed_at!: Date | null;
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 }
 
 TreatmentPlanItem.init(
@@ -86,13 +88,13 @@ TreatmentPlanItem.init(
       defaultValue: 1,
     },
     unit_price: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
       field: 'unit_price_amount',
     },
     subtotal: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
       field: 'subtotal_amount',
@@ -115,7 +117,7 @@ TreatmentPlanItem.init(
       allowNull: true,
     },
     sort_order: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       defaultValue: 0,
     },

@@ -12,6 +12,8 @@ tags:
     description: Autenticacion, ciclo de cuenta y perfil del usuario actual.
   - name: Patients
     description: Pacientes propiedad del usuario autenticado.
+  - name: Treatment Plans
+    description: Planes de tratamiento e items propiedad del usuario autenticado.
 paths:
   /:
     get:
@@ -383,6 +385,252 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/PatientNotFound'
+  /patients/{patientId}/treatment-plans:
+    parameters:
+      - name: patientId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 4294967295
+    get:
+      operationId: listTreatmentPlans
+      tags: [Treatment Plans]
+      summary: Lista planes propios de un paciente propio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000000
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/TreatmentPlanStatus'
+              - const: all
+            default: all
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+    post:
+      operationId: createTreatmentPlan
+      tags: [Treatment Plans]
+      summary: Crea un plan borrador para un paciente propio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTreatmentPlanRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/TreatmentPlanResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+        '409':
+          $ref: '#/components/responses/TreatmentPlanConflict'
+  /treatment-plans/{treatmentPlanId}:
+    parameters:
+      - $ref: '#/components/parameters/TreatmentPlanId'
+    get:
+      operationId: getTreatmentPlan
+      tags: [Treatment Plans]
+      summary: Obtiene un plan propio con sus items, sin notas de evolucion.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+    patch:
+      operationId: updateTreatmentPlan
+      tags: [Treatment Plans]
+      summary: Actualiza campos permitidos y recalcula importes si corresponde.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTreatmentPlanRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+        '409':
+          $ref: '#/components/responses/TreatmentPlanConflict'
+    delete:
+      operationId: cancelTreatmentPlan
+      tags: [Treatment Plans]
+      summary: Cancela un plan propio de forma idempotente y conserva sus items.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+  /treatment-plans/{treatmentPlanId}/status:
+    parameters:
+      - $ref: '#/components/parameters/TreatmentPlanId'
+    patch:
+      operationId: updateTreatmentPlanStatus
+      tags: [Treatment Plans]
+      summary: Cambia el estado de un plan y mantiene sus timestamps de negocio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTreatmentPlanStatusRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+  /treatment-plans/{treatmentPlanId}/items:
+    parameters:
+      - $ref: '#/components/parameters/TreatmentPlanId'
+    post:
+      operationId: createTreatmentPlanItem
+      tags: [Treatment Plans]
+      summary: Agrega un item y recalcula el plan en una transaccion.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTreatmentPlanItemRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/TreatmentPlanItemMutation'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+        '409':
+          $ref: '#/components/responses/TreatmentPlanConflict'
+  /treatment-plans/{treatmentPlanId}/items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/TreatmentPlanId'
+      - $ref: '#/components/parameters/TreatmentPlanItemId'
+    patch:
+      operationId: updateTreatmentPlanItem
+      tags: [Treatment Plans]
+      summary: Actualiza un item y recalcula el plan en una transaccion.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTreatmentPlanItemRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanItemMutation'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+        '409':
+          $ref: '#/components/responses/TreatmentPlanConflict'
+    delete:
+      operationId: cancelTreatmentPlanItem
+      tags: [Treatment Plans]
+      summary: Cancela un item de forma idempotente y recalcula el plan.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanItemMutation'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+        '409':
+          $ref: '#/components/responses/TreatmentPlanConflict'
+  /treatment-plans/{treatmentPlanId}/items/{itemId}/status:
+    parameters:
+      - $ref: '#/components/parameters/TreatmentPlanId'
+      - $ref: '#/components/parameters/TreatmentPlanItemId'
+    patch:
+      operationId: updateTreatmentPlanItemStatus
+      tags: [Treatment Plans]
+      summary: Cambia el estado de un item y mantiene completedAt.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTreatmentPlanItemStatusRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/TreatmentPlanItemMutation'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/TreatmentPlanNotFound'
+        '409':
+          $ref: '#/components/responses/TreatmentPlanConflict'
   /openapi.json:
     get:
       operationId: getOpenApiContract
@@ -505,6 +753,68 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    TreatmentPlanResource:
+      description: Plan de tratamiento propio con sus items.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TreatmentPlanResponse'
+    TreatmentPlanList:
+      description: Pagina de resumenes de planes propios.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TreatmentPlanListResponse'
+    TreatmentPlanItemMutation:
+      description: Item mutado y agregado actualizado atomico.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TreatmentPlanItemMutationResponse'
+    TreatmentPlanNotFound:
+      description: Paciente, plan, item o concepto inexistente o ajeno.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TreatmentPlanConflict:
+      description: La mutacion viola una invariante del plan o sus importes.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  parameters:
+    TreatmentPlanId:
+      name: treatmentPlanId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
+    TreatmentPlanItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
   headers:
     RequestId:
       description: Identificador de correlacion de la solicitud.
@@ -905,6 +1215,352 @@ components:
           type: string
           format: date-time
       additionalProperties: false
+    DecimalAmount:
+      type: string
+      format: decimal
+      pattern: '^\d{1,10}\.\d{2}$'
+      description: Importe decimal exacto serializado con dos decimales.
+    DecimalAmountInput:
+      type: string
+      format: decimal
+      pattern: '^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$'
+      description: Importe decimal exacto que se normaliza a dos decimales.
+    DecimalQuantity:
+      type: string
+      format: decimal
+      pattern: '^(?:0\.(?:0[1-9]|[1-9]\d?)|[1-9]\d{0,7}(?:\.\d{1,2})?)$'
+      description: Cantidad positiva con hasta ocho enteros y dos decimales.
+    TreatmentPlanStatus:
+      type: string
+      enum: [DRAFT, PROPOSED, ACCEPTED, IN_PROGRESS, COMPLETED, CANCELLED]
+    TreatmentPlanItemStatus:
+      type: string
+      enum: [PENDING, APPROVED, IN_PROGRESS, COMPLETED, CANCELLED]
+    TreatmentPlanItemPriority:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, URGENT]
+    TreatmentPlanWriteFields:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        diagnosis:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        patientComplaint:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        clinicalObservations:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        prognosis:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        estimatedStartDate:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        estimatedEndDate:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        acceptanceNotes:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        discount:
+          $ref: '#/components/schemas/DecimalAmountInput'
+    CreateTreatmentPlanRequest:
+      allOf:
+        - $ref: '#/components/schemas/TreatmentPlanWriteFields'
+      required: [title]
+      unevaluatedProperties: false
+    UpdateTreatmentPlanRequest:
+      allOf:
+        - $ref: '#/components/schemas/TreatmentPlanWriteFields'
+      minProperties: 1
+      unevaluatedProperties: false
+    UpdateTreatmentPlanStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/TreatmentPlanStatus'
+        acceptanceNotes:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+      additionalProperties: false
+    TreatmentPlanItemWriteFields:
+      type: object
+      properties:
+        userConceptId:
+          oneOf:
+            - type: integer
+              minimum: 1
+              maximum: 4294967295
+            - type: 'null'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        tooth:
+          oneOf:
+            - type: string
+              maxLength: 50
+            - type: 'null'
+        area:
+          oneOf:
+            - type: string
+              maxLength: 100
+            - type: 'null'
+        quantity:
+          $ref: '#/components/schemas/DecimalQuantity'
+        unitPrice:
+          $ref: '#/components/schemas/DecimalAmountInput'
+        phase:
+          oneOf:
+            - type: string
+              maxLength: 100
+            - type: 'null'
+        priority:
+          oneOf:
+            - $ref: '#/components/schemas/TreatmentPlanItemPriority'
+            - type: 'null'
+        notes:
+          oneOf:
+            - type: string
+              maxLength: 20000
+            - type: 'null'
+        sortOrder:
+          type: integer
+          minimum: 0
+          maximum: 4294967295
+    CreateTreatmentPlanItemRequest:
+      allOf:
+        - $ref: '#/components/schemas/TreatmentPlanItemWriteFields'
+      required: [name, unitPrice]
+      unevaluatedProperties: false
+    UpdateTreatmentPlanItemRequest:
+      allOf:
+        - $ref: '#/components/schemas/TreatmentPlanItemWriteFields'
+      minProperties: 1
+      unevaluatedProperties: false
+    UpdateTreatmentPlanItemStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/TreatmentPlanItemStatus'
+      additionalProperties: false
+    PublicTreatmentPlanSummary:
+      type: object
+      required:
+        - id
+        - patientId
+        - title
+        - description
+        - status
+        - estimatedStartDate
+        - estimatedEndDate
+        - subtotal
+        - discount
+        - total
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        patientId:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        description:
+          oneOf:
+            - type: string
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/TreatmentPlanStatus'
+        estimatedStartDate:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        estimatedEndDate:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+        subtotal:
+          $ref: '#/components/schemas/DecimalAmount'
+        discount:
+          $ref: '#/components/schemas/DecimalAmount'
+        total:
+          $ref: '#/components/schemas/DecimalAmount'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    PublicTreatmentPlan:
+      allOf:
+        - $ref: '#/components/schemas/PublicTreatmentPlanSummary'
+        - type: object
+          required:
+            - diagnosis
+            - patientComplaint
+            - clinicalObservations
+            - prognosis
+            - acceptedAt
+            - rejectedAt
+            - acceptanceNotes
+            - items
+          properties:
+            diagnosis:
+              oneOf:
+                - type: string
+                - type: 'null'
+            patientComplaint:
+              oneOf:
+                - type: string
+                - type: 'null'
+            clinicalObservations:
+              oneOf:
+                - type: string
+                - type: 'null'
+            prognosis:
+              oneOf:
+                - type: string
+                - type: 'null'
+            acceptedAt:
+              oneOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            rejectedAt:
+              oneOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            acceptanceNotes:
+              oneOf:
+                - type: string
+                - type: 'null'
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicTreatmentPlanItem'
+      unevaluatedProperties: false
+    PublicTreatmentPlanItem:
+      type: object
+      required:
+        - id
+        - treatmentPlanId
+        - userConceptId
+        - name
+        - description
+        - tooth
+        - area
+        - quantity
+        - unitPrice
+        - subtotal
+        - phase
+        - priority
+        - status
+        - notes
+        - sortOrder
+        - completedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        treatmentPlanId:
+          type: integer
+          minimum: 1
+        userConceptId:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        name:
+          type: string
+        description:
+          oneOf:
+            - type: string
+            - type: 'null'
+        tooth:
+          oneOf:
+            - type: string
+            - type: 'null'
+        area:
+          oneOf:
+            - type: string
+            - type: 'null'
+        quantity:
+          $ref: '#/components/schemas/DecimalQuantity'
+        unitPrice:
+          $ref: '#/components/schemas/DecimalAmount'
+        subtotal:
+          $ref: '#/components/schemas/DecimalAmount'
+        phase:
+          oneOf:
+            - type: string
+            - type: 'null'
+        priority:
+          oneOf:
+            - $ref: '#/components/schemas/TreatmentPlanItemPriority'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/TreatmentPlanItemStatus'
+        notes:
+          oneOf:
+            - type: string
+            - type: 'null'
+        sortOrder:
+          type: integer
+          minimum: 0
+        completedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
     PaginationMeta:
       type: object
       required: [page, pageSize, total, totalPages]
@@ -954,6 +1610,57 @@ components:
                 pagination:
                   $ref: '#/components/schemas/PaginationMeta'
               additionalProperties: false
+    TreatmentPlanResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/PublicTreatmentPlan'
+            errors:
+              type: 'null'
+    TreatmentPlanListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicTreatmentPlanSummary'
+            errors:
+              type: 'null'
+            meta:
+              type: object
+              required: [pagination]
+              properties:
+                pagination:
+                  $ref: '#/components/schemas/PaginationMeta'
+              additionalProperties: false
+    TreatmentPlanItemMutationData:
+      type: object
+      required: [item, treatmentPlan]
+      properties:
+        item:
+          $ref: '#/components/schemas/PublicTreatmentPlanItem'
+        treatmentPlan:
+          $ref: '#/components/schemas/PublicTreatmentPlan'
+      additionalProperties: false
+    TreatmentPlanItemMutationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/TreatmentPlanItemMutationData'
+            errors:
+              type: 'null'
     UpdateProfileRequest:
       type: object
       minProperties: 1

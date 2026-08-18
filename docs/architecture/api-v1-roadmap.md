@@ -39,8 +39,8 @@ Para cerrar una fase se deben registrar:
 | F2  | Base de datos reproducible         | DONE       | Esquema normalizado creado solo desde migraciones.           |
 | F3  | Plataforma HTTP y contrato v1      | DONE       | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
 | F4  | Identidad y acceso                 | DONE       | Auth, sesiones y perfil migrados al primer modulo v1.        |
-| F5  | Pacientes                          | IN PROGRESS | Pacientes migrados con ownership y DTOs estrictos.          |
-| F6  | Planes de tratamiento              | PENDING    | Planes e items transaccionales en v1.                        |
+| F5  | Pacientes                          | DONE       | Pacientes migrados con ownership y DTOs estrictos.          |
+| F6  | Planes de tratamiento              | IN PROGRESS | Planes e items transaccionales en v1.                       |
 | F7  | Expediente clinico                 | PENDING    | Notas y relaciones clinicas migradas.                        |
 | F8  | Facturacion y catalogos            | PENDING    | Pagos y conceptos transaccionales migrados.                  |
 | F9  | Agenda y Google Calendar           | PENDING    | Agenda desacoplada del proveedor externo.                    |
@@ -400,7 +400,7 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1 y pruebas con dos propietarios.
 - [x] Validacion local integral de F5.
 - [x] CI remoto de F5 y PR abierto.
-- [ ] PR de F5 integrado.
+- [x] PR de F5 integrado.
 
 ### Criterios de salida
 
@@ -425,6 +425,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-17 | Calidad local          | Lint, tipos, contrato, 24 pruebas rapidas y build pasan.         |
 | 2026-08-17 | Reconstruccion MySQL   | 25 pruebas pasan antes y despues de siete migraciones.           |
 | 2026-08-17 | CI remoto              | Jobs `quality` y `database` pasan en el PR #53.                  |
+| 2026-08-17 | Integracion             | PR #53 integrado en `main` mediante `e56f035`.                   |
 
 ### Enlaces de trabajo F5
 
@@ -444,6 +445,76 @@ Para cerrar una fase se deben registrar:
   a facturacion F8.
 - La politica de retencion definitiva requiere una decision de producto. F5 no
   ofrece borrado fisico y mantiene la operacion recuperable.
+
+## F6 - Planes de tratamiento
+
+### Objetivos
+
+- Migrar planes e items a `/api/v1` sin retirar las rutas legacy.
+- Aplicar ownership al plan y a cada recurso anidado.
+- Mantener importes exactos y recalcular el agregado atomicamente.
+- Evitar BOLA, mass assignment y filtrado accidental de notas clinicas.
+- Conservar planes e items mediante cancelacion logica idempotente.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f6-treatment-plans`.
+- [x] [Milestone `API v1 - F6 Planes de tratamiento`](https://github.com/jcmandujano/odontofy_node/milestone/7).
+- [x] Issues #54 a #59 con criterios verificables.
+- [x] ADR de ownership anidado, decimales y transacciones.
+- [x] Modulo `treatment-plans` con schemas, HTTP, servicio y repositorio.
+- [x] Listado paginado y detalle sin notas de evolucion.
+- [x] Mutaciones de plan e items con DTOs camelCase estrictos.
+- [x] Recalculo exacto bajo transaccion y bloqueo de fila.
+- [x] Cancelacion idempotente y timestamps de estado coherentes.
+- [x] Restriccion MySQL para descuentos y totales no negativos.
+- [x] Contrato OpenAPI 3.1 y pruebas con dos propietarios.
+- [x] Validacion local integral de F6.
+- [x] CI remoto de F6 y PR abierto.
+- [ ] PR de F6 integrado.
+
+### Criterios de salida
+
+- Cada plan por ID incluye `user_id`; cada item incluye el plan autorizado y un
+  ID ajeno es indistinguible de uno inexistente.
+- Inputs y outputs usan DTOs explicitos; dinero se expresa como string decimal y
+  no se serializan modelos ni propiedades internas.
+- Alta, edicion, cancelacion y estado de items recalculan el plan dentro de una
+  sola transaccion con bloqueo del agregado.
+- Un rollback conserva item e importes cuando el descuento violaria el subtotal.
+- Items cancelados no suman; planes e items no se eliminan fisicamente en v1.
+- Listados tienen `pageSize` maximo 100 y el detalle no incluye notas de F7.
+- OpenAPI, pruebas rapidas, pruebas MySQL, rollback y build pasan en CI.
+
+### Evidencias
+
+| Fecha      | Evidencia                | Resultado                                                        |
+| ---------- | ------------------------ | ---------------------------------------------------------------- |
+| 2026-08-17 | Schemas y decimales      | Cinco pruebas cubren exactitud, limites y mass assignment.       |
+| 2026-08-17 | Transacciones sobre MySQL | Ocho pruebas cubren BOLA, rollback, totales y ciclo de vida.     |
+| 2026-08-17 | Contrato                 | OpenAPI 3.1 valida diez operaciones de planes e items.            |
+| 2026-08-17 | Calidad local            | Lint, tipos, contrato, 29 pruebas rapidas y build pasan.          |
+| 2026-08-17 | Reconstruccion MySQL     | 33 pruebas pasan antes y despues de ocho migraciones.             |
+| 2026-08-17 | CI remoto                | Jobs `quality` y `database` pasan en el PR #60.                   |
+
+### Enlaces de trabajo F6
+
+- [#54 Definir contrato e invariantes](https://github.com/jcmandujano/odontofy_node/issues/54)
+- [#55 Implementar repositorio transaccional](https://github.com/jcmandujano/odontofy_node/issues/55)
+- [#56 Migrar listado y detalle](https://github.com/jcmandujano/odontofy_node/issues/56)
+- [#57 Migrar mutaciones de planes](https://github.com/jcmandujano/odontofy_node/issues/57)
+- [#58 Implementar items y recalculo atomico](https://github.com/jcmandujano/odontofy_node/issues/58)
+- [#59 Validar contrato y regresion](https://github.com/jcmandujano/odontofy_node/issues/59)
+- [PR #60 Planes de tratamiento transaccionales](https://github.com/jcmandujano/odontofy_node/pull/60)
+
+### Riesgos transferidos
+
+- Las notas de evolucion y su vinculacion clinica pertenecen a F7 y no se
+  incluyen en respuestas de F6.
+- Las transiciones permitidas entre estados requieren una decision de producto;
+  F6 valida enums y timestamps, pero no impone una maquina de estados.
+- La UI legacy envia numeros para importes y pagina localmente; F11 la adaptara a
+  strings decimales y paginacion del servidor.
 
 ## Definicion de terminado para fases posteriores
 

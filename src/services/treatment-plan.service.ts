@@ -28,6 +28,18 @@ const ensureNonNegativeDiscount = (discount?: number) => {
   }
 };
 
+const ensureDiscountWithinSubtotal = (
+  discount: number | undefined,
+  subtotal: number | string
+) => {
+  if (discount !== undefined && Number(discount) > Number(subtotal)) {
+    throw new TreatmentPlanServiceError(
+      'El descuento no puede exceder el subtotal del plan',
+      400
+    );
+  }
+};
+
 const toMoney = (value: number) => Number(value.toFixed(2));
 
 const ensurePatientBelongsToUser = async (userId: number, patientId: number) => {
@@ -66,6 +78,7 @@ export const createTreatmentPlan = async (
   input: CreateTreatmentPlanInput
 ) => {
   ensureNonNegativeDiscount(input.discount);
+  ensureDiscountWithinSubtotal(input.discount, 0);
   await ensurePatientBelongsToUser(userId, patientId);
 
   const discount = Number(input.discount ?? 0);
@@ -156,6 +169,7 @@ export const updateTreatmentPlan = async (
   ensureNonNegativeDiscount(input.discount);
 
   const treatmentPlan = await getTreatmentPlanForUser(userId, treatmentPlanId);
+  ensureDiscountWithinSubtotal(input.discount, treatmentPlan.subtotal);
 
   await treatmentPlan.update(input);
 
@@ -222,6 +236,7 @@ export const recalculateTreatmentPlanTotals = async (userId: number, treatmentPl
     treatmentPlanItems.reduce((sum, item) => sum + Number(item.subtotal), 0)
   );
   const discount = Number(treatmentPlan.discount ?? 0);
+  ensureDiscountWithinSubtotal(discount, subtotal);
   const total = toMoney(subtotal - discount);
 
   await treatmentPlan.update({

@@ -12,10 +12,13 @@ import {
 import { identityErrorHandler } from '../../modules/identity/identity.middleware';
 import { createPatientRouter } from '../../modules/patients/patient.router';
 import { PatientServiceDependencies } from '../../modules/patients/patient.service';
+import { createTreatmentPlanRouter } from '../../modules/treatment-plans/treatment-plan.router';
+import { TreatmentPlanServiceDependencies } from '../../modules/treatment-plans/treatment-plan.service';
 
 export interface V1RouterDependencies {
   identity?: IdentityServiceDependencies;
   patients?: PatientServiceDependencies;
+  treatmentPlans?: TreatmentPlanServiceDependencies;
 }
 
 export const createV1Router = (
@@ -39,6 +42,9 @@ export const createV1Router = (
   router.use('/health', createHealthRouter(readinessCheck));
   router.use(createIdentityRouter(identityService));
   router.use(createPatientRouter(identityService, dependencies.patients));
+  router.use(
+    createTreatmentPlanRouter(identityService, dependencies.treatmentPlans)
+  );
   router.get('/openapi.json', (_req, res) => res.json(openApiDocument));
 
   router.use(notFoundHandler);
