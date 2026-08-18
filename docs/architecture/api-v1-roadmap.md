@@ -399,7 +399,8 @@ Para cerrar una fase se deben registrar:
 - [x] Archivado idempotente y restauracion explicita sin borrado fisico v1.
 - [x] Contrato OpenAPI 3.1 y pruebas con dos propietarios.
 - [x] Validacion local integral de F5.
-- [ ] CI remoto y PR de F5 integrado.
+- [x] CI remoto de F5 y PR abierto.
+- [ ] PR de F5 integrado.
 
 ### Criterios de salida
 
@@ -423,6 +424,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-17 | Contrato               | OpenAPI 3.1 valida cinco operaciones y DTOs de pacientes.        |
 | 2026-08-17 | Calidad local          | Lint, tipos, contrato, 24 pruebas rapidas y build pasan.         |
 | 2026-08-17 | Reconstruccion MySQL   | 25 pruebas pasan antes y despues de siete migraciones.           |
+| 2026-08-17 | CI remoto              | Jobs `quality` y `database` pasan en el PR #53.                  |
 
 ### Enlaces de trabajo F5
 
@@ -432,6 +434,7 @@ Para cerrar una fase se deben registrar:
 - [#50 Migrar alta y actualizacion](https://github.com/jcmandujano/odontofy_node/issues/50)
 - [#51 Implementar archivado y restauracion](https://github.com/jcmandujano/odontofy_node/issues/51)
 - [#52 Validar contrato, ownership y regresion](https://github.com/jcmandujano/odontofy_node/issues/52)
+- [PR #53 Pacientes con ownership en API v1](https://github.com/jcmandujano/odontofy_node/pull/53)
 
 ### Riesgos transferidos
 
