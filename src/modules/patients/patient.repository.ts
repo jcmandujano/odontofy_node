@@ -146,8 +146,12 @@ export class SequelizePatientRepository implements PatientRepository {
       emergency_contact_relationship: input.emergencyContactRelationship,
       reason_for_consultation: input.reasonForConsultation,
       rfc: input.rfc,
-      family_medical_history: input.familyMedicalHistory,
-      personal_medical_history: input.personalMedicalHistory,
+      family_medical_history: { schemaVersion: '1.0', summary: null },
+      personal_medical_history: {
+        schemaVersion: '1.0',
+        answers: [],
+        otherNotes: null,
+      },
       email: input.email,
       status: true,
       debt: 0,
@@ -194,12 +198,6 @@ export class SequelizePatientRepository implements PatientRepository {
         reason_for_consultation: input.reasonForConsultation,
       }),
       ...(input.rfc !== undefined && { rfc: input.rfc }),
-      ...(input.familyMedicalHistory !== undefined && {
-        family_medical_history: input.familyMedicalHistory,
-      }),
-      ...(input.personalMedicalHistory !== undefined && {
-        personal_medical_history: input.personalMedicalHistory,
-      }),
       ...(input.email !== undefined && { email: input.email }),
       ...(input.active !== undefined && { status: input.active }),
     });

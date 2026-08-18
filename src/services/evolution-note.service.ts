@@ -8,7 +8,10 @@ import type {
     ListEvolutionNotesFilters,
     UpdateEvolutionNoteInput,
 } from "../dtos/evolution-note.dto";
+import { SequelizeClinicalRecordRepository } from "../modules/clinical-records/clinical-record.repository";
 import { getTreatmentPlanForUser } from "./treatment-plan.service";
+
+const clinicalRecordRepository = new SequelizeClinicalRecordRepository();
 
 export class EvolutionNoteServiceError extends Error {
     public statusCode: number;
@@ -179,12 +182,13 @@ export const createEvolutionNote = async (
         input.treatment_plan_item_id
     );
 
-    return EvolutionNote.create({
-        patient_id: patientId,
+    const created = await clinicalRecordRepository.createNote(userId, patientId, {
         note: input.note,
-        treatment_plan_id: input.treatment_plan_id ?? null,
-        treatment_plan_item_id: input.treatment_plan_item_id ?? null,
+        treatmentPlanId: input.treatment_plan_id ?? null,
+        treatmentPlanItemId: input.treatment_plan_item_id ?? null,
+        completeTreatmentItem: false,
     });
+    return EvolutionNote.findByPk(created.id);
 };
 
 export const updateEvolutionNote = async (
@@ -211,20 +215,20 @@ export const updateEvolutionNote = async (
         nextTreatmentPlanItemId
     );
 
-    await note.update({
-        ...input,
-        treatment_plan_id: nextTreatmentPlanId,
-        treatment_plan_item_id: nextTreatmentPlanItemId,
+    await clinicalRecordRepository.updateNote(userId, patientId, noteId, {
+        ...(input.note !== undefined && { note: input.note }),
+        treatmentPlanId: nextTreatmentPlanId,
+        treatmentPlanItemId: nextTreatmentPlanItemId,
+        changeReason: "Actualizacion desde API legacy",
     });
-
-    return note;
+    return EvolutionNote.findByPk(noteId);
 };
 
 export const deleteEvolutionNote = async (userId: number, patientId: number, noteId: number) => {
     await ensurePatientBelongsToUser(userId, patientId);
-    const note = await getEvolutionNoteForPatient(patientId, noteId);
-
-    await note.destroy();
-
-    return note;
+    await getEvolutionNoteForPatient(patientId, noteId);
+    await clinicalRecordRepository.archiveNote(userId, patientId, noteId, {
+        changeReason: "Archivado desde API legacy",
+    });
+    return EvolutionNote.findByPk(noteId);
 };

@@ -4,6 +4,8 @@ import { apiErrorHandler, notFoundHandler } from './error.middleware';
 import { createHealthRouter, ReadinessCheck } from './health.router';
 import { loadOpenApiV1 } from './openapi';
 import { sendSuccess } from './response';
+import { createClinicalRecordRouter } from '../../modules/clinical-records/clinical-record.router';
+import { ClinicalRecordServiceDependencies } from '../../modules/clinical-records/clinical-record.service';
 import { createIdentityRouter } from '../../modules/identity/identity.router';
 import {
   IdentityService,
@@ -16,6 +18,7 @@ import { createTreatmentPlanRouter } from '../../modules/treatment-plans/treatme
 import { TreatmentPlanServiceDependencies } from '../../modules/treatment-plans/treatment-plan.service';
 
 export interface V1RouterDependencies {
+  clinicalRecords?: ClinicalRecordServiceDependencies;
   identity?: IdentityServiceDependencies;
   patients?: PatientServiceDependencies;
   treatmentPlans?: TreatmentPlanServiceDependencies;
@@ -44,6 +47,9 @@ export const createV1Router = (
   router.use(createPatientRouter(identityService, dependencies.patients));
   router.use(
     createTreatmentPlanRouter(identityService, dependencies.treatmentPlans)
+  );
+  router.use(
+    createClinicalRecordRouter(identityService, dependencies.clinicalRecords)
   );
   router.get('/openapi.json', (_req, res) => res.json(openApiDocument));
 
