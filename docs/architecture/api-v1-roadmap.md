@@ -39,10 +39,10 @@ Para cerrar una fase se deben registrar:
 | F2  | Base de datos reproducible         | DONE       | Esquema normalizado creado solo desde migraciones.           |
 | F3  | Plataforma HTTP y contrato v1      | DONE       | `/api/v1`, errores, observabilidad y OpenAPI disponibles.    |
 | F4  | Identidad y acceso                 | DONE       | Auth, sesiones y perfil migrados al primer modulo v1.        |
-| F5  | Pacientes                          | DONE       | Pacientes migrados con ownership y DTOs estrictos.          |
-| F6  | Planes de tratamiento              | DONE       | Planes e items transaccionales en v1.                       |
-| F7  | Expediente clinico                 | IN PROGRESS | Historial y notas versionadas en v1.                        |
-| F8  | Facturacion y catalogos            | PENDING    | Pagos y conceptos transaccionales migrados.                  |
+| F5  | Pacientes                          | DONE       | Pacientes migrados con ownership y DTOs estrictos.           |
+| F6  | Planes de tratamiento              | DONE       | Planes e items transaccionales en v1.                        |
+| F7  | Expediente clinico                 | DONE       | Historial y notas versionadas en v1.                         |
+| F8  | Facturacion y catalogos            | VALIDATING | Pagos y conceptos transaccionales migrados.                  |
 | F9  | Agenda y Google Calendar           | PENDING    | Agenda desacoplada del proveedor externo.                    |
 | F10 | Consentimientos, archivos y correo | PENDING    | Integraciones restantes encapsuladas.                        |
 | F11 | Migracion Angular y retiro legacy  | PENDING    | UI en v1 y rutas legacy retiradas por modulo.                |
@@ -137,15 +137,15 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia                    | Resultado                                                                    |
+| Fecha      | Evidencia                  | Resultado                                                                     |
 | ---------- | ---------------------------- | ---------------------------------------------------------------------------- |
-| 2026-08-07 | Bootstrap testeable          | `createApp()` separado de `server.ts`; DB autentica antes de `listen`.        |
-| 2026-08-07 | Pruebas de caracterizacion   | 4 pruebas HTTP pasan sin MySQL ni credenciales de integraciones.              |
-| 2026-08-07 | Validacion local             | `npm run check` pasa: lint, typecheck, 4 pruebas y build.                      |
-| 2026-08-07 | Dependencias compatibles     | Alertas npm reducidas a 8 moderadas; no quedan altas ni criticas.             |
-| 2026-08-07 | Riesgo residual              | Dependencias transitivas de `uuid` documentadas sin aplicar cambios forzados. |
-| 2026-08-07 | CI de F1                     | Job `quality` del PR `#27` aprobado en GitHub Actions sobre Node 24.           |
-| 2026-08-14 | Cierre F1                    | PR `#27` integrado, issues `#22` a `#26` cerrados y milestone completado.      |
+| 2026-08-07 | Bootstrap testeable        | `createApp()` separado de `server.ts`; DB autentica antes de `listen`.        |
+| 2026-08-07 | Pruebas de caracterizacion | 4 pruebas HTTP pasan sin MySQL ni credenciales de integraciones.              |
+| 2026-08-07 | Validacion local           | `npm run check` pasa: lint, typecheck, 4 pruebas y build.                     |
+| 2026-08-07 | Dependencias compatibles   | Alertas npm reducidas a 8 moderadas; no quedan altas ni criticas.             |
+| 2026-08-07 | Riesgo residual            | Dependencias transitivas de `uuid` documentadas sin aplicar cambios forzados. |
+| 2026-08-07 | CI de F1                   | Job `quality` del PR `#27` aprobado en GitHub Actions sobre Node 24.          |
+| 2026-08-14 | Cierre F1                  | PR `#27` integrado, issues `#22` a `#26` cerrados y milestone completado.     |
 
 ### Enlaces de trabajo F1
 
@@ -203,16 +203,16 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia                    | Resultado                                                                      |
+| Fecha      | Evidencia                 | Resultado                                                                       |
 | ---------- | ---------------------------- | ------------------------------------------------------------------------------ |
-| 2026-08-14 | Inventario legacy            | 17 modelos/tablas y cinco scripts SQL manuales incorporados al diseño objetivo. |
-| 2026-08-14 | Migracion desde cero         | Seis migraciones aplicadas correctamente sobre MySQL 8.4 limpio.               |
-| 2026-08-14 | Seed sintetico               | Tres conceptos y dos consentimientos ficticios, sin datos reales.              |
-| 2026-08-14 | Integridad y mappings        | Nueve pruebas validan tablas, FKs, checks, ownership, cascadas y mappings.      |
-| 2026-08-14 | Rollback y reconstruccion    | Las seis migraciones bajan y vuelven a subir en orden sin intervencion manual.  |
-| 2026-08-14 | Seguridad de operaciones     | Pruebas unitarias rechazan production y nombres de base no autorizados.         |
-| 2026-08-14 | CI de F2                     | Jobs `quality` y `database` del PR `#33` aprobados sobre Node 24 y MySQL 8.4.    |
-| 2026-08-14 | Integracion de F2            | PR `#33` integrado en `main` mediante commit `0e8e032`.                         |
+| 2026-08-14 | Inventario legacy         | 17 modelos/tablas y cinco scripts SQL manuales incorporados al diseño objetivo. |
+| 2026-08-14 | Migracion desde cero      | Seis migraciones aplicadas correctamente sobre MySQL 8.4 limpio.                |
+| 2026-08-14 | Seed sintetico            | Tres conceptos y dos consentimientos ficticios, sin datos reales.               |
+| 2026-08-14 | Integridad y mappings     | Nueve pruebas validan tablas, FKs, checks, ownership, cascadas y mappings.      |
+| 2026-08-14 | Rollback y reconstruccion | Las seis migraciones bajan y vuelven a subir en orden sin intervencion manual.  |
+| 2026-08-14 | Seguridad de operaciones  | Pruebas unitarias rechazan production y nombres de base no autorizados.         |
+| 2026-08-14 | CI de F2                  | Jobs `quality` y `database` del PR `#33` aprobados sobre Node 24 y MySQL 8.4.   |
+| 2026-08-14 | Integracion de F2         | PR `#33` integrado en `main` mediante commit `0e8e032`.                         |
 
 ### Enlaces de trabajo F2
 
@@ -271,15 +271,15 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia                  | Resultado                                                        |
+| Fecha      | Evidencia                  | Resultado                                                            |
 | ---------- | -------------------------- | ---------------------------------------------------------------- |
-| 2026-08-15 | Migracion a Express 5      | Suite legacy aprobada y wildcard de archivos adaptado y probado. |
-| 2026-08-15 | Pruebas HTTP de plataforma | Ocho escenarios cubren IDs, errores, health, Zod y shutdown.     |
-| 2026-08-15 | Contrato OpenAPI            | Documento 3.1.1 validado automaticamente con Swagger Parser.     |
-| 2026-08-15 | Suite local                 | 15 pruebas aprobadas sin abrir puerto ni requerir MySQL.         |
-| 2026-08-15 | Regresion de base de datos  | Nueve pruebas pasan antes y despues de reconstruir seis migraciones. |
-| 2026-08-15 | CI de F3                    | Jobs `quality` y `database` del PR `#39` aprobados.               |
-| 2026-08-15 | Integracion de F3           | PR `#39` integrado en `main` mediante commit `5f5e461`.           |
+| 2026-08-15 | Migracion a Express 5      | Suite legacy aprobada y wildcard de archivos adaptado y probado.     |
+| 2026-08-15 | Pruebas HTTP de plataforma | Ocho escenarios cubren IDs, errores, health, Zod y shutdown.         |
+| 2026-08-15 | Contrato OpenAPI           | Documento 3.1.1 validado automaticamente con Swagger Parser.         |
+| 2026-08-15 | Suite local                | 15 pruebas aprobadas sin abrir puerto ni requerir MySQL.             |
+| 2026-08-15 | Regresion de base de datos | Nueve pruebas pasan antes y despues de reconstruir seis migraciones. |
+| 2026-08-15 | CI de F3                   | Jobs `quality` y `database` del PR `#39` aprobados.                  |
+| 2026-08-15 | Integracion de F3          | PR `#39` integrado en `main` mediante commit `5f5e461`.              |
 
 ### Enlaces de trabajo F3
 
@@ -345,7 +345,7 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia                  | Resultado                                                          |
+| Fecha      | Evidencia                  | Resultado                                                           |
 | ---------- | -------------------------- | ------------------------------------------------------------------ |
 | 2026-08-15 | Politica y JWT             | Seis pruebas cubren schemas, claims, secretos y anti-enumeracion.   |
 | 2026-08-15 | Ciclo identity sobre MySQL | Diez pruebas cubren cuenta, sesion, replay, perfil y recovery.      |
@@ -354,7 +354,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-15 | Calidad local              | Lint, tipos, contrato, 21 pruebas rapidas y build pasan.            |
 | 2026-08-15 | Reconstruccion MySQL       | 19 pruebas pasan antes y despues del rollback de siete migraciones. |
 | 2026-08-15 | CI remoto                  | Jobs `quality` y `database` pasan en el PR #46.                     |
-| 2026-08-15 | Integracion                | PR #46 integrado en `beb3a11`; issues y milestone cerrados.        |
+| 2026-08-15 | Integracion                | PR #46 integrado en `beb3a11`; issues y milestone cerrados.         |
 
 ### Enlaces de trabajo F4
 
@@ -417,15 +417,15 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia              | Resultado                                                       |
+| Fecha      | Evidencia             | Resultado                                                        |
 | ---------- | ---------------------- | --------------------------------------------------------------- |
-| 2026-08-17 | Schemas y propiedades  | Tres pruebas cubren limites, normalizacion y mass assignment.   |
-| 2026-08-17 | Ownership sobre MySQL  | Seis pruebas con dos owners cubren CRUD, archivo y restauracion. |
-| 2026-08-17 | Contrato               | OpenAPI 3.1 valida cinco operaciones y DTOs de pacientes.        |
-| 2026-08-17 | Calidad local          | Lint, tipos, contrato, 24 pruebas rapidas y build pasan.         |
-| 2026-08-17 | Reconstruccion MySQL   | 25 pruebas pasan antes y despues de siete migraciones.           |
-| 2026-08-17 | CI remoto              | Jobs `quality` y `database` pasan en el PR #53.                  |
-| 2026-08-17 | Integracion             | PR #53 integrado en `main` mediante `e56f035`.                   |
+| 2026-08-17 | Schemas y propiedades | Tres pruebas cubren limites, normalizacion y mass assignment.    |
+| 2026-08-17 | Ownership sobre MySQL | Seis pruebas con dos owners cubren CRUD, archivo y restauracion. |
+| 2026-08-17 | Contrato              | OpenAPI 3.1 valida cinco operaciones y DTOs de pacientes.        |
+| 2026-08-17 | Calidad local         | Lint, tipos, contrato, 24 pruebas rapidas y build pasan.         |
+| 2026-08-17 | Reconstruccion MySQL  | 25 pruebas pasan antes y despues de siete migraciones.           |
+| 2026-08-17 | CI remoto             | Jobs `quality` y `database` pasan en el PR #53.                  |
+| 2026-08-17 | Integracion           | PR #53 integrado en `main` mediante `e56f035`.                   |
 
 ### Enlaces de trabajo F5
 
@@ -488,15 +488,15 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia                | Resultado                                                        |
+| Fecha      | Evidencia                 | Resultado                                                    |
 | ---------- | ------------------------ | ---------------------------------------------------------------- |
-| 2026-08-17 | Schemas y decimales      | Cinco pruebas cubren exactitud, limites y mass assignment.       |
-| 2026-08-17 | Transacciones sobre MySQL | Ocho pruebas cubren BOLA, rollback, totales y ciclo de vida.     |
-| 2026-08-17 | Contrato                 | OpenAPI 3.1 valida diez operaciones de planes e items.            |
-| 2026-08-17 | Calidad local            | Lint, tipos, contrato, 29 pruebas rapidas y build pasan.          |
-| 2026-08-17 | Reconstruccion MySQL     | 33 pruebas pasan antes y despues de ocho migraciones.             |
-| 2026-08-17 | CI remoto                | Jobs `quality` y `database` pasan en el PR #60.                   |
-| 2026-08-18 | Integracion              | PR #60 integrado en `main` mediante `93bf6b9`.                    |
+| 2026-08-17 | Schemas y decimales       | Cinco pruebas cubren exactitud, limites y mass assignment.   |
+| 2026-08-17 | Transacciones sobre MySQL | Ocho pruebas cubren BOLA, rollback, totales y ciclo de vida. |
+| 2026-08-17 | Contrato                  | OpenAPI 3.1 valida diez operaciones de planes e items.       |
+| 2026-08-17 | Calidad local             | Lint, tipos, contrato, 29 pruebas rapidas y build pasan.     |
+| 2026-08-17 | Reconstruccion MySQL      | 33 pruebas pasan antes y despues de ocho migraciones.        |
+| 2026-08-17 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #60.              |
+| 2026-08-18 | Integracion               | PR #60 integrado en `main` mediante `93bf6b9`.               |
 
 ### Enlaces de trabajo F6
 
@@ -541,7 +541,7 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
 - [x] Validacion local integral de F7.
 - [x] CI remoto de F7 y PR abierto.
-- [ ] PR de F7 integrado.
+- [x] PR de F7 integrado.
 
 ### Criterios de salida
 
@@ -556,13 +556,14 @@ Para cerrar una fase se deben registrar:
 
 ### Evidencias
 
-| Fecha      | Evidencia                 | Resultado                                                       |
+| Fecha      | Evidencia                 | Resultado                                                         |
 | ---------- | ------------------------- | --------------------------------------------------------------- |
 | 2026-08-18 | Schemas clinicos          | Cuatro pruebas cubren cuestionario, referencias y DTOs estrictos. |
-| 2026-08-18 | Transacciones sobre MySQL | Cinco pruebas cubren BOLA, versionado, archivo y rollback.       |
-| 2026-08-18 | Calidad local             | Lint, tipos, contrato, 33 pruebas rapidas y build pasan.         |
-| 2026-08-18 | Reconstruccion MySQL      | 38 pruebas pasan antes y despues de nueve migraciones.           |
+| 2026-08-18 | Transacciones sobre MySQL | Cinco pruebas cubren BOLA, versionado, archivo y rollback.        |
+| 2026-08-18 | Calidad local             | Lint, tipos, contrato, 33 pruebas rapidas y build pasan.          |
+| 2026-08-18 | Reconstruccion MySQL      | 38 pruebas pasan antes y despues de nueve migraciones.            |
 | 2026-08-18 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #67.                   |
+| 2026-08-18 | Integracion               | PR #67 integrado en `main` mediante `bb33c72`.                    |
 
 ### Enlaces de trabajo F7
 
@@ -583,6 +584,77 @@ Para cerrar una fase se deben registrar:
   con asesoria juridica antes de produccion. F7 impide borrado accidental.
 - La UI legacy conserva sus DTOs hasta F11, aunque sus mutaciones ya delegan al
   repositorio versionado.
+
+## F8 - Facturacion y catalogos
+
+### Objetivos
+
+- Separar cobranza interna de facturacion fiscal y procesamiento de pagos.
+- Unificar cargos, ingresos y saldo del paciente bajo invariantes transaccionales.
+- Conservar precios, autoria, correcciones y cancelaciones como evidencia historica.
+- Aplicar ownership e idempotencia a catalogos y registros financieros.
+- Mantener temporalmente las rutas legacy sobre el mismo motor financiero.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f8-billing`.
+- [x] [Milestone `API v1 - F8 Facturacion y catalogos`](https://github.com/jcmandujano/odontofy_node/milestone/9).
+- [x] Issues #68 a #73 con criterios verificables.
+- [x] ADR de alcance, decimales, idempotencia, snapshots y saldos.
+- [x] Modulo `billing` con schemas, HTTP, servicio y repositorio.
+- [x] Catalogo propio con archivo y reactivacion logicos.
+- [x] Registros con snapshots de items, autoria y saldo cronologico.
+- [x] Correcciones versionadas y cancelacion logica idempotente.
+- [x] Puente de escritura para pagos legacy.
+- [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
+- [x] Migracion, rollback y reconstruccion MySQL validados.
+- [x] Validacion local integral de F8.
+- [ ] CI remoto de F8 y PR abierto.
+- [ ] PR de F8 integrado.
+
+### Criterios de salida
+
+- Un registro propio usa conceptos propios activos y persiste sus snapshots; un
+  cambio posterior al catalogo no altera el historial.
+- Dinero viaja como string decimal, se calcula sin punto flotante y respeta
+  `DECIMAL(12,2)`.
+- Repetir una llave con el mismo payload devuelve el mismo registro; cambiar el
+  payload devuelve `409` y no duplica movimientos.
+- Alta, correccion y cancelacion bloquean el paciente, recalculan el historial
+  cronologico y actualizan su saldo dentro de una sola transaccion.
+- Correcciones y cancelaciones conservan revisiones; v1 no borra fisicamente.
+- IDs ajenos no revelan recursos y ningun DTO acepta importes calculados o autor.
+- La API no se presenta como CFDI ni acepta datos sensibles de tarjetas.
+- OpenAPI, pruebas rapidas, pruebas MySQL, rollback y build pasan en CI.
+
+### Evidencias
+
+| Fecha      | Evidencia                 | Resultado                                                         |
+| ---------- | ------------------------- | ----------------------------------------------------------------- |
+| 2026-08-18 | Investigacion y ADR       | Alcance no CFDI, PCI, idempotencia y locking documentados.        |
+| 2026-08-18 | Schemas y decimales       | Tres pruebas cubren exactitud, limites, fechas y mass assignment. |
+| 2026-08-18 | Transacciones sobre MySQL | Cinco pruebas cubren BOLA, snapshots, saldos y revisiones.        |
+| 2026-08-18 | Calidad local             | Lint, tipos, contrato, 36 pruebas rapidas y build pasan.          |
+| 2026-08-18 | Reconstruccion MySQL      | 43 pruebas pasan antes y despues de diez migraciones.             |
+| 2026-08-18 | Rollback F8               | Reversion y reaplicacion de la migracion pasan sin residuos.      |
+
+### Enlaces de trabajo F8
+
+- [#68 Definir contrato e invariantes](https://github.com/jcmandujano/odontofy_node/issues/68)
+- [#69 Asegurar ownership del catalogo](https://github.com/jcmandujano/odontofy_node/issues/69)
+- [#70 Implementar repositorio transaccional](https://github.com/jcmandujano/odontofy_node/issues/70)
+- [#71 Versionar correcciones y cancelaciones](https://github.com/jcmandujano/odontofy_node/issues/71)
+- [#72 Exponer resumen y puente legacy](https://github.com/jcmandujano/odontofy_node/issues/72)
+- [#73 Validar migracion, contrato y pruebas](https://github.com/jcmandujano/odontofy_node/issues/73)
+
+### Riesgos transferidos
+
+- CFDI, conciliacion, reembolsos bancarios y un procesador de pagos quedan fuera
+  del producto actual y requieren fases propias si se incorporan.
+- La UI legacy sigue usando numeros y nombres `payment`; F11 migrara sus DTOs y
+  mostrara revisiones, estados e idempotencia nativos de v1.
+- Medicion de rendimiento y retry automatico de deadlocks se revisaran en F12;
+  F8 usa transacciones cortas y orden estable de bloqueo.
 
 ## Definicion de terminado para fases posteriores
 

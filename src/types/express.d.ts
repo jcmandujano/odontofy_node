@@ -5,7 +5,7 @@ declare module 'express-serve-static-core' {
       userId: number;
     };
     requestId?: string;
-    validated?: Partial<Record<'body' | 'params' | 'query', unknown>>;
+    validated?: Partial<Record<'body' | 'headers' | 'params' | 'query', unknown>>;
   }
 }
 

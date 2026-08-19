@@ -14,6 +14,7 @@ import OAuthState from '../../src/models/oauth-state.model';
 import PasswordReset from '../../src/models/password-reset.model';
 import Patient from '../../src/models/patient.model';
 import PaymentUser from '../../src/models/payment-user.model';
+import PaymentRevision from '../../src/models/payment-revision.model';
 import Payment from '../../src/models/payment.model';
 import SignedConsent from '../../src/models/signed-consent.model';
 import Token from '../../src/models/token.model';
@@ -37,6 +38,7 @@ const expectedTables = [
   'password_resets',
   'patients',
   'payment_items',
+  'payment_revisions',
   'payments',
   'signed_consents',
   'treatment_plan_items',
@@ -89,6 +91,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (owner) await Payment.destroy({ where: { user_id: owner.id } });
   if (owner) await owner.destroy();
 });
 
@@ -121,11 +124,15 @@ describe('reproducible database schema', () => {
     const payment = await Payment.create({
       user_id: owner.id,
       patientId: patient.id,
+      author_user_id: owner.id,
+      author_name: 'Doctora Sintetica F2',
       payment_date: '2026-08-14',
+      subtotal: 550,
       income: 400,
       debt: 100,
       total: 500,
       discount: 50,
+      payment_method: 'CASH',
     });
     const [storedPayment] = await db.query<{
       patient_id: number;
@@ -155,6 +162,7 @@ describe('reproducible database schema', () => {
       [PasswordReset.getTableName(), 'password_resets'],
       [Patient.getTableName(), 'patients'],
       [Payment.getTableName(), 'payments'],
+      [PaymentRevision.getTableName(), 'payment_revisions'],
       [PaymentUser.getTableName(), 'payment_items'],
       [SignedConsent.getTableName(), 'signed_consents'],
       [Token.getTableName(), 'account_verification_tokens'],
@@ -224,11 +232,15 @@ describe('reproducible database schema', () => {
       Payment.create({
         user_id: owner.id,
         patientId: patient.id,
+        author_user_id: owner.id,
+        author_name: 'Doctora Sintetica F2',
         payment_date: '2026-08-14',
+        subtotal: 0,
         income: -1,
         debt: 0,
         total: 0,
         discount: 0,
+        payment_method: null,
       })
     ).rejects.toThrow();
   });

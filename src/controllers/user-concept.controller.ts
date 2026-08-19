@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import UserConcept from "../models/user_concept.model";
-import PaymentUser from "../models/payment-user.model";
 import { errorResponse, successResponse } from "../utils/response";
 import { PaginatedResponse } from "../types/api-response";
 import { getRouteParam } from "../utils/route-param";
@@ -12,7 +11,7 @@ export const listUserConcepts = async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     try {
         // Obtener conceptos personalizados del usuario
-        const { count, rows: userConcepts } = await UserConcept.findAndCountAll({ where: { user_id: authorUid }, limit, offset: (page - 1) * limit });
+        const { count, rows: userConcepts } = await UserConcept.findAndCountAll({ where: { user_id: authorUid, active: true }, limit, offset: (page - 1) * limit });
 
 
         const response: PaginatedResponse<typeof userConcepts[number]> = {
@@ -37,7 +36,7 @@ export const getUserConcept = async (req: Request, res: Response) => {
     const { authorUid } = req;
     try {
         // Buscar en la tabla de conceptos personalizados primero
-        const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid } });
+        const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid, active: true } });
 
         if (userConcept) {
             return successResponse(res, userConcept, "Concept founded")
@@ -83,7 +82,7 @@ export const updateUserConcept = async (req: Request, res: Response) => {
 
         // Si el concepto global no existe, buscar en los conceptos personalizados
         const userConcept = await UserConcept.findOne({
-            where: { user_id: authorUid, id },
+            where: { user_id: authorUid, id, active: true },
         });
 
         if (userConcept) {
@@ -111,20 +110,13 @@ export const deleteUserConcept = async (req: Request, res: Response) => {
     const id = getRouteParam(req, 'id');
     const { authorUid } = req;
     try {
-        const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid } });
+        const userConcept = await UserConcept.findOne({ where: { id, user_id: authorUid, active: true } });
 
         if (!userConcept) {
             return errorResponse(res, 'Failed to find concept', 500);
         }
 
-        // Verificar si existe una relación en PaymentUser
-        const relatedPayments = await PaymentUser.findOne({ where: { conceptId: id } });
-
-        if (relatedPayments) {
-            return errorResponse(res, 'The concept cannot be deleted because it is associated with payments', 400);
-        }
-
-        await userConcept.destroy();
+        await userConcept.update({ active: false });
         return successResponse(res, "Concepts deleted successfully")
     } catch (error) {
         console.error(error);

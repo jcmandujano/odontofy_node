@@ -1,14 +1,19 @@
+import { randomUUID } from 'node:crypto';
+
 import dayjs from 'dayjs';
 import { Op, Transaction } from 'sequelize';
-import db from '../db/connection';
+import { ZodError } from 'zod';
 import type { SavePaymentInput } from '../dtos/payment.dto';
+import { createBillingRecordSchema } from '../modules/billing/billing.schemas';
+import { BillingService } from '../modules/billing/billing.service';
+import { BillingError } from '../modules/billing/billing.types';
 import Patient from '../models/patient.model';
 import Payment from '../models/payment.model';
 import PaymentUser from '../models/payment-user.model';
-import UserConcept from '../models/user_concept.model';
 import type { PaginatedResponse } from '../types/api-response';
 
-const MAX_MONEY_IN_CENTS = 9_999_999_999;
+const MAX_MONEY_IN_CENTS = 999_999_999_999;
+const billingService = new BillingService();
 
 export class PaymentServiceError extends Error {
   public statusCode: number;
@@ -32,9 +37,19 @@ const toCents = (value: number | string, field: string) => {
 
 const fromCents = (value: number) => Number((value / 100).toFixed(2));
 
+const legacyDecimal = (value: number | string, field: string) => {
+  const cents = toCents(value, field);
+  ensureMoneyFitsColumn(cents, field);
+  if (cents < 0)
+    throw new PaymentServiceError(`${field} no puede ser negativo`);
+  return (cents / 100).toFixed(2);
+};
+
 const ensureMoneyFitsColumn = (valueInCents: number, field: string) => {
   if (Math.abs(valueInCents) > MAX_MONEY_IN_CENTS) {
-    throw new PaymentServiceError(`${field} excede el importe maximo permitido`);
+    throw new PaymentServiceError(
+      `${field} excede el importe maximo permitido`
+    );
   }
 };
 
@@ -65,7 +80,7 @@ const getPaymentForUser = async (
   transaction?: Transaction
 ) => {
   const payment = await Payment.findOne({
-    where: { id: paymentId, patientId, user_id: userId },
+    where: { id: paymentId, patientId, user_id: userId, status: 'POSTED' },
     transaction,
   });
 
@@ -79,109 +94,55 @@ const getPaymentForUser = async (
   return payment;
 };
 
-const calculatePaymentAmounts = async (
-  userId: number,
-  input: SavePaymentInput,
-  transaction: Transaction
-) => {
+const billingInput = (input: SavePaymentInput) => {
   if (!Array.isArray(input.concepts) || input.concepts.length === 0) {
     throw new PaymentServiceError('El pago debe incluir al menos un concepto');
   }
-
-  const conceptIds = [...new Set(input.concepts.map(({ conceptId }) => Number(conceptId)))];
-  const userConcepts = await UserConcept.findAll({
-    where: {
-      id: { [Op.in]: conceptIds },
-      user_id: userId,
-    },
-    transaction,
-  });
-
-  if (userConcepts.length !== conceptIds.length) {
-    throw new PaymentServiceError(
-      'Uno o mas conceptos no existen o no pertenecen al usuario autenticado'
-    );
-  }
-
-  const conceptPriceInCents = new Map(
-    userConcepts.map((concept) => [
-      concept.id,
-      toCents(concept.unit_price, `El precio del concepto ${concept.id}`),
-    ])
+  const amountReceived = legacyDecimal(input.income, 'El ingreso');
+  const methods = new Set(
+    input.concepts.map((concept) => concept.paymentMethod)
   );
-
-  const subtotalInCents = input.concepts.reduce((subtotal, concept) => {
-    const quantity = Number(concept.quantity);
-
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      throw new PaymentServiceError('La cantidad de cada concepto debe ser un entero mayor a 0');
-    }
-
-    const unitPriceInCents = conceptPriceInCents.get(Number(concept.conceptId));
-    if (unitPriceInCents === undefined) {
-      throw new PaymentServiceError('No fue posible obtener el precio de uno de los conceptos');
-    }
-
-    return subtotal + unitPriceInCents * quantity;
-  }, 0);
-
-  const requestedDiscountInCents = toCents(input.discount ?? 0, 'El descuento');
-  const incomeInCents = toCents(input.income, 'El ingreso');
-
-  if (requestedDiscountInCents < 0) {
-    throw new PaymentServiceError('El descuento no puede ser negativo');
-  }
-
-  if (incomeInCents < 0) {
-    throw new PaymentServiceError('El ingreso no puede ser negativo');
-  }
-
-  ensureMoneyFitsColumn(subtotalInCents, 'El subtotal');
-  const discountInCents = Math.min(requestedDiscountInCents, subtotalInCents);
-  const totalInCents = subtotalInCents - discountInCents;
-  const debtInCents = totalInCents - incomeInCents;
-  ensureMoneyFitsColumn(incomeInCents, 'El ingreso');
-  ensureMoneyFitsColumn(debtInCents, 'El adeudo');
-
-  return {
-    subtotal: fromCents(subtotalInCents),
-    discount: fromCents(discountInCents),
-    total: fromCents(totalInCents),
-    income: fromCents(incomeInCents),
-    debt: fromCents(debtInCents),
-  };
-};
-
-const savePaymentConcepts = async (
-  paymentId: number,
-  input: SavePaymentInput,
-  transaction: Transaction
-) => {
-  await PaymentUser.bulkCreate(
-    input.concepts.map((concept) => ({
-      paymentId,
+  const singleMethod = methods.values().next().value;
+  const paymentMethod =
+    amountReceived === '0.00'
+      ? null
+      : methods.size > 1
+        ? ('MIXED' as const)
+        : singleMethod === 'DEBIT'
+          ? ('DEBIT_CARD' as const)
+          : singleMethod === 'CREDIT'
+            ? ('CREDIT_CARD' as const)
+            : singleMethod === 'TRANSFERENCE'
+              ? ('BANK_TRANSFER' as const)
+              : ('CASH' as const);
+  return createBillingRecordSchema.parse({
+    occurredOn: input.payment_date,
+    discount: legacyDecimal(input.discount ?? 0, 'El descuento'),
+    amountReceived,
+    paymentMethod,
+    items: input.concepts.map((concept) => ({
       conceptId: Number(concept.conceptId),
-      paymentMethod: concept.paymentMethod,
       quantity: Number(concept.quantity),
     })),
-    { transaction }
-  );
+  });
 };
 
-const attachConcepts = async (userId: number, payments: Payment[]) => {
+const translateBillingError = (error: unknown): never => {
+  if (error instanceof BillingError) {
+    const statusCode = error.code.endsWith('NOT_FOUND') ? 404 : 400;
+    throw new PaymentServiceError(error.message, statusCode);
+  }
+  if (error instanceof ZodError) {
+    throw new PaymentServiceError('El pago contiene valores no validos');
+  }
+  throw error;
+};
+
+const attachConcepts = async (payments: Payment[]) => {
   if (payments.length === 0) return [];
 
   const paymentConcepts = await PaymentUser.findAll({
     where: { paymentId: { [Op.in]: payments.map(({ id }) => id) } },
-    include: [
-      {
-        model: UserConcept,
-        as: 'userConcept',
-        attributes: ['id', 'description', 'unit_price'],
-        where: { user_id: userId },
-        required: false,
-      },
-    ],
     order: [['id', 'ASC']],
   });
 
@@ -194,15 +155,18 @@ const attachConcepts = async (userId: number, payments: Payment[]) => {
 
   return payments.map((payment) => ({
     ...payment.toJSON(),
-    subtotal: fromCents(toCents(payment.total, 'El total') + toCents(payment.discount, 'El descuento')),
+    subtotal: fromCents(
+      toCents(payment.total, 'El total') +
+        toCents(payment.discount, 'El descuento')
+    ),
     concepts: (conceptsByPayment.get(payment.id) ?? []).map((concept) => ({
       id: concept.id,
       paymentId: concept.paymentId,
       conceptId: concept.conceptId,
       paymentMethod: concept.paymentMethod,
       quantity: concept.quantity,
-      description: concept.userConcept ? String(concept.userConcept.description) : null,
-      unitPrice: concept.userConcept ? Number(concept.userConcept.unit_price) : null,
+      description: concept.description_snapshot,
+      unitPrice: Number(concept.unit_price_snapshot),
     })),
   }));
 };
@@ -212,12 +176,14 @@ export const listPayments = async (
   patientId: number,
   page = 1,
   limit = 10
-): Promise<PaginatedResponse<Awaited<ReturnType<typeof attachConcepts>>[number]>> => {
+): Promise<
+  PaginatedResponse<Awaited<ReturnType<typeof attachConcepts>>[number]>
+> => {
   await ensurePatientBelongsToUser(userId, patientId);
 
   const offset = (page - 1) * limit;
   const { count, rows } = await Payment.findAndCountAll({
-    where: { patientId, user_id: userId },
+    where: { patientId, user_id: userId, status: 'POSTED' },
     limit,
     offset,
     order: [
@@ -225,7 +191,7 @@ export const listPayments = async (
       ['id', 'DESC'],
     ],
   });
-  const payments = await attachConcepts(userId, rows);
+  const payments = await attachConcepts(rows);
 
   return {
     total: count,
@@ -242,7 +208,7 @@ export const getPaymentById = async (
   paymentId: number
 ) => {
   const payment = await getPaymentForUser(userId, patientId, paymentId);
-  const [paymentWithConcepts] = await attachConcepts(userId, [payment]);
+  const [paymentWithConcepts] = await attachConcepts([payment]);
 
   return paymentWithConcepts;
 };
@@ -252,27 +218,19 @@ export const createPayment = async (
   patientId: number,
   input: SavePaymentInput
 ) => {
-  const paymentId = await db.transaction(async (transaction) => {
-    await ensurePatientBelongsToUser(userId, patientId, transaction);
-    const amounts = await calculatePaymentAmounts(userId, input, transaction);
-    const payment = await Payment.create(
-      {
-        user_id: userId,
-        patientId,
-        payment_date: input.payment_date,
-        income: amounts.income,
-        debt: amounts.debt,
-        total: amounts.total,
-        discount: amounts.discount,
-      },
-      { transaction }
+  try {
+    const translated = billingInput(input);
+    const idempotencyKey = randomUUID();
+    const record = await billingService.createRecord(
+      userId,
+      patientId,
+      translated,
+      idempotencyKey
     );
-
-    await savePaymentConcepts(payment.id, input, transaction);
-    return payment.id;
-  });
-
-  return getPaymentById(userId, patientId, paymentId);
+    return getPaymentById(userId, patientId, record.id);
+  } catch (error) {
+    return translateBillingError(error);
+  }
 };
 
 export const updatePayment = async (
@@ -281,26 +239,15 @@ export const updatePayment = async (
   paymentId: number,
   input: SavePaymentInput
 ) => {
-  await db.transaction(async (transaction) => {
-    const payment = await getPaymentForUser(userId, patientId, paymentId, transaction);
-    const amounts = await calculatePaymentAmounts(userId, input, transaction);
-
-    await payment.update(
-      {
-        payment_date: input.payment_date,
-        income: amounts.income,
-        debt: amounts.debt,
-        total: amounts.total,
-        discount: amounts.discount,
-      },
-      { transaction }
-    );
-
-    await PaymentUser.destroy({ where: { paymentId }, transaction });
-    await savePaymentConcepts(paymentId, input, transaction);
-  });
-
-  return getPaymentById(userId, patientId, paymentId);
+  try {
+    await billingService.correctRecord(userId, patientId, paymentId, {
+      ...billingInput(input),
+      changeReason: 'Correccion solicitada mediante API legacy',
+    });
+    return getPaymentById(userId, patientId, paymentId);
+  } catch (error) {
+    return translateBillingError(error);
+  }
 };
 
 export const deletePayment = async (
@@ -308,36 +255,33 @@ export const deletePayment = async (
   patientId: number,
   paymentId: number
 ) => {
-  await db.transaction(async (transaction) => {
-    const payment = await getPaymentForUser(userId, patientId, paymentId, transaction);
-    await PaymentUser.destroy({ where: { paymentId }, transaction });
-    await payment.destroy({ transaction });
-  });
+  try {
+    await billingService.cancelRecord(userId, patientId, paymentId, {
+      changeReason: 'Cancelacion solicitada mediante API legacy',
+    });
+  } catch (error) {
+    return translateBillingError(error);
+  }
 };
 
-export const getPaymentBalance = async (userId: number, currentMonthOnly: boolean) => {
-  const dateFilter = currentMonthOnly
-    ? {
-        payment_date: {
-          [Op.between]: [
-            dayjs().startOf('month').format('YYYY-MM-DD'),
-            dayjs().endOf('month').format('YYYY-MM-DD'),
-          ],
-        },
-      }
-    : {};
-  const where = { user_id: userId, ...dateFilter };
-  const [totalPayments, totalDebt, totalIncome, totalDiscount] = await Promise.all([
-    Payment.sum('total', { where }),
-    Payment.sum('debt', { where }),
-    Payment.sum('income', { where }),
-    Payment.sum('discount', { where }),
-  ]);
+export const getPaymentBalance = async (
+  userId: number,
+  currentMonthOnly: boolean
+) => {
+  const summary = await billingService.summary(
+    userId,
+    currentMonthOnly
+      ? {
+          dateFrom: dayjs().startOf('month').format('YYYY-MM-DD'),
+          dateTo: dayjs().endOf('month').format('YYYY-MM-DD'),
+        }
+      : {}
+  );
 
   return {
-    totalPayments: Number(totalPayments ?? 0),
-    totalDebt: Number(totalDebt ?? 0),
-    totalIncome: Number(totalIncome ?? 0),
-    totalDiscount: Number(totalDiscount ?? 0),
+    totalPayments: Number(summary.totalBilled),
+    totalDebt: Number(summary.netChange),
+    totalIncome: Number(summary.totalReceived),
+    totalDiscount: Number(summary.totalDiscount),
   };
 };
