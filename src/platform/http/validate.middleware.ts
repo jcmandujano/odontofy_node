@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { ApiError } from './api-error';
 
-type RequestTarget = 'body' | 'params' | 'query';
+type RequestTarget = 'body' | 'headers' | 'params' | 'query';
 type RequestSchemas = Partial<Record<RequestTarget, z.ZodType>>;
 
 const formatIssues = (error: z.ZodError) =>

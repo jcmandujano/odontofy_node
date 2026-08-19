@@ -33,6 +33,7 @@ import { createV1Router } from './platform/http/v1.router';
 import { ReadinessCheck } from './platform/http/health.router';
 import { IdentityServiceDependencies } from './modules/identity/identity.service';
 import { PatientServiceDependencies } from './modules/patients/patient.service';
+import { BillingServiceDependencies } from './modules/billing/billing.service';
 import './models/treatment-plan.model';
 import './models/treatment-plan-item.model';
 
@@ -56,6 +57,7 @@ const apiRoutes = {
 } as const;
 
 export interface AppOptions {
+  billing?: BillingServiceDependencies;
   identity?: IdentityServiceDependencies;
   logger?: Logger;
   patients?: PatientServiceDependencies;
@@ -103,6 +105,7 @@ export const createApp = (options: AppOptions = {}): Application => {
     createRequestLogger(logger),
     attachRequestContext,
     createV1Router(readinessCheck, {
+      billing: options.billing,
       identity: options.identity,
       patients: options.patients,
     })

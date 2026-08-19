@@ -1,4 +1,3 @@
-// models/payment.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
 import db from "../db/connection";
 
@@ -7,19 +6,21 @@ interface UserConceptAttributes {
   user_id: number;
   concept_id: number | null;
   description: string;
-  unit_price: number;
+  unit_price: string | number;
   is_custom: boolean;
+  active: boolean;
 }
 
-type UserConceptCreationAttributes = Optional<UserConceptAttributes, 'id'>;
+type UserConceptCreationAttributes = Optional<UserConceptAttributes, 'active' | 'id'>;
 
 class UserConcept extends Model<UserConceptAttributes, UserConceptCreationAttributes> implements UserConceptAttributes {
     id!: number;
     user_id!: number;
     concept_id!: number | null;
     description!: string;
-    unit_price!: number;
+    unit_price!: string | number;
     is_custom!: boolean;
+    active!: boolean;
   // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -51,7 +52,12 @@ UserConcept.init(
     is_custom: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-    }
+    },
+    active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
   },
   {
     sequelize: db,

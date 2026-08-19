@@ -1,37 +1,38 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import db from '../db/connection';
-import Payment from './payment.model';
-import UserConcept from './user_concept.model';
-import type { PaymentMethod } from '../types/payment.enums';
+import { DataTypes, Model, Optional } from 'sequelize'
+
+import db from '../db/connection'
+import Payment from './payment.model'
+import UserConcept from './user_concept.model'
+import type { PaymentMethod } from '../types/payment.enums'
 
 interface PaymentUserAttributes {
-  id?: number;
-  paymentId: number;
-  conceptId: number;
-  paymentMethod: PaymentMethod;
-  quantity: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  id: number
+  paymentId: number
+  conceptId: number
+  paymentMethod: PaymentMethod
+  quantity: number
+  description_snapshot: string
+  unit_price_snapshot: string | number
+  subtotal: string | number
 }
 
-type PaymentUserCreationAttributes = Optional<
-  PaymentUserAttributes,
-  'id' | 'createdAt' | 'updatedAt'
->;
+type PaymentUserCreationAttributes = Optional<PaymentUserAttributes, 'id'>
 
 class PaymentUser
   extends Model<PaymentUserAttributes, PaymentUserCreationAttributes>
   implements PaymentUserAttributes
 {
-  public id!: number;
-  public paymentId!: number;
-  public conceptId!: number;
-  public paymentMethod!: PaymentMethod;
-  public quantity!: number;
-  public createdAt?: Date;
-  public updatedAt?: Date;
-
-  public userConcept?: UserConcept;
+  public id!: number
+  public paymentId!: number
+  public conceptId!: number
+  public paymentMethod!: PaymentMethod
+  public quantity!: number
+  public description_snapshot!: string
+  public unit_price_snapshot!: string | number
+  public subtotal!: string | number
+  public readonly createdAt!: Date
+  public readonly updatedAt!: Date
+  public userConcept?: UserConcept
 }
 
 PaymentUser.init(
@@ -57,9 +58,13 @@ PaymentUser.init(
       defaultValue: 'CASH',
       field: 'payment_method',
     },
-    quantity: {
-      type: DataTypes.INTEGER.UNSIGNED,
+    quantity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    description_snapshot: { type: DataTypes.STRING(255), allowNull: false },
+    unit_price_snapshot: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
+    subtotal: {
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
+      field: 'subtotal_amount',
     },
   },
   {
@@ -69,9 +74,13 @@ PaymentUser.init(
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
   }
-);
+)
 
-PaymentUser.belongsTo(Payment, { foreignKey: 'paymentId' });
-PaymentUser.belongsTo(UserConcept, { foreignKey: 'conceptId', as: 'userConcept' });
+Payment.hasMany(PaymentUser, { foreignKey: 'paymentId', as: 'items' })
+PaymentUser.belongsTo(Payment, { foreignKey: 'paymentId' })
+PaymentUser.belongsTo(UserConcept, {
+  foreignKey: 'conceptId',
+  as: 'userConcept',
+})
 
-export default PaymentUser;
+export default PaymentUser

@@ -16,6 +16,8 @@ tags:
     description: Planes de tratamiento e items propiedad del usuario autenticado.
   - name: Clinical Records
     description: Historial medico y notas clinicas versionadas de pacientes propios.
+  - name: Billing
+    description: Catalogos y registros financieros internos; no emite CFDI ni procesa tarjetas.
 paths:
   /:
     get:
@@ -871,6 +873,290 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/ClinicalRecordNotFound'
+  /billing-concepts:
+    get:
+      operationId: listBillingConcepts
+      tags: [Billing]
+      summary: Lista conceptos de cobro propios.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, all]
+            default: active
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingConceptList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createBillingConcept
+      tags: [Billing]
+      summary: Crea un concepto de cobro propio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBillingConceptRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/BillingConceptResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /billing-concepts/{conceptId}:
+    parameters:
+      - $ref: '#/components/parameters/BillingConceptId'
+    get:
+      operationId: getBillingConcept
+      tags: [Billing]
+      summary: Obtiene un concepto de cobro propio.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingConceptResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+    patch:
+      operationId: updateBillingConcept
+      tags: [Billing]
+      summary: Actualiza descripcion o precio para registros futuros.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBillingConceptRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingConceptResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+    delete:
+      operationId: archiveBillingConcept
+      tags: [Billing]
+      summary: Archiva un concepto sin alterar registros historicos.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingConceptResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+  /billing-concepts/{conceptId}/reactivate:
+    parameters:
+      - $ref: '#/components/parameters/BillingConceptId'
+    post:
+      operationId: reactivateBillingConcept
+      tags: [Billing]
+      summary: Reactiva un concepto archivado.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingConceptResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+  /billing/summary:
+    get:
+      operationId: getBillingSummary
+      tags: [Billing]
+      summary: Resume registros vigentes y el saldo actual de pacientes propios.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingSummaryResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /patients/{patientId}/billing-records:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: listBillingRecords
+      tags: [Billing]
+      summary: Lista registros financieros propios de un paciente propio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [POSTED, CANCELLED, all]
+            default: POSTED
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingRecordList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+    post:
+      operationId: createBillingRecord
+      tags: [Billing]
+      summary: Crea una venta/cobro interno y actualiza el saldo atomicamente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBillingRecordRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/BillingRecordResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+        '409':
+          $ref: '#/components/responses/BillingConflict'
+        '422':
+          $ref: '#/components/responses/BillingInvalidAmount'
+  /patients/{patientId}/billing-records/{billingRecordId}:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/BillingRecordId'
+    get:
+      operationId: getBillingRecord
+      tags: [Billing]
+      summary: Obtiene un registro financiero con snapshots de sus conceptos.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingRecordResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+  /patients/{patientId}/billing-records/{billingRecordId}/correction:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/BillingRecordId'
+    put:
+      operationId: correctBillingRecord
+      tags: [Billing]
+      summary: Crea una nueva version corregida y recalcula saldos.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectBillingRecordRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingRecordResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+        '409':
+          $ref: '#/components/responses/BillingConflict'
+        '422':
+          $ref: '#/components/responses/BillingInvalidAmount'
+  /patients/{patientId}/billing-records/{billingRecordId}/cancellation:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/BillingRecordId'
+    post:
+      operationId: cancelBillingRecord
+      tags: [Billing]
+      summary: Cancela logicamente un registro y conserva sus revisiones.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelBillingRecordRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingRecordResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
+  /patients/{patientId}/billing-records/{billingRecordId}/revisions:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/BillingRecordId'
+    get:
+      operationId: listBillingRecordRevisions
+      tags: [Billing]
+      summary: Lista snapshots append-only del registro financiero.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/BillingRevisionList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/BillingNotFound'
   /openapi.json:
     get:
       operationId: getOpenApiContract
@@ -1101,6 +1387,87 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    BillingConceptResource:
+      description: Concepto de cobro propio.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BillingConceptResponse'
+    BillingConceptList:
+      description: Pagina de conceptos de cobro propios.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BillingConceptListResponse'
+    BillingRecordResource:
+      description: Registro financiero interno propio.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BillingRecordResponse'
+    BillingRecordList:
+      description: Pagina de registros financieros propios.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BillingRecordListResponse'
+    BillingRevisionList:
+      description: Pagina de revisiones financieras append-only.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BillingRevisionListResponse'
+    BillingSummaryResource:
+      description: Resumen exacto de facturacion interna y saldos.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BillingSummaryResponse'
+    BillingNotFound:
+      description: Paciente, concepto o registro inexistente o ajeno.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BillingConflict:
+      description: Conflicto de idempotencia o ciclo de vida.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BillingInvalidAmount:
+      description: El importe viola una invariante financiera.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   parameters:
     PatientId:
       name: patientId
@@ -1150,6 +1517,34 @@ components:
         type: integer
         minimum: 1
         maximum: 4294967295
+    BillingConceptId:
+      name: conceptId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
+    BillingRecordId:
+      name: billingRecordId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
+    DateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        format: date
+    DateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        format: date
   headers:
     RequestId:
       description: Identificador de correlacion de la solicitud.
@@ -2557,5 +2952,349 @@ components:
                 status:
                   const: ready
               additionalProperties: false
+            errors:
+              type: 'null'
+    BillingMoney:
+      type: string
+      pattern: '^(?:0|[1-9][0-9]{0,9})\.[0-9]{2}$'
+      examples: ['1250.00']
+    SignedBillingMoney:
+      type: string
+      pattern: '^-?(?:0|[1-9][0-9]{0,9})\.[0-9]{2}$'
+      examples: ['-50.00', '1250.00']
+    BillingAggregateMoney:
+      type: string
+      pattern: '^-?[0-9]+\.[0-9]{2}$'
+      examples: ['1250.00', '19999999999.98']
+    BillingPaymentMethod:
+      type: string
+      enum: [CASH, DEBIT_CARD, CREDIT_CARD, BANK_TRANSFER, OTHER, MIXED]
+    CreateBillingConceptRequest:
+      type: object
+      required: [description, unitPrice]
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        unitPrice:
+          $ref: '#/components/schemas/BillingMoney'
+      additionalProperties: false
+    UpdateBillingConceptRequest:
+      type: object
+      minProperties: 1
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        unitPrice:
+          $ref: '#/components/schemas/BillingMoney'
+      additionalProperties: false
+    BillingConcept:
+      type: object
+      required: [id, description, unitPrice, active, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        unitPrice:
+          $ref: '#/components/schemas/BillingMoney'
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    BillingRecordItemRequest:
+      type: object
+      required: [conceptId, quantity]
+      properties:
+        conceptId:
+          type: integer
+          minimum: 1
+          maximum: 4294967295
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+      additionalProperties: false
+    CreateBillingRecordRequest:
+      type: object
+      required: [occurredOn, items]
+      properties:
+        occurredOn:
+          type: string
+          format: date
+        discount:
+          $ref: '#/components/schemas/BillingMoney'
+        amountReceived:
+          $ref: '#/components/schemas/BillingMoney'
+        paymentMethod:
+          oneOf:
+            - $ref: '#/components/schemas/BillingPaymentMethod'
+            - type: 'null'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/BillingRecordItemRequest'
+      additionalProperties: false
+    CorrectBillingRecordRequest:
+      type: object
+      required: [occurredOn, items, changeReason]
+      properties:
+        occurredOn:
+          type: string
+          format: date
+        discount:
+          $ref: '#/components/schemas/BillingMoney'
+        amountReceived:
+          $ref: '#/components/schemas/BillingMoney'
+        paymentMethod:
+          oneOf:
+            - $ref: '#/components/schemas/BillingPaymentMethod'
+            - type: 'null'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/BillingRecordItemRequest'
+        changeReason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      additionalProperties: false
+    CancelBillingRecordRequest:
+      type: object
+      required: [changeReason]
+      properties:
+        changeReason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      additionalProperties: false
+    BillingItem:
+      type: object
+      required: [id, billingRecordId, conceptId, description, unitPrice, quantity, subtotal]
+      properties:
+        id:
+          type: integer
+        billingRecordId:
+          type: integer
+        conceptId:
+          type: integer
+        description:
+          type: string
+        unitPrice:
+          $ref: '#/components/schemas/BillingMoney'
+        quantity:
+          type: integer
+        subtotal:
+          $ref: '#/components/schemas/BillingMoney'
+      additionalProperties: false
+    BillingActor:
+      type: object
+      required: [userId, name]
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+      additionalProperties: false
+    BillingRecord:
+      type: object
+      required:
+        - id
+        - patientId
+        - occurredOn
+        - subtotal
+        - discount
+        - total
+        - amountReceived
+        - balanceChange
+        - balanceAfter
+        - paymentMethod
+        - status
+        - version
+        - author
+        - cancelledAt
+        - cancelledBy
+        - cancellationReason
+        - items
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        occurredOn:
+          type: string
+          format: date
+        subtotal:
+          $ref: '#/components/schemas/BillingMoney'
+        discount:
+          $ref: '#/components/schemas/BillingMoney'
+        total:
+          $ref: '#/components/schemas/BillingMoney'
+        amountReceived:
+          $ref: '#/components/schemas/BillingMoney'
+        balanceChange:
+          $ref: '#/components/schemas/SignedBillingMoney'
+        balanceAfter:
+          $ref: '#/components/schemas/SignedBillingMoney'
+        paymentMethod:
+          oneOf:
+            - $ref: '#/components/schemas/BillingPaymentMethod'
+            - type: 'null'
+        status:
+          type: string
+          enum: [POSTED, CANCELLED]
+        version:
+          type: integer
+          minimum: 1
+        author:
+          $ref: '#/components/schemas/BillingActor'
+        cancelledAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        cancelledBy:
+          oneOf:
+            - type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: integer
+              additionalProperties: false
+            - type: 'null'
+        cancellationReason:
+          oneOf:
+            - type: string
+            - type: 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillingItem'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    BillingRevision:
+      allOf:
+        - $ref: '#/components/schemas/BillingRecord'
+        - type: object
+          required: [revisionId, action, changedBy, changeReason, recordedAt]
+          properties:
+            revisionId:
+              type: integer
+            action:
+              type: string
+              enum: [CREATED, CORRECTED, CANCELLED]
+            changedBy:
+              $ref: '#/components/schemas/BillingActor'
+            changeReason:
+              oneOf:
+                - type: string
+                - type: 'null'
+            recordedAt:
+              type: string
+              format: date-time
+    BillingSummary:
+      type: object
+      required: [totalBilled, totalReceived, totalDiscount, netChange, currentBalance]
+      properties:
+        totalBilled:
+          $ref: '#/components/schemas/BillingAggregateMoney'
+        totalReceived:
+          $ref: '#/components/schemas/BillingAggregateMoney'
+        totalDiscount:
+          $ref: '#/components/schemas/BillingAggregateMoney'
+        netChange:
+          $ref: '#/components/schemas/BillingAggregateMoney'
+        currentBalance:
+          $ref: '#/components/schemas/BillingAggregateMoney'
+      additionalProperties: false
+    BillingConceptResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/BillingConcept'
+            errors:
+              type: 'null'
+    BillingConceptListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/BillingConcept'
+            errors:
+              type: 'null'
+    BillingRecordResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/BillingRecord'
+            errors:
+              type: 'null'
+    BillingRecordListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/BillingRecord'
+            errors:
+              type: 'null'
+    BillingRevisionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/BillingRevision'
+            errors:
+              type: 'null'
+    BillingSummaryResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              $ref: '#/components/schemas/BillingSummary'
             errors:
               type: 'null'
