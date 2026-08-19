@@ -40,6 +40,8 @@ export const createRequestLogger = (logger: Logger = applicationLogger) =>
       return 'info';
     },
     autoLogging: {
-      ignore: (req) => req.url === '/health/live',
+      ignore: (req) =>
+        req.url === '/health/live' ||
+        req.url?.startsWith('/calendar/google/callback') === true,
     },
   });

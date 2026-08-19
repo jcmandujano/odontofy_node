@@ -1,99 +1,144 @@
-import { DataTypes, Model, Optional } from "sequelize";
-import db from "../db/connection";
-import Patient from "./patient.model";
+import { DataTypes, Model, Optional } from 'sequelize';
 
-// Definir los atributos del modelo
+import db from '../db/connection';
+import Patient from './patient.model';
+
+export const appointmentStatuses = [
+  'SCHEDULED',
+  'CONFIRMED',
+  'COMPLETED',
+  'CANCELLED',
+  'NO_SHOW',
+] as const;
+export type AppointmentStatus = (typeof appointmentStatuses)[number];
+export type AppointmentSyncStatus =
+  | 'NOT_CONNECTED'
+  | 'PENDING'
+  | 'SYNCED'
+  | 'FAILED';
+
 interface AppointmentAttributes {
-id: number;
-    user_id: number;
-    patient_id: number | null; // null si viene de Google
-    appointment_datetime: Date | null; // null si viene de Google
-    appointment_end_datetime: Date | null;
-    status: string;
-    reason: string | null;
-    note: string | null;
-    google_event_id: string | null;
-    source: 'local' | 'google';
+  id: number;
+  user_id: number;
+  patient_id: number | null;
+  appointment_datetime: Date;
+  appointment_end_datetime: Date;
+  time_zone: string;
+  status: AppointmentStatus;
+  reason: string | null;
+  note: string | null;
+  cancelled_at: Date | null;
+  google_event_id: string | null;
+  external_etag: string | null;
+  source: 'local' | 'google';
+  sync_status: AppointmentSyncStatus;
+  sync_version: number;
+  synced_at: Date | null;
+  sync_error_code: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Definir los atributos opcionales al crear una nueva instancia (id es opcional porque es auto-incremental)
-type AppointmentCreationAttributes = Optional<AppointmentAttributes, "id">
+type AppointmentCreationAttributes = Optional<
+  AppointmentAttributes,
+  | 'id'
+  | 'cancelled_at'
+  | 'google_event_id'
+  | 'external_etag'
+  | 'note'
+  | 'reason'
+  | 'source'
+  | 'sync_error_code'
+  | 'sync_status'
+  | 'sync_version'
+  | 'synced_at'
+  | 'createdAt'
+  | 'updatedAt'
+>;
 
-// Definir la clase del modelo
-class Appointment extends Model<AppointmentAttributes, AppointmentCreationAttributes> implements AppointmentAttributes {
-    public id!: number;
-    public user_id!: number;
-    public patient_id!: number | null;
-    public appointment_datetime!: Date | null;
-    public appointment_end_datetime!: Date | null;
-    public status!: string;
-    public reason!: string | null;
-    public note!: string | null; // Inicializar la propiedad "note"
-    public google_event_id!: string | null; // Inicializar la propiedad "google_event_id"
-    public source!: 'local' | 'google';
-    public Patient? : Patient;
-
+class Appointment
+  extends Model<AppointmentAttributes, AppointmentCreationAttributes>
+  implements AppointmentAttributes
+{
+  id!: number;
+  user_id!: number;
+  patient_id!: number | null;
+  appointment_datetime!: Date;
+  appointment_end_datetime!: Date;
+  time_zone!: string;
+  status!: AppointmentStatus;
+  reason!: string | null;
+  note!: string | null;
+  cancelled_at!: Date | null;
+  google_event_id!: string | null;
+  external_etag!: string | null;
+  source!: 'local' | 'google';
+  sync_status!: AppointmentSyncStatus;
+  sync_version!: number;
+  synced_at!: Date | null;
+  sync_error_code!: string | null;
+  createdAt!: Date;
+  updatedAt!: Date;
+  Patient?: Patient;
 }
 
-// Inicializar el modelo
-Appointment.init({
+Appointment.init(
+  {
     id: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        autoIncrement: true,
-        primaryKey: true,
+      type: DataTypes.INTEGER.UNSIGNED,
+      autoIncrement: true,
+      primaryKey: true,
     },
-    user_id: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
-    },
-    patient_id: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: true,
-    },
+    user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    patient_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     appointment_datetime: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        field: 'starts_at',
-        comment: "Fecha y hora de la cita en UTC",
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'starts_at',
     },
     appointment_end_datetime: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        field: 'ends_at',
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'ends_at',
     },
-    reason: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    note: {
-        type: DataTypes.TEXT, // Usamos TEXT para almacenar el contenido HTML
-        allowNull: true, // Permitir valores nulos para cuando no haya una nota
-    },
+    time_zone: { type: DataTypes.STRING(64), allowNull: false },
     status: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'pendiente',
+      type: DataTypes.ENUM(...appointmentStatuses),
+      allowNull: false,
+      defaultValue: 'SCHEDULED',
     },
+    reason: { type: DataTypes.STRING(255), allowNull: true },
+    note: { type: DataTypes.TEXT, allowNull: true },
+    cancelled_at: { type: DataTypes.DATE, allowNull: true },
     google_event_id: {
-        type: DataTypes.STRING,
-        allowNull: true, // Permitir valores nulos para cuando no haya un evento de Google Calendar
-        field: 'external_event_id',
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'external_event_id',
     },
-  source: {
-    type: DataTypes.ENUM('local', 'google'),
-    allowNull: false,
-    defaultValue: 'local',
-  }
-}, {
-    sequelize: db,
-    tableName: "appointments",
-    timestamps: true, // Para crear automáticamente las columnas createdAt y updatedAt
-    underscored: true,
-    createdAt: "createdAt",
-    updatedAt: "updatedAt",
-});
+    external_etag: { type: DataTypes.STRING(255), allowNull: true },
+    source: {
+      type: DataTypes.ENUM('local', 'google'),
+      allowNull: false,
+      defaultValue: 'local',
+    },
+    sync_status: {
+      type: DataTypes.ENUM('NOT_CONNECTED', 'PENDING', 'SYNCED', 'FAILED'),
+      allowNull: false,
+      defaultValue: 'NOT_CONNECTED',
+    },
+    sync_version: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      defaultValue: 1,
+    },
+    synced_at: { type: DataTypes.DATE, allowNull: true },
+    sync_error_code: { type: DataTypes.STRING(64), allowNull: true },
+    createdAt: { type: DataTypes.DATE, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+  },
+  { sequelize: db, tableName: 'appointments', timestamps: true }
+);
 
-// Después de la clase Patient o al final del archivo
 Patient.hasMany(Appointment, { foreignKey: 'patient_id' });
 Appointment.belongsTo(Patient, { foreignKey: 'patient_id' });
 

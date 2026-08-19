@@ -12,6 +12,7 @@ import PasswordReset from '../models/password-reset.model';
 import { resetPasswordTemplate } from '../utils/email-templates/reset-password.template';
 import { clearRefreshCookie, createRefreshSession, getRefreshToken, revokeRefreshSession, revokeUserSessions, rotateRefreshSession, setRefreshCookie } from '../services/auth-session.service';
 import { getRouteParam } from '../utils/route-param';
+import { isGoogleCalendarConnected } from '../services/calendar-connection.service';
 
 const PASSWORD_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 const tokenHash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -33,7 +34,7 @@ export const doLogin = async (req: Request, res: Response) => {
     const user = await User.findOne({ where: { email } });
     if (!user || !user.status || !bcryptjs.compareSync(password, user.password)) return errorResponse(res, 'Credenciales invalidas', 401);
     const token = await issueSession(req, res, user);
-    return successResponse(res, { user: user.toSafeJSON(), token }, 'Sesion iniciada correctamente');
+    return successResponse(res, { user: user.toSafeJSON(await isGoogleCalendarConnected(user.id)), token }, 'Sesion iniciada correctamente');
   } catch (error) {
     console.error('Error in doLogin:', error);
     return errorResponse(res, 'Error del servidor', 500);
@@ -50,7 +51,7 @@ export const refreshSession = async (req: Request, res: Response) => {
     const user = await User.findByPk(rotated.userId);
     if (!user || !user.status) return errorResponse(res, 'Sesion no valida', 401);
     setRefreshCookie(res, rotated.token);
-    return successResponse(res, { token: await generarJWT(user.id), user: user.toSafeJSON() }, 'Sesion renovada');
+    return successResponse(res, { token: await generarJWT(user.id), user: user.toSafeJSON(await isGoogleCalendarConnected(user.id)) }, 'Sesion renovada');
   } catch (error) {
     console.error('Error refreshing session:', error);
     return errorResponse(res, 'Error del servidor', 500);

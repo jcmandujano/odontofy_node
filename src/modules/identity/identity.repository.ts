@@ -3,6 +3,7 @@ import { Transaction, UniqueConstraintError } from 'sequelize';
 
 import db from '../../db/connection';
 import AuthSession from '../../models/auth-session.model';
+import CalendarConnection from '../../models/calendar-connection.model';
 import PasswordReset from '../../models/password-reset.model';
 import Token from '../../models/token.model';
 import User from '../../models/user.model';
@@ -12,7 +13,10 @@ import {
 } from './identity.schemas';
 import { IdentityUser, SessionContext } from './identity.types';
 
-const mapUser = (user: User): IdentityUser => ({
+const mapUser = async (
+  user: User,
+  transaction?: Transaction
+): Promise<IdentityUser> => ({
   id: user.id,
   name: user.name,
   middleName: user.middle_name,
@@ -25,7 +29,11 @@ const mapUser = (user: User): IdentityUser => ({
   active: user.status,
   authVersion: user.auth_version,
   showFinanceStats: user.show_finance_stats,
-  isGoogleSynced: Boolean(user.google_refresh_token),
+  isGoogleSynced:
+    (await CalendarConnection.count({
+      where: { user_id: user.id, status: 'ACTIVE' },
+      transaction,
+    })) > 0,
 });
 
 export type SessionRotationResult =
@@ -83,12 +91,12 @@ const sessionExpiry = (expiresAt: Date, now: Date): boolean =>
 export class SequelizeIdentityRepository implements IdentityRepository {
   async findUserByEmail(email: string): Promise<IdentityUser | null> {
     const user = await User.findOne({ where: { email } });
-    return user ? mapUser(user) : null;
+    return user ? await mapUser(user) : null;
   }
 
   async findActiveUserById(userId: number): Promise<IdentityUser | null> {
     const user = await User.findOne({ where: { id: userId, status: true } });
-    return user ? mapUser(user) : null;
+    return user ? await mapUser(user) : null;
   }
 
   async createPendingUser(
@@ -132,7 +140,7 @@ export class SequelizeIdentityRepository implements IdentityRepository {
           },
           { transaction }
         );
-        return mapUser(user);
+        return mapUser(user, transaction);
       });
     } catch (error) {
       if (error instanceof UniqueConstraintError) return null;
@@ -158,7 +166,7 @@ export class SequelizeIdentityRepository implements IdentityRepository {
         { userId: user.id, token: tokenHash, expiresAt },
         { transaction }
       );
-      return mapUser(user);
+      return mapUser(user, transaction);
     });
   }
 
@@ -252,7 +260,7 @@ export class SequelizeIdentityRepository implements IdentityRepository {
         { transaction }
       );
 
-      return { status: 'rotated', user: mapUser(user) };
+      return { status: 'rotated', user: await mapUser(user, transaction) };
     });
   }
 
@@ -289,7 +297,7 @@ export class SequelizeIdentityRepository implements IdentityRepository {
         },
         { transaction }
       );
-      return mapUser(user);
+      return mapUser(user, transaction);
     });
   }
 

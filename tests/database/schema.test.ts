@@ -4,6 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import db from '../../src/db/connection';
 import Appointment from '../../src/models/appointment.model';
+import CalendarConnection from '../../src/models/calendar-connection.model';
+import CalendarSyncJob from '../../src/models/calendar-sync-job.model';
 import AuthSession from '../../src/models/auth-session.model';
 import Concept from '../../src/models/concept.model';
 import EvolutionNote from '../../src/models/evolution-note.model';
@@ -29,6 +31,8 @@ const expectedTables = [
   'account_verification_tokens',
   'appointments',
   'auth_sessions',
+  'calendar_connections',
+  'calendar_sync_jobs',
   'concepts',
   'evolution_notes',
   'evolution_note_revisions',
@@ -113,6 +117,9 @@ describe('reproducible database schema', () => {
 
     expect(userColumns).toHaveProperty('password_hash');
     expect(userColumns).toHaveProperty('auth_version');
+    expect(userColumns).not.toHaveProperty('google_access_token');
+    expect(userColumns).not.toHaveProperty('google_refresh_token');
+    expect(userColumns).not.toHaveProperty('google_token_expiry_at');
     expect(userColumns).not.toHaveProperty('password');
     expect(User.getAttributes().createdAt.field).toBe('created_at');
     expect(owner.toJSON()).toHaveProperty('createdAt');
@@ -153,6 +160,8 @@ describe('reproducible database schema', () => {
     const mappings = [
       [Appointment.getTableName(), 'appointments'],
       [AuthSession.getTableName(), 'auth_sessions'],
+      [CalendarConnection.getTableName(), 'calendar_connections'],
+      [CalendarSyncJob.getTableName(), 'calendar_sync_jobs'],
       [Concept.getTableName(), 'concepts'],
       [EvolutionNote.getTableName(), 'evolution_notes'],
       [EvolutionNoteRevision.getTableName(), 'evolution_note_revisions'],
@@ -184,7 +193,8 @@ describe('reproducible database schema', () => {
       patient_id: patient.id,
       appointment_datetime: new Date('2026-08-15T15:00:00.000Z'),
       appointment_end_datetime: new Date('2026-08-15T16:00:00.000Z'),
-      status: 'pendiente',
+      status: 'SCHEDULED',
+      time_zone: 'America/Mexico_City',
       reason: 'Prueba de mapping',
       note: null,
       google_event_id: null,

@@ -18,6 +18,10 @@ tags:
     description: Historial medico y notas clinicas versionadas de pacientes propios.
   - name: Billing
     description: Catalogos y registros financieros internos; no emite CFDI ni procesa tarjetas.
+  - name: Appointments
+    description: Agenda local propia y ciclo de vida de citas.
+  - name: Calendar
+    description: Conexion OAuth y sincronizacion desacoplada con Google Calendar.
 paths:
   /:
     get:
@@ -1174,6 +1178,175 @@ paths:
                 type: object
                 required: [openapi, info, paths]
                 additionalProperties: true
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [Appointments]
+      summary: Lista citas locales propias que intersectan un rango temporal.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: patientId, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: status, in: query, schema: { oneOf: [{ $ref: '#/components/schemas/AppointmentStatus' }, { const: all }], default: all } }
+      responses:
+        '200': { $ref: '#/components/responses/AppointmentList' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createAppointment
+      tags: [Appointments]
+      summary: Crea una cita local para un paciente propio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAppointmentRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/AppointmentResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/PatientNotFound' }
+  /appointments/{appointmentId}:
+    parameters:
+      - { name: appointmentId, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 4294967295 } }
+    get:
+      operationId: getAppointment
+      tags: [Appointments]
+      summary: Obtiene una cita local propia.
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/AppointmentResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AppointmentNotFound' }
+    patch:
+      operationId: updateAppointment
+      tags: [Appointments]
+      summary: Actualiza campos permitidos de una cita local propia.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAppointmentRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/AppointmentResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AppointmentNotFound' }
+        '409': { $ref: '#/components/responses/AppointmentConflict' }
+    delete:
+      operationId: cancelAppointment
+      tags: [Appointments]
+      summary: Cancela logicamente una cita; es idempotente.
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/AppointmentResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AppointmentNotFound' }
+  /appointments/{appointmentId}/status:
+    parameters:
+      - { name: appointmentId, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 4294967295 } }
+    patch:
+      operationId: updateAppointmentStatus
+      tags: [Appointments]
+      summary: Cambia el estado explicito de una cita propia.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAppointmentStatusRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/AppointmentResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AppointmentNotFound' }
+        '409': { $ref: '#/components/responses/AppointmentConflict' }
+  /calendar/connection:
+    get:
+      operationId: getCalendarConnection
+      tags: [Calendar]
+      summary: Obtiene el estado seguro de la conexion Google del usuario.
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/CalendarConnectionResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      operationId: disconnectCalendar
+      tags: [Calendar]
+      summary: Revoca y desconecta Google Calendar localmente.
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/EmptySuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /calendar/connection/authorization:
+    post:
+      operationId: authorizeCalendarConnection
+      tags: [Calendar]
+      summary: Genera una autorizacion OAuth de un solo uso con PKCE S256.
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/CalendarAuthorizationResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /calendar/google/callback:
+    get:
+      operationId: completeGoogleCalendarAuthorization
+      tags: [Calendar]
+      summary: Consume el callback OAuth sin exponer codigo ni estado en logs.
+      parameters:
+        - { name: code, in: query, schema: { type: string, maxLength: 4096 } }
+        - { name: state, in: query, required: true, schema: { type: string, minLength: 32, maxLength: 1024 } }
+        - { name: error, in: query, schema: { type: string, maxLength: 255 } }
+      responses:
+        '200':
+          description: Autorizacion completada en una ventana emergente.
+          content:
+            text/html: { schema: { type: string } }
+        '400':
+          description: Estado invalido, autorizacion denegada o token ausente.
+          content:
+            text/html: { schema: { type: string } }
+  /calendar/sync:
+    post:
+      operationId: synchronizeCalendar
+      tags: [Calendar]
+      summary: Procesa hasta 25 trabajos pendientes de la outbox del usuario.
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { $ref: '#/components/responses/CalendarSyncResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/AppointmentConflict' }
+  /calendar/external-events:
+    get:
+      operationId: listExternalCalendarEvents
+      tags: [Calendar]
+      summary: Lista eventos Google ajenos a Odontofy sin convertirlos en citas locales.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: timeZone, in: query, required: true, schema: { type: string, maxLength: 64 } }
+      responses:
+        '200': { $ref: '#/components/responses/ExternalEventList' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/AppointmentConflict' }
+        '503': { $ref: '#/components/responses/CalendarUnavailable' }
 components:
   securitySchemes:
     bearerAuth:
@@ -1252,6 +1425,51 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    AppointmentResource:
+      description: Cita local propia.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AppointmentResponse' }
+    AppointmentList:
+      description: Pagina de citas locales propias.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AppointmentListResponse' }
+    AppointmentNotFound:
+      description: La cita no existe o pertenece a otro usuario.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    AppointmentConflict:
+      description: La cita esta cancelada o el calendario no esta disponible.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    CalendarConnectionResource:
+      description: Estado de la conexion sin credenciales.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CalendarConnectionResponse' }
+    CalendarAuthorizationResource:
+      description: URL de autorizacion OAuth de un solo uso.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CalendarAuthorizationResponse' }
+    CalendarSyncResource:
+      description: Resultado del lote de sincronizacion.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CalendarSyncResponse' }
+    ExternalEventList:
+      description: Eventos externos no administrados por Odontofy.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ExternalEventListResponse' }
+    CalendarUnavailable:
+      description: El proveedor externo no esta disponible temporalmente.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     PatientResource:
       description: Paciente del usuario autenticado.
       headers:
@@ -3298,3 +3516,172 @@ components:
               $ref: '#/components/schemas/BillingSummary'
             errors:
               type: 'null'
+    AppointmentStatus:
+      type: string
+      enum: [SCHEDULED, CONFIRMED, COMPLETED, CANCELLED, NO_SHOW]
+    AppointmentSync:
+      type: object
+      required: [status, version, syncedAt, errorCode]
+      properties:
+        status:
+          type: string
+          enum: [NOT_CONNECTED, PENDING, SYNCED, FAILED]
+        version: { type: integer, minimum: 1 }
+        syncedAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        errorCode:
+          oneOf: [{ type: string }, { type: 'null' }]
+      additionalProperties: false
+    AppointmentPatient:
+      type: object
+      required: [id, name, lastName]
+      properties:
+        id: { type: integer, minimum: 1 }
+        name: { type: string }
+        lastName: { type: string }
+      additionalProperties: false
+    Appointment:
+      type: object
+      required: [id, patientId, patient, startsAt, endsAt, timeZone, status, reason, note, cancelledAt, sync, createdAt, updatedAt]
+      properties:
+        id: { type: integer, minimum: 1 }
+        patientId:
+          oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
+        patient:
+          oneOf: [{ $ref: '#/components/schemas/AppointmentPatient' }, { type: 'null' }]
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        timeZone: { type: string, maxLength: 64 }
+        status: { $ref: '#/components/schemas/AppointmentStatus' }
+        reason:
+          oneOf: [{ type: string, maxLength: 255 }, { type: 'null' }]
+        note:
+          oneOf: [{ type: string, maxLength: 10000 }, { type: 'null' }]
+        cancelledAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        sync: { $ref: '#/components/schemas/AppointmentSync' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      additionalProperties: false
+    CreateAppointmentRequest:
+      type: object
+      required: [patientId, startsAt, endsAt, timeZone]
+      properties:
+        patientId: { type: integer, minimum: 1, maximum: 4294967295 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        timeZone: { type: string, maxLength: 64, example: America/Mexico_City }
+        reason:
+          oneOf: [{ type: string, maxLength: 255 }, { type: 'null' }]
+        note:
+          oneOf: [{ type: string, maxLength: 10000 }, { type: 'null' }]
+      additionalProperties: false
+    UpdateAppointmentRequest:
+      type: object
+      minProperties: 1
+      properties:
+        patientId: { type: integer, minimum: 1, maximum: 4294967295 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        timeZone: { type: string, maxLength: 64 }
+        reason:
+          oneOf: [{ type: string, maxLength: 255 }, { type: 'null' }]
+        note:
+          oneOf: [{ type: string, maxLength: 10000 }, { type: 'null' }]
+      additionalProperties: false
+    UpdateAppointmentStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/AppointmentStatus' }
+      additionalProperties: false
+    AppointmentResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { $ref: '#/components/schemas/Appointment' }
+            errors: { type: 'null' }
+    AppointmentListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/Appointment' }
+            errors: { type: 'null' }
+    CalendarConnection:
+      type: object
+      required: [provider, status, connectedAt, lastSyncAt, errorCode]
+      properties:
+        provider: { const: GOOGLE }
+        status: { type: string, enum: [ACTIVE, REAUTH_REQUIRED, DISCONNECTED] }
+        connectedAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        lastSyncAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        errorCode:
+          oneOf: [{ type: string }, { type: 'null' }]
+      additionalProperties: false
+    CalendarConnectionResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { $ref: '#/components/schemas/CalendarConnection' }
+            errors: { type: 'null' }
+    CalendarAuthorizationResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: object
+              required: [authorizationUrl]
+              properties:
+                authorizationUrl: { type: string, format: uri }
+              additionalProperties: false
+            errors: { type: 'null' }
+    CalendarSyncResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: object
+              required: [claimed, synchronized, failed]
+              properties:
+                claimed: { type: integer, minimum: 0 }
+                synchronized: { type: integer, minimum: 0 }
+                failed: { type: integer, minimum: 0 }
+              additionalProperties: false
+            errors: { type: 'null' }
+    ExternalCalendarEvent:
+      type: object
+      required: [id, summary, startsAt, endsAt, allDay]
+      properties:
+        id: { type: string }
+        summary:
+          oneOf: [{ type: string }, { type: 'null' }]
+        startsAt:
+          oneOf: [{ type: string }, { type: 'null' }]
+        endsAt:
+          oneOf: [{ type: string }, { type: 'null' }]
+        allDay: { type: boolean }
+      additionalProperties: false
+    ExternalEventListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/ExternalCalendarEvent' }
+            errors: { type: 'null' }
