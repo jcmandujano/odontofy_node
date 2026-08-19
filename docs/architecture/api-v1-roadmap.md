@@ -682,7 +682,7 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
 - [x] Migracion de desarrollo que descarta tokens legacy en vez de propagarlos.
 - [x] Validacion local integral, rollback y reconstruccion MySQL.
-- [ ] CI remoto y PR de F9 abierto.
+- [x] CI remoto y [PR #81 de F9](https://github.com/jcmandujano/odontofy_node/pull/81) abierto.
 - [ ] PR de F9 integrado.
 
 ### Criterios de salida
@@ -705,6 +705,7 @@ Para cerrar una fase se deben registrar:
 - [#78 Sincronizacion durable](https://github.com/jcmandujano/odontofy_node/issues/78)
 - [#80 Eventos externos y puente legacy](https://github.com/jcmandujano/odontofy_node/issues/80)
 - [#76 Migracion, contrato y regresion](https://github.com/jcmandujano/odontofy_node/issues/76)
+- [PR #81 Agenda local y Google Calendar desacoplado](https://github.com/jcmandujano/odontofy_node/pull/81)
 
 ### Evidencias
 
@@ -714,6 +715,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-18 | Agenda y outbox MySQL     | 5 pruebas cubren BOLA, fallo, retry, cancelacion y externos. |
 | 2026-08-18 | Reconstruccion MySQL      | 48 pruebas pasan antes y despues de recrear 11 migraciones.  |
 | 2026-08-18 | Rollback F9               | Reversion total y reaplicacion terminan sin residuos.        |
+| 2026-08-18 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #81.              |
 
 ### Riesgos transferidos
 
