@@ -114,13 +114,12 @@ describe('API v1 HTTP platform', () => {
     expect(docs.type).toMatch(/html/);
   });
 
-  it('keeps the legacy upload wildcard reachable under Express 5', async () => {
+  it('does not expose the legacy upload wildcard', async () => {
     const response = await request(testApp()).get(
       '/api/upload/storage/example-1.pdf'
     );
 
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({ msg: 'Token no valido' });
+    expect(response.status).toBe(404);
   });
 
   it('closes the HTTP server before releasing the database connection', async () => {

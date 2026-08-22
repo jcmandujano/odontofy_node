@@ -84,6 +84,7 @@ export const updateProfileSchema = z
     dateOfBirth: isoDate.nullable().optional(),
     phone: z.string().trim().max(30).optional(),
     avatar: z.string().trim().max(2048).optional(),
+    showFinanceStats: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'Se requiere al menos una propiedad',

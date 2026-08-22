@@ -8,6 +8,7 @@ import type { EmailRepository, EmailWork } from '../src/modules/email/email.repo
 import { EmailOutboxService } from '../src/modules/email/email.service';
 import { createSignedConsentSchema, updateConsentTemplateSchema } from '../src/modules/consents/consent.schemas';
 import { FileService } from '../src/modules/files/file.service';
+import { QueuedIdentityEmailSender } from '../src/modules/identity/identity.mailer';
 
 describe('F10 boundary validation', () => {
   it('rejects consent mass assignment and accepts the explicit physical-signature contract', () => {
@@ -74,6 +75,40 @@ class FlakyEmailProvider implements EmailProvider {
 }
 
 describe('email outbox', () => {
+  it('queues account links that Angular can confirm through API v1', async () => {
+    const previousFrontendUrl = process.env.FRONTEND_URL;
+    process.env.FRONTEND_URL = 'https://ui.example.test';
+    const repository = new MemoryEmailRepository();
+    const cipher = new AesGcmEmailPayloadCipher(randomBytes(32).toString('base64'));
+    const outbox = new EmailOutboxService({ cipher, repository });
+    const sender = new QueuedIdentityEmailSender(outbox);
+    const token = 'a'.repeat(64);
+
+    try {
+      await sender.sendAccountVerification({
+        id: 17,
+        name: 'Ada',
+        middleName: '',
+        lastName: 'Lovelace',
+        dateOfBirth: null,
+        phone: '',
+        avatar: '',
+        email: 'ada@example.test',
+        passwordHash: 'hash',
+        active: false,
+        authVersion: 0,
+        showFinanceStats: true,
+        isGoogleSynced: false,
+      }, token);
+
+      const payload = JSON.parse(cipher.decrypt(repository.work!.encryptedPayload)) as { html: string };
+      expect(payload.html).toContain(`https://ui.example.test/confirm-account?userId=17&token=${token}`);
+    } finally {
+      if (previousFrontendUrl === undefined) delete process.env.FRONTEND_URL;
+      else process.env.FRONTEND_URL = previousFrontendUrl;
+    }
+  });
+
   it('encrypts pending content and keeps one idempotency key across retries', async () => {
     let now = new Date('2026-08-22T16:00:00.000Z');
     const repository = new MemoryEmailRepository();

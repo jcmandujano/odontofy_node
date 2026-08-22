@@ -47,7 +47,9 @@ describe('appointment contracts and calendar credentials', () => {
 
     expect(encrypted).not.toContain('refresh-token-value');
     expect(cipher.decrypt(encrypted)).toBe('refresh-token-value');
-    expect(() => cipher.decrypt(`${encrypted.slice(0, -1)}x`)).toThrow();
+    const parts = encrypted.split('.');
+    parts[2] = `${parts[2][0] === 'A' ? 'B' : 'A'}${parts[2].slice(1)}`;
+    expect(() => cipher.decrypt(parts.join('.'))).toThrow();
   });
 
   it('generates stable provider-safe event identifiers', () => {

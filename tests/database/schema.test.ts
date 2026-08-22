@@ -25,7 +25,7 @@ import TreatmentPlan from '../../src/models/treatment-plan.model';
 import UserInformedConsent from '../../src/models/user-informed-consent.model';
 import UserConcept from '../../src/models/user_concept.model';
 import User from '../../src/models/user.model';
-import { createTreatmentPlan } from '../../src/services/treatment-plan.service';
+import { TreatmentPlanService } from '../../src/modules/treatment-plans/treatment-plan.service';
 
 const expectedTables = [
   'account_verification_tokens',
@@ -231,8 +231,19 @@ describe('reproducible database schema', () => {
     });
 
     await expect(
-      createTreatmentPlan(otherOwner.id, patient.id, { title: 'Acceso cruzado' })
-    ).rejects.toMatchObject({ statusCode: 404 });
+      new TreatmentPlanService().create(otherOwner.id, patient.id, {
+        title: 'Acceso cruzado',
+        description: null,
+        diagnosis: null,
+        patientComplaint: null,
+        clinicalObservations: null,
+        prognosis: null,
+        estimatedStartDate: null,
+        estimatedEndDate: null,
+        acceptanceNotes: null,
+        discount: '0.00',
+      })
+    ).rejects.toMatchObject({ code: 'PATIENT_NOT_FOUND' });
 
     await otherOwner.destroy();
   });
