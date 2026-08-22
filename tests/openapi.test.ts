@@ -22,6 +22,12 @@ describe('OpenAPI v1 contract', () => {
     expect(document.paths).toHaveProperty('/appointments/{appointmentId}/status');
     expect(document.paths).toHaveProperty('/calendar/connection/authorization');
     expect(document.paths).toHaveProperty('/calendar/external-events');
+    expect(document.paths).toHaveProperty('/files');
+    expect(document.paths).toHaveProperty('/files/{fileId}/access');
+    expect(document.paths).toHaveProperty('/consent-templates');
+    expect(document.paths).toHaveProperty(
+      '/patients/{patientId}/signed-consents/{consentId}/document'
+    );
     expect(document.paths).toHaveProperty(
       '/patients/{patientId}/treatment-plans'
     );
@@ -52,5 +58,7 @@ describe('OpenAPI v1 contract', () => {
     expect(document.components?.schemas).toHaveProperty('BillingRevision');
     expect(document.components?.schemas).toHaveProperty('Appointment');
     expect(document.components?.schemas).toHaveProperty('CalendarConnection');
+    expect(document.components?.schemas).toHaveProperty('StoredFile');
+    expect(document.components?.schemas).toHaveProperty('SignedConsent');
   });
 });

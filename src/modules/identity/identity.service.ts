@@ -31,7 +31,7 @@ import {
   PublicUser,
   SessionContext,
 } from './identity.types';
-import { BrevoIdentityEmailSender } from './identity.mailer';
+import { QueuedIdentityEmailSender } from './identity.mailer';
 
 const milliseconds = {
   minute: 60 * 1000,
@@ -86,7 +86,7 @@ export class IdentityService {
     this.accessTokens = dependencies.accessTokens ?? new JwtAccessTokenService();
     this.clock = dependencies.clock ?? (() => new Date());
     this.emailSender =
-      dependencies.emailSender ?? new BrevoIdentityEmailSender();
+      dependencies.emailSender ?? new QueuedIdentityEmailSender();
     this.passwordHasher =
       dependencies.passwordHasher ?? new BcryptPasswordHasher();
     this.repository =
