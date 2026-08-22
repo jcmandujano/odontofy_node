@@ -6,6 +6,7 @@ import { Sequelize } from 'sequelize';
 import { createApp } from './app';
 import db from './db/connection';
 import { applicationLogger } from './platform/http/logger';
+import { startEmailWorker } from './modules/email/email.worker';
 
 export const stopServer = async (
   server: Pick<Server, 'close'>,
@@ -32,12 +33,14 @@ export const startServer = async (): Promise<Server> => {
       else resolve(listeningServer);
     });
   });
+  const stopEmailWorker = startEmailWorker();
 
   let shutdownPromise: Promise<void> | undefined;
   const shutdown = (signal: NodeJS.Signals): void => {
     if (shutdownPromise) return;
 
     applicationLogger.info({ signal }, 'Stopping HTTP server');
+    stopEmailWorker();
     shutdownPromise = stopServer(server).catch((error: unknown) => {
       applicationLogger.error({ err: error }, 'Graceful shutdown failed');
       process.exitCode = 1;

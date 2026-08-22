@@ -22,6 +22,10 @@ tags:
     description: Agenda local propia y ciclo de vida de citas.
   - name: Calendar
     description: Conexion OAuth y sincronizacion desacoplada con Google Calendar.
+  - name: Files
+    description: Archivos PDF privados con acceso temporal autorizado.
+  - name: Consents
+    description: Plantillas y constancias de consentimientos firmados fisicamente.
 paths:
   /:
     get:
@@ -1347,6 +1351,234 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/AppointmentConflict' }
         '503': { $ref: '#/components/responses/CalendarUnavailable' }
+  /files:
+    post:
+      operationId: uploadPrivateFile
+      tags: [Files]
+      summary: Valida y almacena un PDF privado.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/FileUploadRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/StoredFileResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/FileProviderUnavailable' }
+  /files/{fileId}/access:
+    get:
+      operationId: authorizePrivateFileAccess
+      tags: [Files]
+      summary: Genera una URL de lectura de cinco minutos para un archivo propio.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/FileId' }]
+      responses:
+        '200': { $ref: '#/components/responses/FileAccessResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
+        '409': { $ref: '#/components/responses/FileConflict' }
+        '503': { $ref: '#/components/responses/FileProviderUnavailable' }
+  /files/{fileId}:
+    delete:
+      operationId: deletePrivateFile
+      tags: [Files]
+      summary: Elimina un archivo propio que no tiene referencias documentales.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/FileId' }]
+      responses:
+        '200': { $ref: '#/components/responses/EmptySuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
+        '409': { $ref: '#/components/responses/FileConflict' }
+        '503': { $ref: '#/components/responses/FileProviderUnavailable' }
+  /consent-catalog:
+    get:
+      operationId: listConsentCatalog
+      tags: [Consents]
+      summary: Lista nombres base disponibles para crear plantillas propias.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ConsentCatalogList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /consent-templates:
+    get:
+      operationId: listConsentTemplates
+      tags: [Consents]
+      summary: Lista plantillas propias activas o archivadas.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: status, in: query, schema: { type: string, enum: [active, archived, all], default: active } }
+      responses:
+        '200': { $ref: '#/components/responses/ConsentTemplateList' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createConsentTemplate
+      tags: [Consents]
+      summary: Crea una plantilla propia, opcionalmente vinculada a un PDF privado.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateConsentTemplateRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/ConsentTemplateResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
+  /consent-templates/from-catalog:
+    post:
+      operationId: createConsentTemplateFromCatalog
+      tags: [Consents]
+      summary: Copia una entrada del catalogo como plantilla versionable propia.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateConsentTemplateFromCatalogRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/ConsentTemplateResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+        '409': { $ref: '#/components/responses/ConsentConflict' }
+  /consent-templates/{templateId}:
+    parameters: [{ $ref: '#/components/parameters/ConsentTemplateId' }]
+    get:
+      operationId: getConsentTemplate
+      tags: [Consents]
+      summary: Obtiene una plantilla propia.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ConsentTemplateResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+    patch:
+      operationId: updateConsentTemplate
+      tags: [Consents]
+      summary: Crea una nueva version de la plantilla propia.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateConsentTemplateRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/ConsentTemplateResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+        '409': { $ref: '#/components/responses/ConsentConflict' }
+    delete:
+      operationId: archiveConsentTemplate
+      tags: [Consents]
+      summary: Archiva logicamente una plantilla propia.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ConsentTemplateResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+  /consent-templates/{templateId}/restore:
+    post:
+      operationId: restoreConsentTemplate
+      tags: [Consents]
+      summary: Restaura una plantilla archivada.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ConsentTemplateId' }]
+      responses:
+        '200': { $ref: '#/components/responses/ConsentTemplateResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+  /patients/{patientId}/signed-consents:
+    parameters: [{ $ref: '#/components/parameters/PatientId' }]
+    get:
+      operationId: listSignedConsents
+      tags: [Consents]
+      summary: Lista constancias propias de un paciente propio.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING_DOCUMENT, COMPLETED, VOIDED, all], default: all } }
+      responses:
+        '200': { $ref: '#/components/responses/SignedConsentList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+    post:
+      operationId: createSignedConsent
+      tags: [Consents]
+      summary: Registra una firma fisica y opcionalmente su digitalizacion.
+      description: No representa una firma electronica o criptografica.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSignedConsentRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/SignedConsentResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+        '409': { $ref: '#/components/responses/ConsentConflict' }
+  /patients/{patientId}/signed-consents/{consentId}:
+    get:
+      operationId: getSignedConsent
+      tags: [Consents]
+      summary: Obtiene una constancia con snapshots inmutables.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PatientId' }
+        - { $ref: '#/components/parameters/SignedConsentId' }
+      responses:
+        '200': { $ref: '#/components/responses/SignedConsentResource' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+  /patients/{patientId}/signed-consents/{consentId}/document:
+    put:
+      operationId: attachSignedConsentDocument
+      tags: [Consents]
+      summary: Adjunta una sola vez el PDF digitalizado de la hoja firmada.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PatientId' }
+        - { $ref: '#/components/parameters/SignedConsentId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachSignedDocumentRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/SignedConsentResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
+        '409': { $ref: '#/components/responses/ConsentConflict' }
+  /patients/{patientId}/signed-consents/{consentId}/void:
+    post:
+      operationId: voidSignedConsent
+      tags: [Consents]
+      summary: Anula logicamente una constancia conservando archivo y motivo.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PatientId' }
+        - { $ref: '#/components/parameters/SignedConsentId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoidSignedConsentRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/SignedConsentResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ConsentNotFound' }
 components:
   securitySchemes:
     bearerAuth:
@@ -1467,6 +1699,66 @@ components:
           schema: { $ref: '#/components/schemas/ExternalEventListResponse' }
     CalendarUnavailable:
       description: El proveedor externo no esta disponible temporalmente.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    StoredFileResource:
+      description: Metadatos publicos del archivo privado; nunca expone bucket ni object key.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/StoredFileResponse' }
+    FileAccessResource:
+      description: Acceso temporal no almacenable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/FileAccessResponse' }
+    FileNotFound:
+      description: El archivo no existe o pertenece a otro usuario.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    FileConflict:
+      description: El archivo no esta disponible o conserva referencias.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    FileProviderUnavailable:
+      description: El almacenamiento privado no esta disponible temporalmente.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ConsentCatalogList:
+      description: Catalogo base sin documentos externos.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ConsentCatalogListResponse' }
+    ConsentTemplateResource:
+      description: Plantilla propia versionable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ConsentTemplateResponse' }
+    ConsentTemplateList:
+      description: Pagina de plantillas propias.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ConsentTemplateListResponse' }
+    SignedConsentResource:
+      description: Constancia de firma fisica con snapshots historicos.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SignedConsentResponse' }
+    SignedConsentList:
+      description: Pagina de constancias propias.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SignedConsentListResponse' }
+    ConsentNotFound:
+      description: Paciente, plantilla, archivo o constancia inexistente o ajeno.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ConsentConflict:
+      description: La operacion viola inmutabilidad, unicidad o ciclo de vida.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1687,6 +1979,21 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   parameters:
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ConsentTemplateId:
+      name: templateId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1, maximum: 4294967295 }
+    SignedConsentId:
+      name: consentId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1, maximum: 4294967295 }
     PatientId:
       name: patientId
       in: path
@@ -3684,4 +3991,208 @@ components:
             data:
               type: array
               items: { $ref: '#/components/schemas/ExternalCalendarEvent' }
+            errors: { type: 'null' }
+    FilePurpose:
+      type: string
+      enum: [CONSENT_TEMPLATE, SIGNED_CONSENT]
+    FileUploadRequest:
+      type: object
+      required: [purpose, file]
+      properties:
+        purpose: { $ref: '#/components/schemas/FilePurpose' }
+        file: { type: string, format: binary }
+      additionalProperties: false
+    StoredFile:
+      type: object
+      required: [id, purpose, originalName, mediaType, sizeBytes, sha256, status, securityStatus, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        purpose: { $ref: '#/components/schemas/FilePurpose' }
+        originalName: { type: string, maxLength: 255 }
+        mediaType: { const: application/pdf }
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        status: { const: AVAILABLE }
+        securityStatus: { const: BASIC_VALIDATED }
+        createdAt: { type: string, format: date-time }
+      additionalProperties: false
+    StoredFileResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { $ref: '#/components/schemas/StoredFile' }
+            errors: { type: 'null' }
+    FileAccessResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: object
+              required: [url, expiresAt]
+              properties:
+                url: { type: string, format: uri }
+                expiresAt: { type: string, format: date-time }
+              additionalProperties: false
+            errors: { type: 'null' }
+    ConsentCatalogEntry:
+      type: object
+      required: [id, name, description]
+      properties:
+        id: { type: integer, minimum: 1 }
+        name: { type: string, maxLength: 255 }
+        description:
+          oneOf: [{ type: string }, { type: 'null' }]
+      additionalProperties: false
+    CreateConsentTemplateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        description:
+          oneOf: [{ type: string, maxLength: 10000 }, { type: 'null' }]
+        templateFileId:
+          oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+      additionalProperties: false
+    CreateConsentTemplateFromCatalogRequest:
+      type: object
+      required: [catalogId]
+      properties:
+        catalogId: { type: integer, minimum: 1, maximum: 4294967295 }
+        templateFileId:
+          oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+      additionalProperties: false
+    UpdateConsentTemplateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        description:
+          oneOf: [{ type: string, maxLength: 10000 }, { type: 'null' }]
+        templateFileId:
+          oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+      additionalProperties: false
+    ConsentTemplate:
+      type: object
+      required: [id, catalogId, name, description, source, templateFileId, status, version, archivedAt, createdAt, updatedAt]
+      properties:
+        id: { type: integer, minimum: 1 }
+        catalogId:
+          oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
+        name: { type: string, maxLength: 255 }
+        description:
+          oneOf: [{ type: string }, { type: 'null' }]
+        source: { type: string, enum: [CUSTOM, CATALOG] }
+        templateFileId:
+          oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+        status: { type: string, enum: [ACTIVE, ARCHIVED] }
+        version: { type: integer, minimum: 1 }
+        archivedAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      additionalProperties: false
+    CreateSignedConsentRequest:
+      type: object
+      required: [templateId, signedAt, signatoryName, signatoryCapacity]
+      properties:
+        templateId: { type: integer, minimum: 1, maximum: 4294967295 }
+        signedAt: { type: string, format: date-time }
+        signedDocumentFileId:
+          oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+        signatoryName: { type: string, minLength: 1, maxLength: 350 }
+        signatoryCapacity: { type: string, enum: [PATIENT, REPRESENTATIVE] }
+      additionalProperties: false
+    AttachSignedDocumentRequest:
+      type: object
+      required: [signedDocumentFileId]
+      properties:
+        signedDocumentFileId: { type: string, format: uuid }
+      additionalProperties: false
+    VoidSignedConsentRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+      additionalProperties: false
+    SignedConsent:
+      type: object
+      required: [id, patientId, template, signedDocumentFileId, status, signedAt, patientName, doctorName, signatory, voidedAt, voidReason, createdAt, updatedAt]
+      properties:
+        id: { type: integer, minimum: 1 }
+        patientId: { type: integer, minimum: 1 }
+        template:
+          type: object
+          required: [id, version, name, description, fileId]
+          properties:
+            id: { type: integer, minimum: 1 }
+            version: { type: integer, minimum: 1 }
+            name: { type: string }
+            description:
+              oneOf: [{ type: string }, { type: 'null' }]
+            fileId:
+              oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+          additionalProperties: false
+        signedDocumentFileId:
+          oneOf: [{ type: string, format: uuid }, { type: 'null' }]
+        status: { type: string, enum: [PENDING_DOCUMENT, COMPLETED, VOIDED] }
+        signedAt: { type: string, format: date-time }
+        patientName: { type: string }
+        doctorName: { type: string }
+        signatory:
+          type: object
+          required: [name, capacity]
+          properties:
+            name: { type: string }
+            capacity: { type: string, enum: [PATIENT, REPRESENTATIVE] }
+          additionalProperties: false
+        voidedAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        voidReason:
+          oneOf: [{ type: string }, { type: 'null' }]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      additionalProperties: false
+    ConsentCatalogListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { type: array, items: { $ref: '#/components/schemas/ConsentCatalogEntry' } }
+            errors: { type: 'null' }
+    ConsentTemplateResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { $ref: '#/components/schemas/ConsentTemplate' }
+            errors: { type: 'null' }
+    ConsentTemplateListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { type: array, items: { $ref: '#/components/schemas/ConsentTemplate' } }
+            errors: { type: 'null' }
+    SignedConsentResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { $ref: '#/components/schemas/SignedConsent' }
+            errors: { type: 'null' }
+    SignedConsentListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { type: array, items: { $ref: '#/components/schemas/SignedConsent' } }
             errors: { type: 'null' }

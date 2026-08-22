@@ -1,77 +1,52 @@
-// models/informedConsent.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
-import db from "../db/connection";
-import SignedConsent from './signed-consent.model';
+
+import db from '../db/connection';
 
 interface UserInformedConsentAttributes {
   id: number;
   user_id: number;
   informed_consent_id: number | null;
-  name: string | null;
+  name: string;
   description: string | null;
-  file_url: string | null;
   is_custom: boolean;
+  template_file_id: number | null;
+  status: 'ACTIVE' | 'ARCHIVED';
+  version: number;
+  archived_at: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-type UserInformedConsentCreationAttributes = Optional<UserInformedConsentAttributes, 'id'>;
+type UserInformedConsentCreation = Optional<UserInformedConsentAttributes, 'id' | 'informed_consent_id' | 'description' | 'is_custom' | 'template_file_id' | 'status' | 'version' | 'archived_at' | 'createdAt' | 'updatedAt'>;
 
-class UserInformedConsent extends Model<UserInformedConsentAttributes, UserInformedConsentCreationAttributes> implements UserInformedConsentAttributes {
-  public id!: number;
+class UserInformedConsent extends Model<UserInformedConsentAttributes, UserInformedConsentCreation> implements UserInformedConsentAttributes {
+  id!: number;
   user_id!: number;
   informed_consent_id!: number | null;
-  public name!: string | null;
-  public description!: string | null;
-  public file_url!: string | null;
+  name!: string;
+  description!: string | null;
   is_custom!: boolean;
-  // Timestamps
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  template_file_id!: number | null;
+  status!: 'ACTIVE' | 'ARCHIVED';
+  version!: number;
+  archived_at!: Date | null;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
-UserInformedConsent.init(
-  {
-    id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    user_id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-    },
-    informed_consent_id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    description: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    file_url: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    is_custom: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-    }
-  },
-  {
-    sequelize: db,
-    tableName: 'user_informed_consents',
-    underscored: true,
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt',
-  }
-);
-
-SignedConsent.belongsTo(UserInformedConsent, {
-  foreignKey: 'consent_id',
-  as: 'consent'
-});
+UserInformedConsent.init({
+  id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+  user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+  informed_consent_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+  name: { type: DataTypes.STRING(255), allowNull: false },
+  description: { type: DataTypes.TEXT, allowNull: true },
+  is_custom: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+  template_file_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+  status: { type: DataTypes.ENUM('ACTIVE', 'ARCHIVED'), allowNull: false, defaultValue: 'ACTIVE' },
+  version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+  archived_at: { type: DataTypes.DATE, allowNull: true },
+  createdAt: { type: DataTypes.DATE, field: 'created_at' },
+  updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+}, { sequelize: db, tableName: 'user_informed_consents', timestamps: true });
 
 export default UserInformedConsent;

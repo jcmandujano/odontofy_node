@@ -1,84 +1,75 @@
-// models/signedConsent.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
-import db from "../db/connection";
-import Patient from './patient.model';
-import User from './user.model';
+
+import db from '../db/connection';
+
+export type SignedConsentStatus = 'PENDING_DOCUMENT' | 'COMPLETED' | 'VOIDED';
 
 interface SignedConsentAttributes {
   id: number;
-  consent_id: number;
+  user_informed_consent_id: number;
   patient_id: number;
   doctor_id: number;
-  signed_date: Date;
-  file_url: string | null;
+  signed_at: Date;
+  template_file_id_snapshot: number | null;
+  signed_file_id: number | null;
+  status: SignedConsentStatus;
+  template_version: number;
+  template_name_snapshot: string;
+  template_description_snapshot: string | null;
+  patient_name_snapshot: string;
+  doctor_name_snapshot: string;
+  signatory_name: string;
+  signatory_capacity: 'PATIENT' | 'REPRESENTATIVE';
+  voided_at: Date | null;
+  void_reason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-type SignedConsentCreationAttributes = Optional<SignedConsentAttributes, 'id'>;
+type SignedConsentCreation = Optional<SignedConsentAttributes, 'id' | 'template_file_id_snapshot' | 'signed_file_id' | 'status' | 'template_description_snapshot' | 'voided_at' | 'void_reason' | 'createdAt' | 'updatedAt'>;
 
-class SignedConsent extends Model<SignedConsentAttributes, SignedConsentCreationAttributes> implements SignedConsentAttributes {
-  public id!: number;
-  public consent_id!: number;
-  public patient_id!: number;
-  public doctor_id!: number;
-  public signed_date!: Date;
-  public file_url!: string | null;
-
-  // Timestamps
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+class SignedConsent extends Model<SignedConsentAttributes, SignedConsentCreation> implements SignedConsentAttributes {
+  id!: number;
+  user_informed_consent_id!: number;
+  patient_id!: number;
+  doctor_id!: number;
+  signed_at!: Date;
+  template_file_id_snapshot!: number | null;
+  signed_file_id!: number | null;
+  status!: SignedConsentStatus;
+  template_version!: number;
+  template_name_snapshot!: string;
+  template_description_snapshot!: string | null;
+  patient_name_snapshot!: string;
+  doctor_name_snapshot!: string;
+  signatory_name!: string;
+  signatory_capacity!: 'PATIENT' | 'REPRESENTATIVE';
+  voided_at!: Date | null;
+  void_reason!: string | null;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
-SignedConsent.init(
-  {
-    id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    consent_id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-      field: 'user_informed_consent_id',
-    },
-    patient_id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-      references: {
-        model: Patient,
-        key: 'id',
-      },
-    },
-    doctor_id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-      references: {
-        model: User,
-        key: 'id',
-      },
-    },
-    signed_date: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
-      field: 'signed_at',
-    },
-    file_url: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize: db,
-    tableName: 'signed_consents',
-    underscored: true,
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt',
-  }
-);
-
-// Definir las relaciones
-/* SignedConsent.belongsTo(InformedConsent, { foreignKey: 'consentId' });
-SignedConsent.belongsTo(Patient, { foreignKey: 'patientId' });
-SignedConsent.belongsTo(User, { foreignKey: 'doctorId' }); */
+SignedConsent.init({
+  id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+  user_informed_consent_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+  patient_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+  doctor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+  signed_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  template_file_id_snapshot: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+  signed_file_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+  status: { type: DataTypes.ENUM('PENDING_DOCUMENT', 'COMPLETED', 'VOIDED'), allowNull: false, defaultValue: 'PENDING_DOCUMENT' },
+  template_version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+  template_name_snapshot: { type: DataTypes.STRING(255), allowNull: false },
+  template_description_snapshot: { type: DataTypes.TEXT, allowNull: true },
+  patient_name_snapshot: { type: DataTypes.STRING(350), allowNull: false },
+  doctor_name_snapshot: { type: DataTypes.STRING(350), allowNull: false },
+  signatory_name: { type: DataTypes.STRING(350), allowNull: false },
+  signatory_capacity: { type: DataTypes.ENUM('PATIENT', 'REPRESENTATIVE'), allowNull: false },
+  voided_at: { type: DataTypes.DATE, allowNull: true },
+  void_reason: { type: DataTypes.STRING(1000), allowNull: true },
+  createdAt: { type: DataTypes.DATE, field: 'created_at' },
+  updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+}, { sequelize: db, tableName: 'signed_consents', timestamps: true });
 
 export default SignedConsent;

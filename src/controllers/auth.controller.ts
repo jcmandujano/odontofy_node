@@ -76,7 +76,7 @@ export const register = async (req: Request, res: Response) => {
     await Token.destroy({ where: { userId: newUser.id } });
     await Token.create({ userId: newUser.id, token: tokenHash(token), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
     const confirmationUrl = `${process.env.BACKEND_URL}/api/auth/verify-account/${newUser.id}/${token}`;
-    await sendEmail({ to: newUser.email || '', subject: 'Confirma tu cuenta en Odontofy', html: accountConfirmationTemplate(newUser.name, confirmationUrl) });
+    await sendEmail({ to: newUser.email || '', subject: 'Confirma tu cuenta en Odontofy', html: accountConfirmationTemplate(newUser.name, confirmationUrl), userId: newUser.id });
     return successResponse(res, newUser.toSafeJSON(), 'Usuario registrado correctamente. Revisa tu correo para confirmar tu cuenta.');
   } catch (error) {
     console.error('Error en register:', error);
@@ -112,7 +112,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
       await PasswordReset.destroy({ where: { user_id: user.id, used: false } });
       await PasswordReset.create({ user_id: user.id, token: tokenHash(resetToken), expires_at: new Date(Date.now() + 60 * 60 * 1000) });
       const resetPasswordUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-      await sendEmail({ to: user.email || '', subject: 'Restablece tu contrasena en Odontofy', html: resetPasswordTemplate(user.name, resetPasswordUrl) });
+      await sendEmail({ to: user.email || '', subject: 'Restablece tu contrasena en Odontofy', html: resetPasswordTemplate(user.name, resetPasswordUrl), kind: 'PASSWORD_RESET', userId: user.id });
     }
     return successResponse(res, genericMessage);
   } catch (error) {

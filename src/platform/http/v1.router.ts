@@ -19,11 +19,17 @@ import { createPatientRouter } from '../../modules/patients/patient.router';
 import { PatientServiceDependencies } from '../../modules/patients/patient.service';
 import { createTreatmentPlanRouter } from '../../modules/treatment-plans/treatment-plan.router';
 import { TreatmentPlanServiceDependencies } from '../../modules/treatment-plans/treatment-plan.service';
+import { createConsentRouter } from '../../modules/consents/consent.router';
+import { ConsentServiceDependencies } from '../../modules/consents/consent.service';
+import { createFileRouter } from '../../modules/files/file.router';
+import { FileServiceDependencies } from '../../modules/files/file.service';
 
 export interface V1RouterDependencies {
   appointmentModule?: AppointmentModuleDependencies;
   billing?: BillingServiceDependencies;
   clinicalRecords?: ClinicalRecordServiceDependencies;
+  consents?: ConsentServiceDependencies;
+  files?: FileServiceDependencies;
   identity?: IdentityServiceDependencies;
   patients?: PatientServiceDependencies;
   treatmentPlans?: TreatmentPlanServiceDependencies;
@@ -49,6 +55,8 @@ export const createV1Router = (
   );
   router.use('/health', createHealthRouter(readinessCheck));
   router.use(createIdentityRouter(identityService));
+  router.use(createFileRouter(identityService, dependencies.files));
+  router.use(createConsentRouter(identityService, dependencies.consents));
   router.use(createAppointmentRouter(identityService, dependencies.appointmentModule));
   router.use(createPatientRouter(identityService, dependencies.patients));
   router.use(createBillingRouter(identityService, dependencies.billing));

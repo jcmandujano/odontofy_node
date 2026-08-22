@@ -11,7 +11,6 @@ import authRoutes from './routes/auth.route';
 import calendarRoutes from './routes/google.route';
 import conceptRoutes from './routes/concept.route';
 import informedConsentsRoutes from './routes/informed-consent.route';
-import mailingRoutes from './routes/mailing.route';
 import meRoutes from './routes/me.route';
 import noteRoutes from './routes/evolution-note.route';
 import patientRoutes from './routes/patient.route';
@@ -35,6 +34,8 @@ import { IdentityServiceDependencies } from './modules/identity/identity.service
 import { PatientServiceDependencies } from './modules/patients/patient.service';
 import { BillingServiceDependencies } from './modules/billing/billing.service';
 import { AppointmentModuleDependencies } from './modules/appointments/appointment.router';
+import { ConsentServiceDependencies } from './modules/consents/consent.service';
+import { FileServiceDependencies } from './modules/files/file.service';
 import './models/treatment-plan.model';
 import './models/treatment-plan-item.model';
 
@@ -53,13 +54,14 @@ const apiRoutes = {
   userInformedConsents: '/api/user-informed-consents',
   calendar: '/api/google',
   fileUpload: '/api/upload',
-  mailing: '/api/mailing',
   treatmentPlans: '/api',
 } as const;
 
 export interface AppOptions {
   appointmentModule?: AppointmentModuleDependencies;
   billing?: BillingServiceDependencies;
+  consents?: ConsentServiceDependencies;
+  files?: FileServiceDependencies;
   identity?: IdentityServiceDependencies;
   logger?: Logger;
   patients?: PatientServiceDependencies;
@@ -109,6 +111,8 @@ export const createApp = (options: AppOptions = {}): Application => {
     createV1Router(readinessCheck, {
       appointmentModule: options.appointmentModule,
       billing: options.billing,
+      consents: options.consents,
+      files: options.files,
       identity: options.identity,
       patients: options.patients,
     })
@@ -131,7 +135,6 @@ export const createApp = (options: AppOptions = {}): Application => {
   app.use(apiRoutes.userInformedConsents, userInformedConsentRoutes);
   app.use(apiRoutes.calendar, calendarRoutes);
   app.use(apiRoutes.fileUpload, fileUploadRoute);
-  app.use(apiRoutes.mailing, mailingRoutes);
   app.use(apiRoutes.treatmentPlans, treatmentPlanRoutes);
   app.use(
     '/api-docs/v1',

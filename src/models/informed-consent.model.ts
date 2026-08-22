@@ -1,54 +1,31 @@
-// models/informedConsent.model.ts
 import { DataTypes, Model, Optional } from 'sequelize';
-import db from "../db/connection";
+
+import db from '../db/connection';
 
 interface InformedConsentAttributes {
   id: number;
-  name: string | null;
+  name: string;
   description: string | null;
-  file_url: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-type InformedConsentCreationAttributes = Optional<InformedConsentAttributes, 'id'>;
+type InformedConsentCreation = Optional<InformedConsentAttributes, 'id' | 'description' | 'createdAt' | 'updatedAt'>;
 
-class InformedConsent extends Model<InformedConsentAttributes, InformedConsentCreationAttributes> implements InformedConsentAttributes {
-  public id!: number;
-  public name!: string | null;
-  public description!: string | null;
-  public file_url!: string | null;
-
-  // Timestamps
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+class InformedConsent extends Model<InformedConsentAttributes, InformedConsentCreation> implements InformedConsentAttributes {
+  id!: number;
+  name!: string;
+  description!: string | null;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
-InformedConsent.init(
-  {
-    id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    description: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    file_url: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize: db,
-    tableName: 'informed_consents',
-    underscored: true,
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt',
-  }
-);
+InformedConsent.init({
+  id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+  name: { type: DataTypes.STRING(255), allowNull: false },
+  description: { type: DataTypes.TEXT, allowNull: true },
+  createdAt: { type: DataTypes.DATE, field: 'created_at' },
+  updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+}, { sequelize: db, tableName: 'informed_consents', timestamps: true });
 
 export default InformedConsent;
