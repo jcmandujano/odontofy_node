@@ -13,7 +13,7 @@ export class QueuedIdentityEmailSender implements IdentityEmailSender {
     user: IdentityUser,
     token: string
   ): Promise<void> {
-    const url = frontendUrl('/verify-account');
+    const url = frontendUrl('/confirm-account');
     url.searchParams.set('userId', String(user.id));
     url.searchParams.set('token', token);
 

@@ -28,6 +28,12 @@ afterEach(() => {
 });
 
 describe('identity schemas', () => {
+  it('allows the authenticated user to update the finance visibility preference', () => {
+    expect(updateProfileSchema.parse({ showFinanceStats: false })).toEqual({
+      showFinanceStats: false,
+    });
+  });
+
   it('accepts long passphrases and rejects bcrypt truncation or unknown fields', () => {
     expect(passwordSchema.safeParse('correct horse battery staple').success).toBe(
       true

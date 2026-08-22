@@ -3333,6 +3333,8 @@ components:
         avatar:
           type: string
           maxLength: 2048
+        showFinanceStats:
+          type: boolean
       additionalProperties: false
     PublicUser:
       type: object
