@@ -43,8 +43,8 @@ Para cerrar una fase se deben registrar:
 | F6  | Planes de tratamiento              | DONE       | Planes e items transaccionales en v1.                        |
 | F7  | Expediente clinico                 | DONE       | Historial y notas versionadas en v1.                         |
 | F8  | Facturacion y catalogos            | DONE       | Pagos y conceptos transaccionales migrados.                  |
-| F9  | Agenda y Google Calendar           | VALIDATING | Agenda desacoplada del proveedor externo.                    |
-| F10 | Consentimientos, archivos y correo | PENDING    | Integraciones restantes encapsuladas.                        |
+| F9  | Agenda y Google Calendar           | DONE       | Agenda desacoplada del proveedor externo.                    |
+| F10 | Consentimientos, archivos y correo | VALIDATING | Integraciones restantes encapsuladas.                        |
 | F11 | Migracion Angular y retiro legacy  | PENDING    | UI en v1 y rutas legacy retiradas por modulo.                |
 | F12 | Cierre arquitectonico              | PENDING    | Reglas de arquitectura y validacion integral en CI.          |
 
@@ -683,7 +683,7 @@ Para cerrar una fase se deben registrar:
 - [x] Migracion de desarrollo que descarta tokens legacy en vez de propagarlos.
 - [x] Validacion local integral, rollback y reconstruccion MySQL.
 - [x] CI remoto y [PR #81 de F9](https://github.com/jcmandujano/odontofy_node/pull/81) abierto.
-- [ ] PR de F9 integrado.
+- [x] PR de F9 integrado (`073e3a2`).
 
 ### Criterios de salida
 
@@ -716,6 +716,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-18 | Reconstruccion MySQL      | 48 pruebas pasan antes y despues de recrear 11 migraciones.  |
 | 2026-08-18 | Rollback F9               | Reversion total y reaplicacion terminan sin residuos.        |
 | 2026-08-18 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #81.              |
+| 2026-08-22 | Integracion               | PR #81 integrado en `main` mediante `073e3a2`.               |
 
 ### Riesgos transferidos
 
@@ -724,6 +725,69 @@ Para cerrar una fase se deben registrar:
 - La rotacion operativa de claves y alertas de conexiones en
   `REAUTH_REQUIRED` se completaran antes de produccion.
 - F11 migrara Angular al contrato v1 y retirara la mezcla visual legacy.
+
+## F10 - Consentimientos, archivos y correo
+
+### Objetivos
+
+- Modelar el flujo real de firma manuscrita y digitalizacion sin prometer firma electronica.
+- Encapsular archivos privados con ownership, validacion, integridad y acceso temporal.
+- Conservar snapshots e impedir reemplazo o borrado silencioso de evidencia.
+- Desacoplar identidad de Brevo mediante correo durable, cifrado e idempotente.
+- Mantener solo la compatibilidad legacy que no contradiga estas invariantes.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f10-consents-files-mail`.
+- [x] [Milestone `API v1 - F10 Consentimientos, archivos y correo`](https://github.com/jcmandujano/odontofy_node/milestone/11).
+- [x] Issues #82 a #87 con criterios verificables.
+- [x] ADR de alcance fisico-digital, almacenamiento y correo durable.
+- [x] Modulo `files` con proveedor GCS intercambiable y ADC.
+- [x] Modulo `consents` con plantillas versionadas y constancias inmutables.
+- [x] Outbox de correo cifrada con retry e idempotencia Brevo.
+- [x] Retiro del endpoint legacy de mailing arbitrario.
+- [x] Migracion que descarta URLs legacy no verificables.
+- [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
+- [x] Validacion local integral, rollback y reconstruccion MySQL.
+- [ ] CI remoto y PR de F10 abierto.
+- [ ] PR de F10 integrado.
+
+### Criterios de salida
+
+- Solo PDFs basicos validos y acotados se almacenan con nombre opaco y checksum.
+- Archivos ajenos no se distinguen de inexistentes; las URLs duran cinco minutos.
+- Un archivo referenciado no se elimina y ninguna respuesta expone bucket u object key.
+- Una constancia conserva snapshots y su documento solo puede adjuntarse una vez.
+- Constancias y plantillas se archivan o anulan logicamente; no existe borrado v1.
+- Editar una plantilla no altera constancias ya registradas.
+- Brevo no se invoca en el request de identidad; retry conserva idempotency key.
+- OpenAPI, pruebas rapidas, MySQL, rollback, reconstruccion y build pasan.
+
+### Evidencias
+
+| Fecha      | Evidencia                 | Resultado                                                        |
+| ---------- | ------------------------- | ---------------------------------------------------------------- |
+| 2026-08-22 | Investigacion y ADR       | Limites NOM, OWASP, GCS y Brevo documentados con fuentes oficiales. |
+| 2026-08-22 | Calidad local             | Lint, tipos, OpenAPI, 43 pruebas rapidas y build pasan.          |
+| 2026-08-22 | Integracion MySQL         | 51 pruebas cubren ownership, snapshots, archivos y retry.        |
+| 2026-08-22 | Rollback F10              | Reversion y reaplicacion de F10 terminan sin residuos.           |
+| 2026-08-22 | Reconstruccion MySQL      | 12 migraciones y seed sintetico se reconstruyen desde cero.      |
+
+### Enlaces de trabajo F10
+
+- [#82 ADR y contrato de seguridad documental](https://github.com/jcmandujano/odontofy_node/issues/82)
+- [#83 Almacenamiento privado encapsulado](https://github.com/jcmandujano/odontofy_node/issues/83)
+- [#84 Plantillas versionables](https://github.com/jcmandujano/odontofy_node/issues/84)
+- [#85 Consentimientos firmados inmutables](https://github.com/jcmandujano/odontofy_node/issues/85)
+- [#86 Correo durable desacoplado](https://github.com/jcmandujano/odontofy_node/issues/86)
+- [#87 Migracion, contrato y pruebas](https://github.com/jcmandujano/odontofy_node/issues/87)
+
+### Riesgos transferidos
+
+- Antivirus o CDR, webhooks de entrega y politica legal de retencion son requisitos
+  previos a produccion y se revisaran en F12.
+- F11 debe dejar de enviar `file_url` y usar UUIDs de archivo antes de retirar rutas legacy.
+- La aplicacion conserva digitalizaciones; no implementa ni declara firma electronica.
 
 ## Definicion de terminado para fases posteriores
 
