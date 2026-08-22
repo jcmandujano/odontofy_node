@@ -14,9 +14,6 @@ interface UserAttributes {
     status: boolean;
     auth_version?: number;
     show_finance_stats?: boolean;
-    google_access_token?: string | null;
-    google_refresh_token?: string | null;
-    google_token_expiry_date?: Date | null;
 }
 
 type UserCreationAttributes = Optional<UserAttributes, "id">;
@@ -34,19 +31,12 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     status!: boolean;
     auth_version!: number;
     show_finance_stats!: boolean;
-    google_access_token!: string | null;
-    google_refresh_token!: string | null;
-    google_token_expiry_date!: Date | null;
-
-    toSafeJSON() {
+    toSafeJSON(isGoogleSynced = false) {
         const data: Partial<UserAttributes> = { ...this.toJSON() };
         delete data.password;
-        delete data.google_access_token;
-        delete data.google_refresh_token;
-        delete data.google_token_expiry_date;
         return {
             ...data,
-            is_google_synced: Boolean(this.google_refresh_token),
+            is_google_synced: isGoogleSynced,
         };
     }
 }
@@ -88,19 +78,6 @@ User.init({
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
-    google_access_token: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    google_refresh_token: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    google_token_expiry_date: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        field: 'google_token_expiry_at'
-    }
 }, {
     sequelize: db,
     tableName: "users",

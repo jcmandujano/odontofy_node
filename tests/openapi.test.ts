@@ -18,6 +18,10 @@ describe('OpenAPI v1 contract', () => {
     expect(document.paths).toHaveProperty('/me');
     expect(document.paths).toHaveProperty('/patients');
     expect(document.paths).toHaveProperty('/patients/{patientId}');
+    expect(document.paths).toHaveProperty('/appointments');
+    expect(document.paths).toHaveProperty('/appointments/{appointmentId}/status');
+    expect(document.paths).toHaveProperty('/calendar/connection/authorization');
+    expect(document.paths).toHaveProperty('/calendar/external-events');
     expect(document.paths).toHaveProperty(
       '/patients/{patientId}/treatment-plans'
     );
@@ -46,5 +50,7 @@ describe('OpenAPI v1 contract', () => {
       'PublicEvolutionNoteRevision'
     );
     expect(document.components?.schemas).toHaveProperty('BillingRevision');
+    expect(document.components?.schemas).toHaveProperty('Appointment');
+    expect(document.components?.schemas).toHaveProperty('CalendarConnection');
   });
 });

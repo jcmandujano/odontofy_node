@@ -2,6 +2,7 @@ import express, { Router } from 'express';
 
 import { apiErrorHandler, notFoundHandler } from './error.middleware';
 import { createBillingRouter } from '../../modules/billing/billing.router';
+import { createAppointmentRouter, AppointmentModuleDependencies } from '../../modules/appointments/appointment.router';
 import { BillingServiceDependencies } from '../../modules/billing/billing.service';
 import { createHealthRouter, ReadinessCheck } from './health.router';
 import { loadOpenApiV1 } from './openapi';
@@ -20,6 +21,7 @@ import { createTreatmentPlanRouter } from '../../modules/treatment-plans/treatme
 import { TreatmentPlanServiceDependencies } from '../../modules/treatment-plans/treatment-plan.service';
 
 export interface V1RouterDependencies {
+  appointmentModule?: AppointmentModuleDependencies;
   billing?: BillingServiceDependencies;
   clinicalRecords?: ClinicalRecordServiceDependencies;
   identity?: IdentityServiceDependencies;
@@ -47,6 +49,7 @@ export const createV1Router = (
   );
   router.use('/health', createHealthRouter(readinessCheck));
   router.use(createIdentityRouter(identityService));
+  router.use(createAppointmentRouter(identityService, dependencies.appointmentModule));
   router.use(createPatientRouter(identityService, dependencies.patients));
   router.use(createBillingRouter(identityService, dependencies.billing));
   router.use(

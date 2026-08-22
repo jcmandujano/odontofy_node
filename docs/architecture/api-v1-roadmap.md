@@ -42,8 +42,8 @@ Para cerrar una fase se deben registrar:
 | F5  | Pacientes                          | DONE       | Pacientes migrados con ownership y DTOs estrictos.           |
 | F6  | Planes de tratamiento              | DONE       | Planes e items transaccionales en v1.                        |
 | F7  | Expediente clinico                 | DONE       | Historial y notas versionadas en v1.                         |
-| F8  | Facturacion y catalogos            | VALIDATING | Pagos y conceptos transaccionales migrados.                  |
-| F9  | Agenda y Google Calendar           | PENDING    | Agenda desacoplada del proveedor externo.                    |
+| F8  | Facturacion y catalogos            | DONE       | Pagos y conceptos transaccionales migrados.                  |
+| F9  | Agenda y Google Calendar           | VALIDATING | Agenda desacoplada del proveedor externo.                    |
 | F10 | Consentimientos, archivos y correo | PENDING    | Integraciones restantes encapsuladas.                        |
 | F11 | Migracion Angular y retiro legacy  | PENDING    | UI en v1 y rutas legacy retiradas por modulo.                |
 | F12 | Cierre arquitectonico              | PENDING    | Reglas de arquitectura y validacion integral en CI.          |
@@ -610,7 +610,7 @@ Para cerrar una fase se deben registrar:
 - [x] Migracion, rollback y reconstruccion MySQL validados.
 - [x] Validacion local integral de F8.
 - [x] CI remoto de F8 y PR abierto.
-- [ ] PR de F8 integrado.
+- [x] PR de F8 integrado (`e8ad271`).
 
 ### Criterios de salida
 
@@ -657,6 +657,73 @@ Para cerrar una fase se deben registrar:
   mostrara revisiones, estados e idempotencia nativos de v1.
 - Medicion de rendimiento y retry automatico de deadlocks se revisaran en F12;
   F8 usa transacciones cortas y orden estable de bloqueo.
+
+## F9 - Agenda y Google Calendar
+
+### Objetivos
+
+- Hacer de la agenda local la fuente de verdad y separar el proveedor externo.
+- Normalizar ownership, tiempos, estados y cancelacion de citas.
+- Proteger OAuth y eliminar credenciales en texto plano.
+- Persistir reintentos de sincronizacion sin duplicar eventos.
+- Mantener adaptadores legacy hasta la migracion Angular de F11.
+
+### Entregables
+
+- [x] Rama `refactor/api-v1-f9-appointments-calendar`.
+- [x] [Milestone `API v1 - F9 Agenda y Google Calendar`](https://github.com/jcmandujano/odontofy_node/milestone/10).
+- [x] Issues #75 a #80 con criterios verificables.
+- [x] ADR de agenda local, OAuth, privacidad y outbox.
+- [x] Modulo `appointments` con schemas, HTTP, servicio y repositorios.
+- [x] Cancelacion logica, ownership y contrato temporal estricto.
+- [x] Conexion Google con PKCE, scope minimo y refresh token cifrado.
+- [x] Outbox durable, retry y evento externo idempotente.
+- [x] Ruta separada para eventos externos y adaptadores legacy.
+- [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
+- [x] Migracion de desarrollo que descarta tokens legacy en vez de propagarlos.
+- [x] Validacion local integral, rollback y reconstruccion MySQL.
+- [x] CI remoto y [PR #81 de F9](https://github.com/jcmandujano/odontofy_node/pull/81) abierto.
+- [ ] PR de F9 integrado.
+
+### Criterios de salida
+
+- Una falla del proveedor no revierte ni elimina una cita local.
+- Crear y mutar cita encola el ultimo cambio dentro de la misma transaccion.
+- Reintentar usa el mismo ID externo y no crea eventos duplicados.
+- Citas canceladas conservan fila y marca temporal; no pueden reactivarse.
+- Pacientes y citas ajenos responden como inexistentes; DTOs extra se rechazan.
+- OAuth usa state de un solo uso, PKCE S256 y `calendar.events`.
+- No existen tokens Google en `users`, respuestas, logs ni eventos exportados.
+- Eventos Google ajenos se consultan separados de las citas locales.
+- OpenAPI, pruebas rapidas, pruebas MySQL, rollback y build pasan en CI.
+
+### Enlaces de trabajo F9
+
+- [#79 Contrato temporal y ciclo de vida](https://github.com/jcmandujano/odontofy_node/issues/79)
+- [#75 Modulo appointments y ownership](https://github.com/jcmandujano/odontofy_node/issues/75)
+- [#77 OAuth y conexiones Google](https://github.com/jcmandujano/odontofy_node/issues/77)
+- [#78 Sincronizacion durable](https://github.com/jcmandujano/odontofy_node/issues/78)
+- [#80 Eventos externos y puente legacy](https://github.com/jcmandujano/odontofy_node/issues/80)
+- [#76 Migracion, contrato y regresion](https://github.com/jcmandujano/odontofy_node/issues/76)
+- [PR #81 Agenda local y Google Calendar desacoplado](https://github.com/jcmandujano/odontofy_node/pull/81)
+
+### Evidencias
+
+| Fecha      | Evidencia                 | Resultado                                                    |
+| ---------- | ------------------------- | ------------------------------------------------------------ |
+| 2026-08-18 | Contratos, OAuth y cifrado | 4 pruebas rapidas cubren DTOs, rangos, AES-GCM e IDs estables. |
+| 2026-08-18 | Agenda y outbox MySQL     | 5 pruebas cubren BOLA, fallo, retry, cancelacion y externos. |
+| 2026-08-18 | Reconstruccion MySQL      | 48 pruebas pasan antes y despues de recrear 11 migraciones.  |
+| 2026-08-18 | Rollback F9               | Reversion total y reaplicacion terminan sin residuos.        |
+| 2026-08-18 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #81.              |
+
+### Riesgos transferidos
+
+- F12 puede ejecutar la outbox en un worker con scheduler y metricas; F9 expone
+  un procesador autenticado y acotado a 25 trabajos.
+- La rotacion operativa de claves y alertas de conexiones en
+  `REAUTH_REQUIRED` se completaran antes de produccion.
+- F11 migrara Angular al contrato v1 y retirara la mezcla visual legacy.
 
 ## Definicion de terminado para fases posteriores
 
