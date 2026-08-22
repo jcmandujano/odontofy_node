@@ -749,7 +749,7 @@ Para cerrar una fase se deben registrar:
 - [x] Migracion que descarta URLs legacy no verificables.
 - [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
 - [x] Validacion local integral, rollback y reconstruccion MySQL.
-- [ ] CI remoto y PR de F10 abierto.
+- [x] CI remoto y [PR #88 de F10](https://github.com/jcmandujano/odontofy_node/pull/88) abierto.
 - [ ] PR de F10 integrado.
 
 ### Criterios de salida
@@ -772,6 +772,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-22 | Integracion MySQL         | 51 pruebas cubren ownership, snapshots, archivos y retry.        |
 | 2026-08-22 | Rollback F10              | Reversion y reaplicacion de F10 terminan sin residuos.           |
 | 2026-08-22 | Reconstruccion MySQL      | 12 migraciones y seed sintetico se reconstruyen desde cero.      |
+| 2026-08-22 | CI remoto                 | Jobs `quality` y `database` pasan en el PR #88.                   |
 
 ### Enlaces de trabajo F10
 
