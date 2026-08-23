@@ -811,7 +811,7 @@ Para cerrar una fase se deben registrar:
   archivos y consentimientos.
 - [x] Retiro de mounts, Swagger, rutas, controladores, validadores y servicios legacy.
 - [x] Calidad local, pruebas de contrato, build y suites backend aprobadas.
-- [ ] CI remoto y PRs coordinados preparados.
+- [x] CI remoto y PRs coordinados preparados.
 
 ### Criterios de salida
 
@@ -831,6 +831,8 @@ Para cerrar una fase se deben registrar:
 - [UI #16 Plataforma, identidad y clinica](https://github.com/jcmandujano/odontofy_UI/issues/16)
 - [UI #17 Billing, agenda y documentos](https://github.com/jcmandujano/odontofy_UI/issues/17)
 - [UI #18 Calidad y rollback](https://github.com/jcmandujano/odontofy_UI/issues/18)
+- [PR UI #19 Migracion Angular](https://github.com/jcmandujano/odontofy_UI/pull/19)
+- [PR API #92 Retiro legacy](https://github.com/jcmandujano/odontofy_node/pull/92)
 
 ### Evidencias F11
 
@@ -841,6 +843,7 @@ Para cerrar una fase se deben registrar:
 | 2026-08-22 | Calidad API           | Lint, tipos, OpenAPI, 46 pruebas rapidas y build pasan.          |
 | 2026-08-22 | Integracion MySQL     | 51 pruebas de identidad y modulos de dominio pasan.              |
 | 2026-08-22 | Revision estatica     | Sin consumidores Angular ni mounts backend de rutas legacy.      |
+| 2026-08-23 | CI remoto coordinado  | UI/Vercel y jobs API `quality` y `database` pasan en los PRs.    |
 
 ## Definicion de terminado para fases posteriores
 
