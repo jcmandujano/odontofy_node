@@ -866,7 +866,7 @@ Para cerrar una fase se deben registrar:
 - [x] Angular 21 y SDKs estables de Google actualizados.
 - [x] Matriz explicita de readiness y riesgos transferidos a produccion.
 - [x] Validacion integral local de F12.
-- [ ] CI remoto de F12.
+- [x] CI remoto de F12.
 - [ ] PRs F12 revisados e integrados.
 
 ### Criterios de salida
@@ -896,11 +896,14 @@ Para cerrar una fase se deben registrar:
 | 2026-08-24 | Calidad UI                 | Angular 21, tipos, 13 pruebas Karma y build de produccion pasan. |
 | 2026-08-24 | Seguridad runtime          | UI sin avisos; API sin high/critical y tres moderados aceptados. |
 | 2026-08-24 | Reconstruccion MySQL       | 51 pruebas pasan antes y despues de recrear 12 migraciones. |
+| 2026-08-24 | CI remoto                  | API quality/database/dependency-review y UI quality/dependency-review/Vercel pasan. |
 
 ### Enlaces de trabajo F12
 
-- API #93 a #98: arquitectura, limites, contrato, dependencias, resiliencia y cierre.
-- UI #20 y #21: frontera HTTP, CI y evidencia cruzada.
+- [API #93 a #98](https://github.com/jcmandujano/odontofy_node/milestone/13): arquitectura, limites, contrato, dependencias, resiliencia y cierre.
+- [UI #20 y #21](https://github.com/jcmandujano/odontofy_UI/milestone/2): frontera HTTP, CI y evidencia cruzada.
+- [PR UI #22](https://github.com/jcmandujano/odontofy_UI/pull/22).
+- [PR API #99](https://github.com/jcmandujano/odontofy_node/pull/99).
 
 ## Definicion de terminado para fases posteriores
 
