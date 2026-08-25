@@ -18,12 +18,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout Angular consumer
-        uses: actions/checkout@v4
-        with:
-          repository: jcmandujano/odontofy_UI
-          path: contract-ui
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,6 +29,12 @@ jobs:
 
       - name: Run quality checks
         run: npm run check
+
+      - name: Checkout Angular consumer
+        uses: actions/checkout@v4
+        with:
+          repository: jcmandujano/odontofy_UI
+          path: contract-ui
 
       - name: Match Angular calls against OpenAPI
         run: npm run contract:angular -- contract-ui
