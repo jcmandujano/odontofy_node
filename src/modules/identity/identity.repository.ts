@@ -356,6 +356,9 @@ export class SequelizeIdentityRepository implements IdentityRepository {
       }),
       ...(input.phone !== undefined && { phone: input.phone }),
       ...(input.avatar !== undefined && { avatar: input.avatar }),
+      ...(input.showFinanceStats !== undefined && {
+        show_finance_stats: input.showFinanceStats,
+      }),
     });
     return mapUser(user);
   }

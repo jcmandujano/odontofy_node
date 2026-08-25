@@ -1,6 +1,6 @@
 # ADR-0002: Coexistencia y retiro de API legacy
 
-- Estado: Accepted
+- Estado: Superseded por ADR-0013
 - Fecha: 2026-08-07
 
 ## Contexto
@@ -16,6 +16,9 @@ su comportamiento durante todas las fases backend.
 El frontend se migrara al final, un modulo a la vez. La ruta legacy de un modulo se
 retirara solamente cuando su contrato v1, adaptacion Angular y pruebas end-to-end
 esten completos.
+
+F11 completo la convivencia descrita aqui. La decision de corte y recuperacion se
+registra en ADR-0013.
 
 ## Consecuencias
 

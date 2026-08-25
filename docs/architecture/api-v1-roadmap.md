@@ -3,9 +3,9 @@
 ## Objetivo
 
 Evolucionar Odontofy hacia un monolito modular dentro de este repositorio. La API
-actual bajo `/api` permanecera disponible mientras los modulos se reconstruyen en
-`/api/v1`. La base de datos se recreara desde migraciones versionadas y datos
-sinteticos.
+legacy bajo `/api` permanecio disponible durante la reconstruccion de modulos y se
+retira cuando Angular completa el corte a `/api/v1`. La base de datos se recrea
+desde migraciones versionadas y datos sinteticos.
 
 ## Estados
 
@@ -44,8 +44,8 @@ Para cerrar una fase se deben registrar:
 | F7  | Expediente clinico                 | DONE       | Historial y notas versionadas en v1.                         |
 | F8  | Facturacion y catalogos            | DONE       | Pagos y conceptos transaccionales migrados.                  |
 | F9  | Agenda y Google Calendar           | DONE       | Agenda desacoplada del proveedor externo.                    |
-| F10 | Consentimientos, archivos y correo | VALIDATING | Integraciones restantes encapsuladas.                        |
-| F11 | Migracion Angular y retiro legacy  | PENDING    | UI en v1 y rutas legacy retiradas por modulo.                |
+| F10 | Consentimientos, archivos y correo | DONE       | Integraciones restantes encapsuladas.                        |
+| F11 | Migracion Angular y retiro legacy  | VALIDATING | UI en v1 y rutas legacy retiradas por modulo.               |
 | F12 | Cierre arquitectonico              | PENDING    | Reglas de arquitectura y validacion integral en CI.          |
 
 ## F0 - Gobierno e higiene
@@ -750,7 +750,7 @@ Para cerrar una fase se deben registrar:
 - [x] Contrato OpenAPI 3.1 y guia de integracion frontend.
 - [x] Validacion local integral, rollback y reconstruccion MySQL.
 - [x] CI remoto y [PR #88 de F10](https://github.com/jcmandujano/odontofy_node/pull/88) abierto.
-- [ ] PR de F10 integrado.
+- [x] PR de F10 integrado mediante `6b6c708`.
 
 ### Criterios de salida
 
@@ -789,6 +789,61 @@ Para cerrar una fase se deben registrar:
   previos a produccion y se revisaran en F12.
 - F11 debe dejar de enviar `file_url` y usar UUIDs de archivo antes de retirar rutas legacy.
 - La aplicacion conserva digitalizaciones; no implementa ni declara firma electronica.
+
+## F11 - Migracion Angular y retiro legacy
+
+### Objetivos
+
+- Migrar el unico consumidor conocido al contrato `/api/v1` completo.
+- Preservar la experiencia existente mediante adaptadores tipados en el limite HTTP.
+- Retirar la superficie y las capas Express legacy cuando ya no tengan consumidores.
+- Dejar una recuperacion verificable que no dependa de cambios de base de datos.
+
+### Entregables
+
+- [x] Ramas `refactor/api-v1-f11-angular-migration` y
+  `refactor/api-v1-f11-angular-legacy-retirement`.
+- [x] Milestones F11 en API y UI, con issues #89 a #91 y UI #16 a #18.
+- [x] Snapshots remotos pre-F11 para ambos repositorios.
+- [x] ADR de corte, orden de integracion y recuperacion.
+- [x] Infraestructura Angular para envelope, paginacion, refresh y entornos v1.
+- [x] Migracion de identidad, pacientes, expediente, planes, billing, agenda,
+  archivos y consentimientos.
+- [x] Retiro de mounts, Swagger, rutas, controladores, validadores y servicios legacy.
+- [x] Calidad local, pruebas de contrato, build y suites backend aprobadas.
+- [x] CI remoto y PRs coordinados preparados.
+
+### Criterios de salida
+
+- Ningun servicio Angular construye URLs `/api` fuera de la base `/api/v1`.
+- Los flujos financieros usan idempotencia, decimales exactos y ciclo de vida v1.
+- Historial medico y notas se escriben por sus endpoints clinicos versionados.
+- Consentimientos no almacenan URLs ficticias y solo usan UUIDs privados.
+- `/api/auth/login`, `/api/upload/*` y `/api-docs` responden `404`.
+- OpenAPI, TypeScript, pruebas, build y suites MySQL pasan.
+- El PR UI se integra antes del PR de retiro backend.
+
+### Enlaces de trabajo F11
+
+- [API #89 Corte y recuperacion](https://github.com/jcmandujano/odontofy_node/issues/89)
+- [API #90 Retiro legacy](https://github.com/jcmandujano/odontofy_node/issues/90)
+- [API #91 Contrato y regresion](https://github.com/jcmandujano/odontofy_node/issues/91)
+- [UI #16 Plataforma, identidad y clinica](https://github.com/jcmandujano/odontofy_UI/issues/16)
+- [UI #17 Billing, agenda y documentos](https://github.com/jcmandujano/odontofy_UI/issues/17)
+- [UI #18 Calidad y rollback](https://github.com/jcmandujano/odontofy_UI/issues/18)
+- [PR UI #19 Migracion Angular](https://github.com/jcmandujano/odontofy_UI/pull/19)
+- [PR API #92 Retiro legacy](https://github.com/jcmandujano/odontofy_node/pull/92)
+
+### Evidencias F11
+
+| Fecha      | Evidencia             | Resultado                                                        |
+| ---------- | --------------------- | ---------------------------------------------------------------- |
+| 2026-08-22 | Snapshot UI y API     | Ramas y tags anotados pre-F11 publicados en ambos repositorios.  |
+| 2026-08-22 | Calidad Angular       | TypeScript, 13 pruebas Karma y build de produccion pasan.        |
+| 2026-08-22 | Calidad API           | Lint, tipos, OpenAPI, 46 pruebas rapidas y build pasan.          |
+| 2026-08-22 | Integracion MySQL     | 51 pruebas de identidad y modulos de dominio pasan.              |
+| 2026-08-22 | Revision estatica     | Sin consumidores Angular ni mounts backend de rutas legacy.      |
+| 2026-08-23 | CI remoto coordinado  | UI/Vercel y jobs API `quality` y `database` pasan en los PRs.    |
 
 ## Definicion de terminado para fases posteriores
 
