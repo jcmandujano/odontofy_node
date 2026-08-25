@@ -1,12 +1,11 @@
 import { Op, Transaction, WhereOptions } from 'sequelize';
 
 import db from '../../db/connection';
-import Appointment, {
-  AppointmentStatus,
-} from '../../models/appointment.model';
+import Appointment from '../../models/appointment.model';
 import CalendarConnection from '../../models/calendar-connection.model';
 import CalendarSyncJob from '../../models/calendar-sync-job.model';
 import Patient from '../../models/patient.model';
+import type { AppointmentStatus } from '../../types/appointment.enums';
 import {
   CreateAppointmentInput,
   ListAppointmentsQuery,

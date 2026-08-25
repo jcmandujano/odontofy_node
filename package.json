@@ -13,6 +13,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "contract:validate": "node scripts/validate-openapi.mjs",
+    "contract:angular": "node scripts/validate-angular-contract.mjs",
+    "architecture:check": "node scripts/check-architecture.mjs",
+    "security:check": "npm audit --omit=dev --audit-level=high",
     "test:database": "vitest run --config vitest.database.config.ts",
     "db:up": "docker compose -f compose.database.yml up -d --wait",
     "db:down": "docker compose -f compose.database.yml down",
@@ -23,7 +26,7 @@
     "db:seed:undo:test": "sequelize-cli db:seed:undo:all --env test",
     "db:rebuild:test": "npm run db:seed:undo:test && sequelize-cli db:migrate:undo:all --env test && npm run db:migrate:test && npm run db:seed:test",
     "db:verify:test": "npm run db:migrate:test && npm run db:seed:test && npm run test:database && npm run db:rebuild:test && npm run test:database",
-    "check": "npm run lint && npm run typecheck && npm run contract:validate && npm test && npm run build"
+    "check": "npm run architecture:check && npm run lint && npm run typecheck && npm run contract:validate && npm test && npm run build"
   },
   "keywords": [],
   "author": "",
@@ -59,7 +62,7 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^3.0.1",
-    "@google-cloud/storage": "^7.21.0",
+    "@google-cloud/storage": "^8.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
@@ -68,7 +71,7 @@
     "express-rate-limit": "^8.6.1",
     "express-validator": "^7.0.1",
     "google-auth-library": "^9.15.1",
-    "googleapis": "^148.0.0",
+    "googleapis": "^176.0.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.6.0",

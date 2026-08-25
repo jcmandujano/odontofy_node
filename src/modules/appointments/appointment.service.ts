@@ -9,7 +9,7 @@ import {
 } from './appointment.repository';
 import type { AppointmentData } from './appointment.types';
 import { AppointmentError } from './appointment.types';
-import type { AppointmentStatus } from '../../models/appointment.model';
+import type { AppointmentStatus } from '../../types/appointment.enums';
 
 const serialize = (appointment: AppointmentData) => ({
   ...appointment,

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { EmailKind } from '../../models/email-delivery.model';
+import type { EmailKind } from '../../types/email.enums';
 import { AesGcmEmailPayloadCipher, EmailPayloadCipher } from './email.crypto';
 import { BrevoEmailProvider, EmailPayload, EmailProvider } from './email.provider';
 import { EmailRepository, SequelizeEmailRepository } from './email.repository';

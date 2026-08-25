@@ -1,4 +1,4 @@
-import { Op, Transaction, WhereOptions } from 'sequelize';
+import { Op, Transaction, UniqueConstraintError, WhereOptions } from 'sequelize';
 
 import db from '../../db/connection';
 import InformedConsent from '../../models/informed-consent.model';
@@ -218,14 +218,21 @@ export class SequelizeConsentRepository {
   }
 
   async attachDocument(userId: number, patientId: number, consentId: number, fileId: number) {
-    await db.transaction(async (transaction) => {
-      await this.requirePatient(userId, patientId, transaction);
-      const consent = await this.lockSigned(userId, patientId, consentId, transaction);
-      if (consent.status === 'VOIDED') throw new ConsentError('CONSENT_VOIDED', 'El consentimiento esta anulado');
-      if (consent.signed_file_id) throw new ConsentError('CONSENT_DOCUMENT_ATTACHED', 'El documento firmado ya fue adjuntado');
-      await this.requireFile(userId, fileId, 'SIGNED_CONSENT', transaction);
-      await consent.update({ signed_file_id: fileId, status: 'COMPLETED' }, { transaction });
-    });
+    try {
+      await db.transaction(async (transaction) => {
+        await this.requirePatient(userId, patientId, transaction);
+        const consent = await this.lockSigned(userId, patientId, consentId, transaction);
+        if (consent.status === 'VOIDED') throw new ConsentError('CONSENT_VOIDED', 'El consentimiento esta anulado');
+        if (consent.signed_file_id) throw new ConsentError('CONSENT_DOCUMENT_ATTACHED', 'El documento firmado ya fue adjuntado');
+        await this.requireFile(userId, fileId, 'SIGNED_CONSENT', transaction);
+        await consent.update({ signed_file_id: fileId, status: 'COMPLETED' }, { transaction });
+      });
+    } catch (error) {
+      if (error instanceof UniqueConstraintError) {
+        throw new ConsentError('CONSENT_DOCUMENT_ATTACHED', 'El documento ya esta vinculado');
+      }
+      throw error;
+    }
     return (await this.findSigned(userId, patientId, consentId))!;
   }
 

@@ -1,21 +1,13 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 
 import db from '../db/connection';
+import {
+  APPOINTMENT_STATUSES,
+  APPOINTMENT_SYNC_STATUSES,
+  AppointmentStatus,
+  AppointmentSyncStatus,
+} from '../types/appointment.enums';
 import Patient from './patient.model';
-
-export const appointmentStatuses = [
-  'SCHEDULED',
-  'CONFIRMED',
-  'COMPLETED',
-  'CANCELLED',
-  'NO_SHOW',
-] as const;
-export type AppointmentStatus = (typeof appointmentStatuses)[number];
-export type AppointmentSyncStatus =
-  | 'NOT_CONNECTED'
-  | 'PENDING'
-  | 'SYNCED'
-  | 'FAILED';
 
 interface AppointmentAttributes {
   id: number;
@@ -103,7 +95,7 @@ Appointment.init(
     },
     time_zone: { type: DataTypes.STRING(64), allowNull: false },
     status: {
-      type: DataTypes.ENUM(...appointmentStatuses),
+      type: DataTypes.ENUM(...APPOINTMENT_STATUSES),
       allowNull: false,
       defaultValue: 'SCHEDULED',
     },
@@ -122,7 +114,7 @@ Appointment.init(
       defaultValue: 'local',
     },
     sync_status: {
-      type: DataTypes.ENUM('NOT_CONNECTED', 'PENDING', 'SYNCED', 'FAILED'),
+      type: DataTypes.ENUM(...APPOINTMENT_SYNC_STATUSES),
       allowNull: false,
       defaultValue: 'NOT_CONNECTED',
     },

@@ -18,6 +18,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout Angular consumer
+        uses: actions/checkout@v4
+        with:
+          repository: jcmandujano/odontofy_UI
+          path: contract-ui
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,6 +35,12 @@ jobs:
 
       - name: Run quality checks
         run: npm run check
+
+      - name: Match Angular calls against OpenAPI
+        run: npm run contract:angular -- contract-ui
+
+      - name: Audit production dependencies
+        run: npm run security:check
 
   database:
     runs-on: ubuntu-latest
@@ -72,3 +84,18 @@ jobs:
 
       - name: Verify migrations and database integrity
         run: npm run db:verify:test
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

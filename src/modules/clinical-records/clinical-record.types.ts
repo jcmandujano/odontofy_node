@@ -1,4 +1,4 @@
-import type { EvolutionNoteRevisionAction } from '../../models/evolution-note-revision.model'
+import type { EvolutionNoteRevisionAction } from '../../types/clinical-record.enums'
 
 export const MEDICAL_QUESTION_IDS = [
   'MEDICAL_TREATMENT',

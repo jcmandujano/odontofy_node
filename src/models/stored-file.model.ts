@@ -1,10 +1,12 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 
 import db from '../db/connection';
-
-export const filePurposes = ['CONSENT_TEMPLATE', 'SIGNED_CONSENT'] as const;
-export type FilePurpose = (typeof filePurposes)[number];
-export type StoredFileStatus = 'PENDING' | 'AVAILABLE' | 'DELETING' | 'FAILED' | 'DELETED';
+import {
+  FILE_PURPOSES,
+  FilePurpose,
+  STORED_FILE_STATUSES,
+  StoredFileStatus,
+} from '../types/file.enums';
 
 interface StoredFileAttributes {
   id: number;
@@ -54,7 +56,7 @@ StoredFile.init({
   id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
   public_id: { type: DataTypes.UUID, allowNull: false },
   user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-  purpose: { type: DataTypes.ENUM(...filePurposes), allowNull: false },
+  purpose: { type: DataTypes.ENUM(...FILE_PURPOSES), allowNull: false },
   provider: { type: DataTypes.ENUM('GCS'), allowNull: false, defaultValue: 'GCS' },
   bucket: { type: DataTypes.STRING(255), allowNull: false },
   object_key: { type: DataTypes.STRING(512), allowNull: false },
@@ -63,7 +65,7 @@ StoredFile.init({
   size_bytes: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   sha256: { type: DataTypes.CHAR(64), allowNull: false },
   generation: { type: DataTypes.STRING(64), allowNull: true },
-  status: { type: DataTypes.ENUM('PENDING', 'AVAILABLE', 'DELETING', 'FAILED', 'DELETED'), allowNull: false, defaultValue: 'PENDING' },
+  status: { type: DataTypes.ENUM(...STORED_FILE_STATUSES), allowNull: false, defaultValue: 'PENDING' },
   security_status: { type: DataTypes.ENUM('BASIC_VALIDATED'), allowNull: false, defaultValue: 'BASIC_VALIDATED' },
   failure_code: { type: DataTypes.STRING(64), allowNull: true },
   deleted_at: { type: DataTypes.DATE, allowNull: true },

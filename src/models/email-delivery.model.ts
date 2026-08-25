@@ -1,8 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 
 import db from '../db/connection';
-
-export type EmailKind = 'ACCOUNT_VERIFICATION' | 'PASSWORD_RESET';
+import { EMAIL_KINDS, EmailKind } from '../types/email.enums';
 
 interface EmailDeliveryAttributes {
   id: number;
@@ -48,7 +47,7 @@ EmailDelivery.init({
   id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
   public_id: { type: DataTypes.UUID, allowNull: false },
   user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-  kind: { type: DataTypes.ENUM('ACCOUNT_VERIFICATION', 'PASSWORD_RESET'), allowNull: false },
+  kind: { type: DataTypes.ENUM(...EMAIL_KINDS), allowNull: false },
   idempotency_key: { type: DataTypes.UUID, allowNull: false },
   encrypted_payload: { type: DataTypes.TEXT('long'), allowNull: false },
   key_version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },

@@ -1,17 +1,12 @@
 import { DataTypes, Model, Optional } from 'sequelize'
 
 import db from '../db/connection'
+import {
+  EVOLUTION_NOTE_REVISION_ACTIONS,
+  EvolutionNoteRevisionAction,
+} from '../types/clinical-record.enums'
 import EvolutionNote from './evolution-note.model'
 import User from './user.model'
-
-export const EVOLUTION_NOTE_REVISION_ACTIONS = [
-  'CREATED',
-  'AMENDED',
-  'ARCHIVED',
-  'RESTORED',
-] as const
-export type EvolutionNoteRevisionAction =
-  (typeof EVOLUTION_NOTE_REVISION_ACTIONS)[number]
 
 interface EvolutionNoteRevisionAttributes {
   id: number

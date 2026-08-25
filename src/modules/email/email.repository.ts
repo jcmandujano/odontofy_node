@@ -1,7 +1,8 @@
 import { Op } from 'sequelize';
 
 import db from '../../db/connection';
-import EmailDelivery, { EmailKind } from '../../models/email-delivery.model';
+import EmailDelivery from '../../models/email-delivery.model';
+import type { EmailKind } from '../../types/email.enums';
 
 export interface EmailWork {
   id: number;

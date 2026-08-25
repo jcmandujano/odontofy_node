@@ -1,4 +1,4 @@
-import type { FilePurpose, StoredFileStatus } from '../../models/stored-file.model';
+import type { FilePurpose, StoredFileStatus } from '../../types/file.enums';
 
 export interface StoredFileData {
   id: number;

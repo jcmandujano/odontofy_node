@@ -1,4 +1,4 @@
-import type { SignedConsentStatus } from '../../models/signed-consent.model';
+import type { SignedConsentStatus } from '../../types/consent.enums';
 
 export interface ConsentTemplateData {
   id: number;
