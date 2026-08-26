@@ -1,8 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 
 import db from '../db/connection';
-
-export type SignedConsentStatus = 'PENDING_DOCUMENT' | 'COMPLETED' | 'VOIDED';
+import { SIGNED_CONSENT_STATUSES, SignedConsentStatus } from '../types/consent.enums';
 
 interface SignedConsentAttributes {
   id: number;
@@ -58,7 +57,7 @@ SignedConsent.init({
   signed_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   template_file_id_snapshot: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   signed_file_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-  status: { type: DataTypes.ENUM('PENDING_DOCUMENT', 'COMPLETED', 'VOIDED'), allowNull: false, defaultValue: 'PENDING_DOCUMENT' },
+  status: { type: DataTypes.ENUM(...SIGNED_CONSENT_STATUSES), allowNull: false, defaultValue: 'PENDING_DOCUMENT' },
   template_version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
   template_name_snapshot: { type: DataTypes.STRING(255), allowNull: false },
   template_description_snapshot: { type: DataTypes.TEXT, allowNull: true },

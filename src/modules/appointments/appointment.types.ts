@@ -1,7 +1,7 @@
 import type {
   AppointmentStatus,
   AppointmentSyncStatus,
-} from '../../models/appointment.model';
+} from '../../types/appointment.enums';
 
 export interface AppointmentData {
   id: number;

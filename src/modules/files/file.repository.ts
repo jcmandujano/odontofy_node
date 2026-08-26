@@ -2,7 +2,8 @@ import { Transaction } from 'sequelize';
 
 import db from '../../db/connection';
 import SignedConsent from '../../models/signed-consent.model';
-import StoredFile, { FilePurpose } from '../../models/stored-file.model';
+import StoredFile from '../../models/stored-file.model';
+import type { FilePurpose } from '../../types/file.enums';
 import UserInformedConsent from '../../models/user-informed-consent.model';
 import type { StoredFileData } from './file.types';
 

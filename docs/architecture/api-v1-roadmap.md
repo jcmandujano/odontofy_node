@@ -845,6 +845,66 @@ Para cerrar una fase se deben registrar:
 | 2026-08-22 | Revision estatica     | Sin consumidores Angular ni mounts backend de rutas legacy.      |
 | 2026-08-23 | CI remoto coordinado  | UI/Vercel y jobs API `quality` y `database` pasan en los PRs.    |
 
+## F12 - Cierre arquitectonico y readiness
+
+### Objetivos
+
+- Convertir la arquitectura modular y la frontera Angular en reglas ejecutables.
+- Evitar drift entre OpenAPI y el consumidor UI.
+- Modernizar dependencias fuera de soporte sin adoptar versiones inestables.
+- Separar cierre del refactor de autorizacion para operar datos reales.
+
+### Entregables
+
+- [x] Ramas F12 y snapshots remotos previos en API/UI.
+- [x] Milestone F12 e issues API #93 a #98; UI #20 y #21.
+- [x] Mapa de modulos, matriz de dependencias y ADR-0014.
+- [x] Enums de dominio desacoplados de modelos Sequelize.
+- [x] Checkers AST para capas backend y frontera HTTP Angular.
+- [x] Validacion automatica de llamadas Angular contra OpenAPI.
+- [x] CI Angular, auditoria runtime y Dependency Review en ambos repositorios.
+- [x] Angular 21 y SDKs estables de Google actualizados.
+- [x] Matriz explicita de readiness y riesgos transferidos a produccion.
+- [x] Validacion integral local de F12.
+- [x] CI remoto de F12.
+- [ ] PRs F12 revisados e integrados.
+
+### Criterios de salida
+
+- Servicios, schemas y types no importan Sequelize, modelos ni DB.
+- Toda dependencia entre modulos pertenece a la matriz aprobada.
+- Features Angular no importan HttpClient, URL de entorno ni DTOs ApiV1.
+- Todas las llamadas Angular descubiertas coinciden con OpenAPI por metodo y ruta.
+- Dependencias runtime no tienen hallazgos high o critical.
+- Base, pruebas, build, contrato y checks arquitectonicos pasan localmente y en CI.
+- Ningun dump ni dato sensible forma parte de Git; el esquema nace de migraciones.
+- Los bloqueos operativos impiden declarar readiness productiva prematuramente.
+
+### Recuperacion
+
+- API: `snapshot/pre-f12-api-20260824` / `api-pre-f12-20260824`.
+- UI: `snapshot/pre-f12-ui-20260824` / `ui-pre-f12-20260824`.
+- F12 no agrega migraciones. Revertir sus merges restaura codigo y toolchains sin
+  rollback de datos; los snapshots permiten recuperar ambos repositorios juntos.
+
+### Evidencias F12
+
+| Fecha      | Evidencia                  | Resultado |
+| ---------- | -------------------------- | --------- |
+| 2026-08-24 | Arquitectura y contrato    | Limites API/UI pasan; 64 llamadas Angular coinciden con OpenAPI. |
+| 2026-08-24 | Calidad API                | Lint, tipos, OpenAPI, 46 pruebas rapidas y build pasan. |
+| 2026-08-24 | Calidad UI                 | Angular 21, tipos, 13 pruebas Karma y build de produccion pasan. |
+| 2026-08-24 | Seguridad runtime          | UI sin avisos; API sin high/critical y tres moderados aceptados. |
+| 2026-08-24 | Reconstruccion MySQL       | 51 pruebas pasan antes y despues de recrear 12 migraciones. |
+| 2026-08-24 | CI remoto                  | API quality/database/dependency-review y UI quality/dependency-review/Vercel pasan. |
+
+### Enlaces de trabajo F12
+
+- [API #93 a #98](https://github.com/jcmandujano/odontofy_node/milestone/13): arquitectura, limites, contrato, dependencias, resiliencia y cierre.
+- [UI #20 y #21](https://github.com/jcmandujano/odontofy_UI/milestone/2): frontera HTTP, CI y evidencia cruzada.
+- [PR UI #22](https://github.com/jcmandujano/odontofy_UI/pull/22).
+- [PR API #99](https://github.com/jcmandujano/odontofy_node/pull/99).
+
 ## Definicion de terminado para fases posteriores
 
 - Todos los criterios de aceptacion del issue estan completos.

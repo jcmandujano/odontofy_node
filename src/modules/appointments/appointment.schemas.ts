@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { appointmentStatuses } from '../../models/appointment.model';
+import { APPOINTMENT_STATUSES } from '../../types/appointment.enums';
 
 const id = z.coerce.number().int().positive().max(4_294_967_295);
 const nullableText = (max: number) =>
@@ -62,7 +62,7 @@ export const updateAppointmentSchema = z
   .superRefine(appointmentRange);
 
 export const updateAppointmentStatusSchema = z.strictObject({
-  status: z.enum(appointmentStatuses),
+  status: z.enum(APPOINTMENT_STATUSES),
 });
 
 export const listAppointmentsQuerySchema = z
@@ -73,7 +73,7 @@ export const listAppointmentsQuerySchema = z
     pageSize: z.coerce.number().int().min(1).max(100).default(50),
     patientId: id.optional(),
     status: z
-      .union([z.enum(appointmentStatuses), z.literal('all')])
+      .union([z.enum(APPOINTMENT_STATUSES), z.literal('all')])
       .default('all'),
   })
   .superRefine((value, context) => {

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 
-import type { FilePurpose } from '../../models/stored-file.model';
+import type { FilePurpose } from '../../types/file.enums';
 import { FileStorageProvider, GoogleCloudFileStorage } from './file.provider';
 import { FileRepository, SequelizeFileRepository } from './file.repository';
 import { FileError, StoredFileData } from './file.types';
