@@ -38,7 +38,7 @@ class RecordingEmailSender implements IdentityEmailSender {
 
 const silentLogger = pino({ level: 'silent' });
 const email = `identity-${randomUUID()}@example.test`;
-const initialPassword = 'correct horse battery staple';
+const initialPassword = 'CorrectHorseBattery1!';
 const nextPassword = 'another secure passphrase 2026';
 const originalEnvironment = { ...process.env };
 const emails = new RecordingEmailSender();
