@@ -31,12 +31,18 @@ const storedPasswordSchema = z
 
 export const passwordSchema = z
   .string()
-  .min(12, 'La contrasena debe tener al menos 12 caracteres')
+  .min(8, 'La contrasena debe tener al menos 8 caracteres')
   .refine((value) => !value.includes('\0'), 'La contrasena contiene caracteres invalidos')
   .refine(
     (value) => Buffer.byteLength(value, 'utf8') <= 72,
     'La contrasena no debe exceder 72 bytes'
   );
+
+const registrationPasswordSchema = passwordSchema
+  .regex(/[a-z]/, 'La contrasena debe incluir una minuscula')
+  .regex(/[A-Z]/, 'La contrasena debe incluir una mayuscula')
+  .regex(/\d/, 'La contrasena debe incluir un numero')
+  .regex(/[^A-Za-z0-9\s]/, 'La contrasena debe incluir un simbolo');
 
 export const loginSchema = z.strictObject({
   email: emailSchema,
@@ -51,7 +57,7 @@ export const registerSchema = z.strictObject({
   phone: optionalText(30).default(''),
   avatar: optionalText(2048).default(''),
   email: emailSchema,
-  password: passwordSchema,
+  password: registrationPasswordSchema,
 });
 
 export const emptyBodySchema = z.strictObject({}).default({});

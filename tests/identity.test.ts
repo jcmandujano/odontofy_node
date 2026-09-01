@@ -53,6 +53,22 @@ describe('identity schemas', () => {
         name: 'Ada',
         lastName: 'Lovelace',
         email: 'ada@example.test',
+        password: 'Password1!',
+      }).success
+    ).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        name: 'Ada',
+        lastName: 'Lovelace',
+        email: 'ada@example.test',
+        password: 'password1!',
+      }).success
+    ).toBe(false);
+    expect(
+      registerSchema.safeParse({
+        name: 'Ada',
+        lastName: 'Lovelace',
+        email: 'ada@example.test',
         password: 'correct horse battery staple',
         role: 'admin',
       }).success
