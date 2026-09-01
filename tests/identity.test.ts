@@ -138,6 +138,31 @@ describe('v1 access tokens', () => {
 });
 
 describe('identity anti-enumeration', () => {
+  it('activates local test accounts without creating a verification token when disabled', async () => {
+    const createUser = vi.fn().mockResolvedValue({ id: 1 });
+    const sendAccountVerification = vi.fn();
+    const service = new IdentityService({
+      accountVerificationRequired: false,
+      passwordHasher: { hash: vi.fn().mockResolvedValue('password-hash'), verify: vi.fn() },
+      repository: { createUser } as never,
+      emailSender: { sendAccountVerification, sendPasswordReset: vi.fn() },
+    });
+    const input = {
+      name: 'Ada',
+      middleName: '',
+      lastName: 'Lovelace',
+      dateOfBirth: undefined,
+      phone: '',
+      avatar: '',
+      email: 'ada@example.test',
+      password: 'correct horse battery staple',
+    };
+
+    await expect(service.register(input)).resolves.toBe(false);
+    expect(createUser).toHaveBeenCalledWith(input, 'password-hash', null);
+    expect(sendAccountVerification).not.toHaveBeenCalled();
+  });
+
   it('performs password verification for an unknown email and returns a generic error', async () => {
     const verify = vi.fn().mockResolvedValue(false);
     const service = new IdentityService({
