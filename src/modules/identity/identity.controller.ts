@@ -65,10 +65,13 @@ export const createIdentityController = (service: IdentityService) => {
   };
 
   const register: RequestHandler = async (req, res) => {
-    await service.register(validatedBody<RegisterInput>(req));
+    const requiresAccountVerification = await service.register(
+      validatedBody<RegisterInput>(req)
+    );
     return sendSuccess(req, res, null, {
-      message:
-        'Si la solicitud es valida, recibiras instrucciones para activar la cuenta',
+      message: requiresAccountVerification
+        ? 'Si la solicitud es valida, recibiras instrucciones para activar la cuenta'
+        : 'Registro completado. Ya puedes iniciar sesion.',
       statusCode: 202,
     });
   };

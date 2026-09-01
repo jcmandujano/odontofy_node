@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import {
+  calendarCallbackQuerySchema,
   createAppointmentSchema,
   listAppointmentsQuerySchema,
 } from '../src/modules/appointments/appointment.schemas';
@@ -39,6 +40,35 @@ describe('appointment contracts and calendar credentials', () => {
         to: '2027-02-01T00:00:00Z',
       }).success
     ).toBe(false);
+  });
+
+  it('excludes cancelled appointments from the agenda by default', () => {
+    expect(
+      listAppointmentsQuerySchema.parse({
+        from: '2026-01-01T00:00:00Z',
+        to: '2026-01-02T00:00:00Z',
+      }).status
+    ).toBe('active');
+    expect(
+      listAppointmentsQuerySchema.parse({
+        from: '2026-01-01T00:00:00Z',
+        to: '2026-01-02T00:00:00Z',
+        status: 'all',
+      }).status
+    ).toBe('all');
+  });
+
+  it('accepts provider-added OAuth callback parameters', () => {
+    expect(
+      calendarCallbackQuerySchema.safeParse({
+        code: 'authorization-code',
+        state: 'a'.repeat(32),
+        iss: 'https://accounts.google.com',
+        scope: 'https://www.googleapis.com/auth/calendar',
+        authuser: '0',
+        prompt: 'consent',
+      }).success
+    ).toBe(true);
   });
 
   it('encrypts refresh tokens with authenticated encryption', () => {

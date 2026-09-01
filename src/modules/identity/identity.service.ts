@@ -52,6 +52,9 @@ const configuredNumber = (
   return value;
 };
 
+const accountVerificationRequired = (): boolean =>
+  process.env.ACCOUNT_VERIFICATION_REQUIRED?.trim().toLowerCase() !== 'false';
+
 const toPublicUser = (user: IdentityUser): PublicUser => ({
   id: user.id,
   name: user.name,
@@ -69,6 +72,7 @@ const toPublicUser = (user: IdentityUser): PublicUser => ({
 
 export interface IdentityServiceDependencies {
   accessTokens?: AccessTokenService;
+  accountVerificationRequired?: boolean;
   clock?: () => Date;
   emailSender?: IdentityEmailSender;
   passwordHasher?: PasswordHasher;
@@ -77,6 +81,7 @@ export interface IdentityServiceDependencies {
 
 export class IdentityService {
   private readonly accessTokens: AccessTokenService;
+  private readonly requiresAccountVerification: boolean;
   private readonly clock: () => Date;
   private readonly emailSender: IdentityEmailSender;
   private readonly passwordHasher: PasswordHasher;
@@ -84,6 +89,8 @@ export class IdentityService {
 
   constructor(dependencies: IdentityServiceDependencies = {}) {
     this.accessTokens = dependencies.accessTokens ?? new JwtAccessTokenService();
+    this.requiresAccountVerification =
+      dependencies.accountVerificationRequired ?? accountVerificationRequired();
     this.clock = dependencies.clock ?? (() => new Date());
     this.emailSender =
       dependencies.emailSender ?? new QueuedIdentityEmailSender();
@@ -153,18 +160,23 @@ export class IdentityService {
     );
   }
 
-  async register(input: RegisterInput): Promise<void> {
+  async register(input: RegisterInput): Promise<boolean> {
     const passwordHash = await this.passwordHasher.hash(input.password);
-    const token = createActionToken();
     const now = this.clock();
-    const user = await this.repository.createPendingUser(
+    const token = this.requiresAccountVerification ? createActionToken() : null;
+    const user = await this.repository.createUser(
       input,
       passwordHash,
-      hashToken(token),
-      new Date(now.getTime() + 24 * milliseconds.hour)
+      token
+        ? {
+            tokenHash: hashToken(token),
+            expiresAt: new Date(now.getTime() + 24 * milliseconds.hour),
+          }
+        : null
     );
 
-    if (user) await this.emailSender.sendAccountVerification(user, token);
+    if (user && token) await this.emailSender.sendAccountVerification(user, token);
+    return this.requiresAccountVerification;
   }
 
   async requestAccountVerification(

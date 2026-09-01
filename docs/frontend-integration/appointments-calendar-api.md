@@ -6,7 +6,8 @@ Base: `/api/v1`. Salvo el callback OAuth, todas las rutas requieren
 ## Agenda local
 
 - `GET /appointments?from=<RFC3339>&to=<RFC3339>` lista citas que intersectan el
-  rango; admite `patientId`, `status`, `page` y `pageSize`.
+  rango y, por defecto, excluye las canceladas. Admite `patientId`, `status`,
+  `page` y `pageSize`; usar `status=all` para incluir canceladas en un historial.
 - `POST /appointments` crea una cita con `patientId`, `startsAt`, `endsAt` y
   `timeZone`; `reason` y `note` son opcionales.
 - `PATCH /appointments/{appointmentId}` modifica solo campos editables.

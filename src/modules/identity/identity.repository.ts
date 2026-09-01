@@ -40,14 +40,18 @@ export type SessionRotationResult =
   | { status: 'invalid' | 'replayed' }
   | { status: 'rotated'; user: IdentityUser };
 
+interface AccountActivation {
+  tokenHash: string;
+  expiresAt: Date;
+}
+
 export interface IdentityRepository {
   findUserByEmail(email: string): Promise<IdentityUser | null>;
   findActiveUserById(userId: number): Promise<IdentityUser | null>;
-  createPendingUser(
+  createUser(
     input: RegisterInput,
     passwordHash: string,
-    verificationTokenHash: string,
-    verificationExpiresAt: Date
+    accountActivation: AccountActivation | null
   ): Promise<IdentityUser | null>;
   replaceVerificationToken(
     email: string,
@@ -99,11 +103,10 @@ export class SequelizeIdentityRepository implements IdentityRepository {
     return user ? await mapUser(user) : null;
   }
 
-  async createPendingUser(
+  async createUser(
     input: RegisterInput,
     passwordHash: string,
-    verificationTokenHash: string,
-    verificationExpiresAt: Date
+    accountActivation: AccountActivation | null
   ): Promise<IdentityUser | null> {
     try {
       return await db.transaction(async (transaction) => {
@@ -126,20 +129,22 @@ export class SequelizeIdentityRepository implements IdentityRepository {
             avatar: input.avatar,
             email: input.email,
             password: passwordHash,
-            status: false,
+            status: accountActivation === null,
             auth_version: 0,
             show_finance_stats: false,
           },
           { transaction }
         );
-        await Token.create(
-          {
-            userId: user.id,
-            token: verificationTokenHash,
-            expiresAt: verificationExpiresAt,
-          },
-          { transaction }
-        );
+        if (accountActivation) {
+          await Token.create(
+            {
+              userId: user.id,
+              token: accountActivation.tokenHash,
+              expiresAt: accountActivation.expiresAt,
+            },
+            { transaction }
+          );
+        }
         return mapUser(user, transaction);
       });
     } catch (error) {

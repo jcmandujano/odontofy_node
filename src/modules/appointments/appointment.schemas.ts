@@ -73,8 +73,8 @@ export const listAppointmentsQuerySchema = z
     pageSize: z.coerce.number().int().min(1).max(100).default(50),
     patientId: id.optional(),
     status: z
-      .union([z.enum(APPOINTMENT_STATUSES), z.literal('all')])
-      .default('all'),
+      .union([z.enum(APPOINTMENT_STATUSES), z.literal('active'), z.literal('all')])
+      .default('active'),
   })
   .superRefine((value, context) => {
     if (new Date(value.from).getTime() >= new Date(value.to).getTime()) {
@@ -97,11 +97,16 @@ export const externalEventsQuerySchema = z
     }
   );
 
-export const calendarCallbackQuerySchema = z.strictObject({
-  code: z.string().trim().min(1).max(4096).optional(),
-  state: z.string().trim().min(32).max(1024),
-  error: z.string().trim().max(255).optional(),
-});
+// OAuth providers can append informational callback parameters (for example,
+// Google sends `iss`, `scope`, `authuser` and `prompt`). Only the values below
+// affect the authorization flow; unknown parameters are intentionally ignored.
+export const calendarCallbackQuerySchema = z
+  .object({
+    code: z.string().trim().min(1).max(4096).optional(),
+    state: z.string().trim().min(32).max(1024),
+    error: z.string().trim().max(255).optional(),
+  })
+  .passthrough();
 
 export type AppointmentParams = z.infer<typeof appointmentParamsSchema>;
 export type CreateAppointmentInput = z.infer<typeof createAppointmentSchema>;

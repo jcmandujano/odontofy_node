@@ -124,7 +124,9 @@ export class SequelizeAppointmentRepository implements AppointmentRepository {
       appointment_datetime: { [Op.lt]: new Date(query.to) },
       appointment_end_datetime: { [Op.gt]: new Date(query.from) },
       ...(query.patientId && { patient_id: query.patientId }),
-      ...(query.status !== 'all' && { status: query.status }),
+      ...(query.status === 'active'
+        ? { status: { [Op.ne]: 'CANCELLED' } }
+        : query.status !== 'all' && { status: query.status }),
     };
     const { count, rows } = await Appointment.findAndCountAll({
       where,
