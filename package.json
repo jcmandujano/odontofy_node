@@ -20,6 +20,7 @@
     "db:up": "docker compose -f compose.database.yml up -d --wait",
     "db:down": "docker compose -f compose.database.yml down",
     "db:migrate": "sequelize-cli db:migrate --env development",
+    "db:migrate:production": "sequelize-cli db:migrate --env production",
     "db:migrate:test": "sequelize-cli db:migrate --env test",
     "db:rollback:test": "sequelize-cli db:migrate:undo --env test",
     "db:seed:test": "sequelize-cli db:seed:all --env test",

@@ -32,6 +32,7 @@ const createConfig = (environment) => {
 const configurations = {
   development: createConfig('development'),
   test: createConfig('test'),
+  production: createConfig('production'),
 };
 
 if (!Object.hasOwn(configurations, requestedEnvironment)) {
@@ -41,10 +42,22 @@ if (!Object.hasOwn(configurations, requestedEnvironment)) {
 const expectedSuffix = requestedEnvironment === 'test' ? '_test' : '_dev';
 const selectedDatabase = configurations[requestedEnvironment].database;
 
-if (!selectedDatabase.startsWith('odontofy_') || !selectedDatabase.endsWith(expectedSuffix)) {
+if (
+  requestedEnvironment !== 'production' &&
+  (!selectedDatabase.startsWith('odontofy_') || !selectedDatabase.endsWith(expectedSuffix))
+) {
   throw new Error(
     `Refusing database operation on "${selectedDatabase}". ` +
       `Expected an odontofy database ending in "${expectedSuffix}".`
+  );
+}
+
+if (
+  requestedEnvironment === 'production' &&
+  process.env.ALLOW_PRODUCTION_MIGRATIONS !== 'true'
+) {
+  throw new Error(
+    'Refusing production database operation. Set ALLOW_PRODUCTION_MIGRATIONS=true for a controlled deployment.'
   );
 }
 
