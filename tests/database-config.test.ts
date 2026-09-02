@@ -23,10 +23,10 @@ describe('database safety guard', () => {
     expect(result.stderr).toContain('Refusing database operation');
   });
 
-  it('rejects the production environment entirely', () => {
+  it('rejects production migrations without an explicit deployment opt-in', () => {
     const result = loadConfig('production', 'odontofy_production');
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain('is not allowed');
+    expect(result.stderr).toContain('ALLOW_PRODUCTION_MIGRATIONS=true');
   });
 });
