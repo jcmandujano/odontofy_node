@@ -45,6 +45,10 @@ export const createApp = (options: AppOptions = {}): Application => {
   const readinessCheck = options.readinessCheck ?? defaultReadinessCheck;
   const openApiV1Document = loadOpenApiV1();
 
+  // Railway terminates TLS and forwards requests to this container. Trust only
+  // that immediate proxy so rate limiting uses the forwarded client address.
+  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+
   app.use(
     helmet({
       contentSecurityPolicy: false,
