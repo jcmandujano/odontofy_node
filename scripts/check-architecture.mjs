@@ -12,6 +12,7 @@ const allowedModuleDependencies = new Map([
   ['consents', new Set(['files', 'identity'])],
   ['files', new Set(['identity'])],
   ['identity', new Set(['email'])],
+  ['odontograms', new Set(['identity'])],
   ['patients', new Set(['identity'])],
   ['treatment-plans', new Set(['identity'])],
 ]);

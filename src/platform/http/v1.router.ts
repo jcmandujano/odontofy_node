@@ -17,6 +17,8 @@ import {
 import { identityErrorHandler } from '../../modules/identity/identity.middleware';
 import { createPatientRouter } from '../../modules/patients/patient.router';
 import { PatientServiceDependencies } from '../../modules/patients/patient.service';
+import { createOdontogramRouter } from '../../modules/odontograms/odontogram.router';
+import { OdontogramServiceDependencies } from '../../modules/odontograms/odontogram.service';
 import { createTreatmentPlanRouter } from '../../modules/treatment-plans/treatment-plan.router';
 import { TreatmentPlanServiceDependencies } from '../../modules/treatment-plans/treatment-plan.service';
 import { createConsentRouter } from '../../modules/consents/consent.router';
@@ -31,6 +33,7 @@ export interface V1RouterDependencies {
   consents?: ConsentServiceDependencies;
   files?: FileServiceDependencies;
   identity?: IdentityServiceDependencies;
+  odontograms?: OdontogramServiceDependencies;
   patients?: PatientServiceDependencies;
   treatmentPlans?: TreatmentPlanServiceDependencies;
 }
@@ -59,6 +62,9 @@ export const createV1Router = (
   router.use(createConsentRouter(identityService, dependencies.consents));
   router.use(createAppointmentRouter(identityService, dependencies.appointmentModule));
   router.use(createPatientRouter(identityService, dependencies.patients));
+  router.use(
+    createOdontogramRouter(identityService, dependencies.odontograms)
+  );
   router.use(createBillingRouter(identityService, dependencies.billing));
   router.use(
     createTreatmentPlanRouter(identityService, dependencies.treatmentPlans)
