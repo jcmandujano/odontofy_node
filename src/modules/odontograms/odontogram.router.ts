@@ -10,6 +10,7 @@ import {
   createOdontogramSchema,
   listOdontogramsQuerySchema,
   odontogramParamsSchema,
+  odontogramTreatmentLinkParamsSchema,
   patientOdontogramsParamsSchema,
   updateOdontogramSchema,
 } from './odontogram.schemas';
@@ -68,6 +69,16 @@ export const createOdontogramRouter = (
     '/odontograms/:odontogramId/restore',
     validateRequest({ params: odontogramParamsSchema }),
     controller.restore
+  );
+  router.put(
+    '/odontograms/:odontogramId/findings/:findingId/treatment-items/:itemId',
+    validateRequest({ params: odontogramTreatmentLinkParamsSchema }),
+    controller.linkTreatmentItem
+  );
+  router.delete(
+    '/odontograms/:odontogramId/findings/:findingId/treatment-items/:itemId',
+    validateRequest({ params: odontogramTreatmentLinkParamsSchema }),
+    controller.unlinkTreatmentItem
   );
 
   router.use(odontogramErrorHandler);

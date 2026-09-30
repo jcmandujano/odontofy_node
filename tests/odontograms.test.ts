@@ -29,6 +29,7 @@ const repository: OdontogramRepository = {
   create: async () => adult,
   update: async () => adult,
   setArchived: async () => adult,
+  setTreatmentLink: async () => adult,
 };
 
 describe('odontogram v1 schemas', () => {

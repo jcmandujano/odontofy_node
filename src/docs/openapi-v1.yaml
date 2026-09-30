@@ -527,6 +527,48 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/OdontogramNotFound'
+  /odontograms/{odontogramId}/findings/{findingId}/treatment-items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/OdontogramId'
+      - name: findingId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1, maximum: 4294967295 }
+      - $ref: '#/components/parameters/TreatmentPlanItemId'
+    put:
+      operationId: linkOdontogramFindingTreatmentItem
+      tags: [Odontograms]
+      summary: Asocia idempotentemente un hallazgo con un item de tratamiento del mismo paciente.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/OdontogramNotFound'
+        '409':
+          $ref: '#/components/responses/OdontogramConflict'
+    delete:
+      operationId: unlinkOdontogramFindingTreatmentItem
+      tags: [Odontograms]
+      summary: Desvincula idempotentemente un hallazgo y un item de tratamiento.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/OdontogramNotFound'
+        '409':
+          $ref: '#/components/responses/OdontogramConflict'
   /patients/{patientId}/treatment-plans:
     parameters:
       - name: patientId
@@ -3447,7 +3489,7 @@ components:
       additionalProperties: false
     PublicOdontogramFinding:
       type: object
-      required: [id, odontogramId, toothCode, condition, surface, notes, createdAt, updatedAt]
+      required: [id, odontogramId, toothCode, condition, surface, notes, treatmentPlanItemIds, treatmentPlanItems, createdAt, updatedAt]
       properties:
         id: { type: integer, minimum: 1 }
         odontogramId: { type: integer, minimum: 1 }
@@ -3462,6 +3504,24 @@ components:
             - type: 'null'
         notes:
           oneOf: [{ type: string }, { type: 'null' }]
+        treatmentPlanItemIds:
+          type: array
+          uniqueItems: true
+          items: { type: integer, minimum: 1 }
+        treatmentPlanItems:
+          type: array
+          items:
+            type: object
+            required: [id, treatmentPlanId, userConceptId, name, status]
+            properties:
+              id: { type: integer, minimum: 1 }
+              treatmentPlanId: { type: integer, minimum: 1 }
+              userConceptId:
+                oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
+              name: { type: string }
+              status:
+                $ref: '#/components/schemas/TreatmentPlanItemStatus'
+            additionalProperties: false
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
       additionalProperties: false

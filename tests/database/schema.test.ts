@@ -42,6 +42,7 @@ const expectedTables = [
   'medical_history_revisions',
   'oauth_states',
   'odontogram_findings',
+  'odontogram_finding_treatment_items',
   'odontograms',
   'password_resets',
   'patients',

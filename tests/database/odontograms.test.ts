@@ -183,3 +183,121 @@ describe('odontograms v1 ownership and lifecycle', () => {
     expect(restored.body.data.archivedAt).toBeNull();
   });
 });
+
+describe('odontogram finding treatment links', () => {
+  it('links only same-patient items and preserves links across note edits', async () => {
+    const chart = await request(app)
+      .post(`/api/v1/patients/${patientA.id}/odontograms`)
+      .set(bearer(tokenA))
+      .send({
+        dentition: 'ADULT',
+        findings: [{ toothCode: '16', condition: 'CARIES' }],
+      });
+    expect(chart.status).toBe(201);
+    const chartId = chart.body.data.id as number;
+    const findingId = chart.body.data.findings[0].id as number;
+
+    const plan = await request(app)
+      .post(`/api/v1/patients/${patientA.id}/treatment-plans`)
+      .set(bearer(tokenA))
+      .send({ title: 'Restauracion' });
+    expect(plan.status).toBe(201);
+    const item = await request(app)
+      .post(`/api/v1/treatment-plans/${plan.body.data.id}/items`)
+      .set(bearer(tokenA))
+      .send({ name: 'Resina', unitPrice: '250.00' });
+    expect(item.status).toBe(201);
+    const itemId = item.body.data.item.id as number;
+    const path = `/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${itemId}`;
+
+    const foreignPlan = await request(app)
+      .post(`/api/v1/patients/${patientB.id}/treatment-plans`)
+      .set(bearer(tokenB))
+      .send({ title: 'Otro propietario' });
+    const foreignItem = await request(app)
+      .post(`/api/v1/treatment-plans/${foreignPlan.body.data.id}/items`)
+      .set(bearer(tokenB))
+      .send({ name: 'Resina ajena', unitPrice: '1.00' });
+    const foreignLink = await request(app)
+      .put(`/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${foreignItem.body.data.item.id}`)
+      .set(bearer(tokenA));
+    expect(foreignLink.status).toBe(404);
+
+    const otherPatient = await createPatient(ownerA.id, 'Same-owner-other-patient');
+    const otherPlan = await request(app)
+      .post(`/api/v1/patients/${otherPatient.id}/treatment-plans`)
+      .set(bearer(tokenA))
+      .send({ title: 'Otro paciente' });
+    const otherItem = await request(app)
+      .post(`/api/v1/treatment-plans/${otherPlan.body.data.id}/items`)
+      .set(bearer(tokenA))
+      .send({ name: 'Tratamiento distinto', unitPrice: '1.00' });
+    const mismatch = await request(app)
+      .put(`/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${otherItem.body.data.item.id}`)
+      .set(bearer(tokenA));
+    expect(mismatch.status).toBe(409);
+    expect(mismatch.body.errors[0].code).toBe('TREATMENT_PATIENT_MISMATCH');
+    await otherPatient.destroy();
+
+    const linked = await request(app).put(path).set(bearer(tokenA));
+    const replay = await request(app).put(path).set(bearer(tokenA));
+    expect(linked.status).toBe(200);
+    expect(replay.body.data.findings[0].treatmentPlanItemIds).toEqual([itemId]);
+    expect(replay.body.data.findings[0].treatmentPlanItems).toEqual([
+      {
+        id: itemId,
+        treatmentPlanId: plan.body.data.id,
+        userConceptId: null,
+        name: 'Resina',
+        status: 'PENDING',
+      },
+    ]);
+    const secondItem = await request(app)
+      .post(`/api/v1/treatment-plans/${plan.body.data.id}/items`)
+      .set(bearer(tokenA))
+      .send({ name: 'Corona', unitPrice: '500.00' });
+    const secondItemId = secondItem.body.data.item.id as number;
+    const secondPath = `/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${secondItemId}`;
+    const secondLink = await request(app)
+      .put(secondPath)
+      .set(bearer(tokenA));
+    expect(secondLink.body.data.findings[0].treatmentPlanItemIds).toEqual([
+      itemId,
+      secondItemId,
+    ]);
+
+    const edited = await request(app)
+      .patch(`/api/v1/odontograms/${chartId}`)
+      .set(bearer(tokenA))
+      .send({ findings: [{ toothCode: '16', condition: 'CARIES', notes: 'Profunda' }] });
+    expect(edited.status).toBe(200);
+    expect(edited.body.data.findings[0]).toMatchObject({
+      id: findingId,
+      notes: 'Profunda',
+      treatmentPlanItemIds: [itemId, secondItemId],
+    });
+
+    await request(app).delete(`/api/v1/odontograms/${chartId}`).set(bearer(tokenA));
+    const archived = await request(app).delete(path).set(bearer(tokenA));
+    expect(archived.status).toBe(409);
+    await request(app)
+      .post(`/api/v1/odontograms/${chartId}/restore`)
+      .set(bearer(tokenA));
+
+    const unlinked = await request(app).delete(path).set(bearer(tokenA));
+    const unlinkReplay = await request(app).delete(path).set(bearer(tokenA));
+    expect(unlinked.status).toBe(200);
+    expect(unlinkReplay.body.data.findings[0].treatmentPlanItemIds).toEqual([
+      secondItemId,
+    ]);
+    await request(app).delete(secondPath).set(bearer(tokenA));
+    await request(app).put(path).set(bearer(tokenA));
+
+    const removed = await request(app)
+      .patch(`/api/v1/odontograms/${chartId}`)
+      .set(bearer(tokenA))
+      .send({ findings: [] });
+    expect(removed.status).toBe(200);
+    expect(removed.body.data.findings).toEqual([]);
+  });
+});

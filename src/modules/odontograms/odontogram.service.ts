@@ -108,6 +108,40 @@ export class OdontogramService {
     );
   }
 
+  async linkTreatmentItem(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    itemId: number
+  ) {
+    return publicDetail(
+      await this.repository.setTreatmentLink(
+        userId,
+        odontogramId,
+        findingId,
+        itemId,
+        true
+      )
+    );
+  }
+
+  async unlinkTreatmentItem(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    itemId: number
+  ) {
+    return publicDetail(
+      await this.repository.setTreatmentLink(
+        userId,
+        odontogramId,
+        findingId,
+        itemId,
+        false
+      )
+    );
+  }
+
   private validateToothCodes(
     dentition: 'ADULT' | 'PEDIATRIC',
     findings: Array<{ toothCode: string }>
