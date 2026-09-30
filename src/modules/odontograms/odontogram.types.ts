@@ -3,6 +3,15 @@ import type {
   OdontogramDentition,
   OdontogramSurface,
 } from '../../types/odontogram.enums';
+import type { TreatmentPlanItemStatus } from '../../types/treatment-plan.enums';
+
+export interface OdontogramTreatmentItemData {
+  id: number;
+  treatmentPlanId: number;
+  userConceptId: number | null;
+  name: string;
+  status: TreatmentPlanItemStatus;
+}
 
 export interface OdontogramFindingData {
   id: number;
@@ -11,6 +20,8 @@ export interface OdontogramFindingData {
   condition: OdontogramCondition;
   surface: OdontogramSurface | null;
   notes: string | null;
+  treatmentPlanItemIds: number[];
+  treatmentPlanItems: OdontogramTreatmentItemData[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +51,9 @@ export type OdontogramErrorCode =
   | 'PATIENT_NOT_FOUND'
   | 'ODONTOGRAM_NOT_FOUND'
   | 'ODONTOGRAM_ARCHIVED'
+  | 'ODONTOGRAM_FINDING_NOT_FOUND'
+  | 'TREATMENT_PLAN_ITEM_NOT_FOUND'
+  | 'TREATMENT_PATIENT_MISMATCH'
   | 'INVALID_TOOTH_CODE';
 
 export class OdontogramError extends Error {

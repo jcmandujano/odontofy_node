@@ -6,6 +6,7 @@ import {
   CreateOdontogramInput,
   ListOdontogramsQuery,
   OdontogramParams,
+  OdontogramTreatmentLinkParams,
   PatientOdontogramsParams,
   UpdateOdontogramInput,
 } from './odontogram.schemas';
@@ -80,5 +81,42 @@ export const createOdontogramController = (service: OdontogramService) => {
     });
   };
 
-  return { archive, create, get, list, restore, update };
+  const linkTreatmentItem: RequestHandler = async (req, res) => {
+    const { odontogramId, findingId, itemId } =
+      validated<OdontogramTreatmentLinkParams>(req, 'params');
+    const odontogram = await service.linkTreatmentItem(
+      authenticatedUserId(req),
+      odontogramId,
+      findingId,
+      itemId
+    );
+    return sendSuccess(req, res, odontogram, {
+      message: 'Tratamiento asociado al hallazgo',
+    });
+  };
+
+  const unlinkTreatmentItem: RequestHandler = async (req, res) => {
+    const { odontogramId, findingId, itemId } =
+      validated<OdontogramTreatmentLinkParams>(req, 'params');
+    const odontogram = await service.unlinkTreatmentItem(
+      authenticatedUserId(req),
+      odontogramId,
+      findingId,
+      itemId
+    );
+    return sendSuccess(req, res, odontogram, {
+      message: 'Tratamiento desvinculado del hallazgo',
+    });
+  };
+
+  return {
+    archive,
+    create,
+    get,
+    linkTreatmentItem,
+    list,
+    restore,
+    unlinkTreatmentItem,
+    update,
+  };
 };

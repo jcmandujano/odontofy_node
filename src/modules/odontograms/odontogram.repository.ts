@@ -2,8 +2,11 @@ import { Op, Transaction, WhereOptions } from 'sequelize';
 
 import db from '../../db/connection';
 import OdontogramFinding from '../../models/odontogram-finding.model';
+import OdontogramFindingTreatmentItem from '../../models/odontogram-finding-treatment-item.model';
 import Odontogram from '../../models/odontogram.model';
 import Patient from '../../models/patient.model';
+import TreatmentPlan from '../../models/treatment-plan.model';
+import TreatmentPlanItem from '../../models/treatment-plan-item.model';
 import User from '../../models/user.model';
 import {
   CreateOdontogramInput,
@@ -31,6 +34,8 @@ const mapFinding = (finding: OdontogramFinding): OdontogramFindingData => ({
   condition: finding.condition,
   surface: finding.surface,
   notes: finding.notes,
+  treatmentPlanItemIds: [],
+  treatmentPlanItems: [],
   createdAt: finding.createdAt,
   updatedAt: finding.updatedAt,
 });
@@ -118,6 +123,13 @@ export interface OdontogramRepository {
     odontogramId: number,
     archived: boolean
   ): Promise<OdontogramDetailData>;
+  setTreatmentLink(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    itemId: number,
+    linked: boolean
+  ): Promise<OdontogramDetailData>;
 }
 
 export class SequelizeOdontogramRepository implements OdontogramRepository {
@@ -166,7 +178,37 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         },
       ],
     });
-    return odontogram ? mapDetail(odontogram) : null;
+    if (!odontogram) return null;
+    const detail = mapDetail(odontogram);
+    if (detail.findings.length === 0) return detail;
+    const links = await OdontogramFindingTreatmentItem.findAll({
+      where: { finding_id: detail.findings.map((finding) => finding.id) },
+      order: [['treatment_plan_item_id', 'ASC']],
+    });
+    const findingById = new Map(detail.findings.map((finding) => [finding.id, finding]));
+    for (const link of links) {
+      findingById.get(link.finding_id)?.treatmentPlanItemIds.push(
+        link.treatment_plan_item_id
+      );
+    }
+    if (links.length > 0) {
+      const items = await TreatmentPlanItem.findAll({
+        where: { id: [...new Set(links.map((link) => link.treatment_plan_item_id))] },
+      });
+      const itemById = new Map(items.map((item) => [item.id, item]));
+      for (const link of links) {
+        const item = itemById.get(link.treatment_plan_item_id);
+        if (!item) continue;
+        findingById.get(link.finding_id)?.treatmentPlanItems.push({
+          id: item.id,
+          treatmentPlanId: item.treatment_plan_id,
+          userConceptId: item.user_concept_id,
+          name: item.name,
+          status: item.status,
+        });
+      }
+    }
+    return detail;
   }
 
   async create(
@@ -231,15 +273,46 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         { transaction }
       );
       if (input.findings !== undefined) {
-        await OdontogramFinding.destroy({
+        const existing = await OdontogramFinding.findAll({
           where: { odontogram_id: odontogram.id },
           transaction,
+          lock: transaction.LOCK.UPDATE,
         });
-        if (input.findings.length > 0) {
-          await OdontogramFinding.bulkCreate(
-            findingRows(odontogram.id, input.findings),
-            { transaction }
-          );
+        const findingKey = (finding: {
+          toothCode: string;
+          condition: string;
+          surface: string | null;
+        }) => `${finding.toothCode}:${finding.condition}:${finding.surface ?? ''}`;
+        const byKey = new Map(
+          existing.map((finding) => [
+            findingKey({
+              toothCode: finding.tooth_code,
+              condition: finding.condition,
+              surface: finding.surface,
+            }),
+            finding,
+          ])
+        );
+        for (const finding of input.findings) {
+          const key = findingKey(finding);
+          const persisted = byKey.get(key);
+          if (persisted) {
+            byKey.delete(key);
+            if (persisted.notes !== finding.notes) {
+              await persisted.update({ notes: finding.notes }, { transaction });
+            }
+          } else {
+            await OdontogramFinding.create(
+              findingRows(odontogram.id, [finding])[0],
+              { transaction }
+            );
+          }
+        }
+        if (byKey.size > 0) {
+          await OdontogramFinding.destroy({
+            where: { id: [...byKey.values()].map((finding) => finding.id) },
+            transaction,
+          });
         }
       }
     });
@@ -264,6 +337,68 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         { archived_at: archived ? new Date() : null },
         { transaction }
       );
+    });
+    return (await this.findById(userId, odontogramId))!;
+  }
+
+  async setTreatmentLink(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    itemId: number,
+    linked: boolean
+  ): Promise<OdontogramDetailData> {
+    await db.transaction(async (transaction) => {
+      const odontogram = await this.lockOdontogram(
+        userId,
+        odontogramId,
+        transaction
+      );
+      if (odontogram.archived_at) {
+        throw new OdontogramError(
+          'ODONTOGRAM_ARCHIVED',
+          'El odontograma debe restaurarse antes de editarse'
+        );
+      }
+      const finding = await OdontogramFinding.findOne({
+        where: { id: findingId, odontogram_id: odontogram.id },
+        transaction,
+      });
+      if (!finding) {
+        throw new OdontogramError(
+          'ODONTOGRAM_FINDING_NOT_FOUND',
+          'Hallazgo no encontrado'
+        );
+      }
+      const item = await TreatmentPlanItem.findByPk(itemId, { transaction });
+      const plan = item
+        ? await TreatmentPlan.findOne({
+            where: { id: item.treatment_plan_id, user_id: userId },
+            transaction,
+          })
+        : null;
+      if (!plan) {
+        throw new OdontogramError(
+          'TREATMENT_PLAN_ITEM_NOT_FOUND',
+          'Item de tratamiento no encontrado'
+        );
+      }
+      if (plan.patient_id !== odontogram.patient_id) {
+        throw new OdontogramError(
+          'TREATMENT_PATIENT_MISMATCH',
+          'El tratamiento pertenece a otro paciente'
+        );
+      }
+      const where = { finding_id: finding.id, treatment_plan_item_id: item!.id };
+      if (linked) {
+        await OdontogramFindingTreatmentItem.findOrCreate({
+          where,
+          defaults: where,
+          transaction,
+        });
+      } else {
+        await OdontogramFindingTreatmentItem.destroy({ where, transaction });
+      }
     });
     return (await this.findById(userId, odontogramId))!;
   }
