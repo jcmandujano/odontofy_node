@@ -26,6 +26,7 @@ Estas reglas se verifican mediante `npm run architecture:check` y son parte de
 | Modulo             | Puede depender de       | Motivo |
 | ------------------ | ----------------------- | ------ |
 | `identity`         | `email`                 | Encola correo de identidad mediante un puerto durable. |
+| `odontograms`      | `identity`              | Autenticacion del expediente odontologico visual. |
 | `patients`         | `identity`              | Autenticacion y ownership del usuario actual. |
 | `treatment-plans`  | `identity`              | Autenticacion del limite HTTP. |
 | `clinical-records` | `identity`              | Autenticacion del limite HTTP. |

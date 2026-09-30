@@ -12,6 +12,8 @@ tags:
     description: Autenticacion, ciclo de cuenta y perfil del usuario actual.
   - name: Patients
     description: Pacientes propiedad del usuario autenticado.
+  - name: Odontograms
+    description: Odontogramas adultos y pediatricos del expediente de pacientes propios.
   - name: Treatment Plans
     description: Planes de tratamiento e items propiedad del usuario autenticado.
   - name: Clinical Records
@@ -397,6 +399,134 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/PatientNotFound'
+  /patients/{patientId}/odontograms:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: listOdontograms
+      tags: [Odontograms]
+      summary: Lista los odontogramas propios de un paciente propio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: dentition
+          in: query
+          schema:
+            type: string
+            enum: [ADULT, PEDIATRIC, all]
+            default: all
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, all]
+            default: active
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramList'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PatientNotFound'
+    post:
+      operationId: createOdontogram
+      tags: [Odontograms]
+      summary: Crea un odontograma adulto o pediatrico para un paciente propio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOdontogramRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PatientNotFound'
+  /odontograms/{odontogramId}:
+    parameters:
+      - $ref: '#/components/parameters/OdontogramId'
+    get:
+      operationId: getOdontogram
+      tags: [Odontograms]
+      summary: Obtiene un odontograma propio con sus hallazgos.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/OdontogramNotFound'
+    patch:
+      operationId: updateOdontogram
+      tags: [Odontograms]
+      summary: Actualiza metadatos o reemplaza los hallazgos de un odontograma propio.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOdontogramRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/OdontogramNotFound'
+        '409':
+          $ref: '#/components/responses/OdontogramConflict'
+    delete:
+      operationId: archiveOdontogram
+      tags: [Odontograms]
+      summary: Archiva logicamente un odontograma propio.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/OdontogramNotFound'
+  /odontograms/{odontogramId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/OdontogramId'
+    post:
+      operationId: restoreOdontogram
+      tags: [Odontograms]
+      summary: Restaura de forma idempotente un odontograma archivado.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OdontogramResource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/OdontogramNotFound'
   /patients/{patientId}/treatment-plans:
     parameters:
       - name: patientId
@@ -1789,6 +1919,42 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    OdontogramResource:
+      description: Odontograma propio con hallazgos estructurados.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OdontogramResponse'
+    OdontogramList:
+      description: Pagina de odontogramas propios de un paciente.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OdontogramListResponse'
+    OdontogramNotFound:
+      description: El odontograma no existe o pertenece a otro usuario.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    OdontogramConflict:
+      description: El ciclo de vida actual impide modificar el odontograma.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     TreatmentPlanResource:
       description: Plan de tratamiento propio con sus items.
       headers:
@@ -1996,6 +2162,14 @@ components:
       schema: { type: integer, minimum: 1, maximum: 4294967295 }
     PatientId:
       name: patientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4294967295
+    OdontogramId:
+      name: odontogramId
       in: path
       required: true
       schema:
@@ -3207,6 +3381,165 @@ components:
             pagination:
               $ref: '#/components/schemas/PaginationMeta'
           additionalProperties: false
+    OdontogramFindingInput:
+      type: object
+      required: [toothCode, condition]
+      properties:
+        toothCode:
+          type: string
+          pattern: '^\d{2}$'
+        condition:
+          type: string
+          enum: [HEALTHY, MISSING, NOT_ERUPTED, RESTORATION, CROWN, ROOT_CANAL, IMPLANT, CARIES, FRACTURE, EXTRACTION_INDICATED, OTHER]
+        surface:
+          oneOf:
+            - type: string
+              enum: [MESIAL, DISTAL, VESTIBULAR, LINGUAL_PALATAL, OCCLUSAL_INCISAL]
+            - type: 'null'
+          default: null
+        notes:
+          oneOf:
+            - type: string
+              maxLength: 2000
+            - type: 'null'
+          default: null
+      additionalProperties: false
+    CreateOdontogramRequest:
+      type: object
+      required: [dentition]
+      properties:
+        dentition:
+          type: string
+          enum: [ADULT, PEDIATRIC]
+        title:
+          oneOf:
+            - type: string
+              maxLength: 255
+            - type: 'null'
+          default: null
+        occurredAt:
+          type: string
+          format: date-time
+        findings:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/OdontogramFindingInput'
+          default: []
+      additionalProperties: false
+    UpdateOdontogramRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          oneOf:
+            - type: string
+              maxLength: 255
+            - type: 'null'
+        occurredAt:
+          type: string
+          format: date-time
+        findings:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/OdontogramFindingInput'
+      additionalProperties: false
+    PublicOdontogramFinding:
+      type: object
+      required: [id, odontogramId, toothCode, condition, surface, notes, createdAt, updatedAt]
+      properties:
+        id: { type: integer, minimum: 1 }
+        odontogramId: { type: integer, minimum: 1 }
+        toothCode: { type: string, pattern: '^\d{2}$' }
+        condition:
+          type: string
+          enum: [HEALTHY, MISSING, NOT_ERUPTED, RESTORATION, CROWN, ROOT_CANAL, IMPLANT, CARIES, FRACTURE, EXTRACTION_INDICATED, OTHER]
+        surface:
+          oneOf:
+            - type: string
+              enum: [MESIAL, DISTAL, VESTIBULAR, LINGUAL_PALATAL, OCCLUSAL_INCISAL]
+            - type: 'null'
+        notes:
+          oneOf: [{ type: string }, { type: 'null' }]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      additionalProperties: false
+    PublicOdontogramSummary:
+      type: object
+      required: [id, patientId, dentition, title, author, occurredAt, archivedAt, createdAt, updatedAt]
+      properties:
+        id: { type: integer, minimum: 1 }
+        patientId: { type: integer, minimum: 1 }
+        dentition: { type: string, enum: [ADULT, PEDIATRIC] }
+        title:
+          oneOf: [{ type: string }, { type: 'null' }]
+        author:
+          type: object
+          required: [userId, name]
+          properties:
+            userId: { type: integer, minimum: 1 }
+            name: { type: string }
+          additionalProperties: false
+        occurredAt: { type: string, format: date-time }
+        archivedAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      additionalProperties: false
+    PublicOdontogram:
+      type: object
+      required: [id, patientId, dentition, title, author, occurredAt, archivedAt, createdAt, updatedAt, findings]
+      properties:
+        id: { type: integer, minimum: 1 }
+        patientId: { type: integer, minimum: 1 }
+        dentition: { type: string, enum: [ADULT, PEDIATRIC] }
+        title:
+          oneOf: [{ type: string }, { type: 'null' }]
+        author:
+          type: object
+          required: [userId, name]
+          properties:
+            userId: { type: integer, minimum: 1 }
+            name: { type: string }
+          additionalProperties: false
+        occurredAt: { type: string, format: date-time }
+        archivedAt:
+          oneOf: [{ type: string, format: date-time }, { type: 'null' }]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicOdontogramFinding'
+      additionalProperties: false
+    OdontogramResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              $ref: '#/components/schemas/PublicOdontogram'
+            errors: { type: 'null' }
+    OdontogramListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicOdontogramSummary'
+            errors: { type: 'null' }
+            meta:
+              type: object
+              required: [pagination]
+              properties:
+                pagination:
+                  $ref: '#/components/schemas/PaginationMeta'
+              additionalProperties: false
     PaginationMeta:
       type: object
       required: [page, pageSize, total, totalPages]

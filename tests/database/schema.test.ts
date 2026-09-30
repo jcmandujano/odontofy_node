@@ -13,6 +13,8 @@ import EvolutionNoteRevision from '../../src/models/evolution-note-revision.mode
 import InformedConsent from '../../src/models/informed-consent.model';
 import MedicalHistoryRevision from '../../src/models/medical-history-revision.model';
 import OAuthState from '../../src/models/oauth-state.model';
+import OdontogramFinding from '../../src/models/odontogram-finding.model';
+import Odontogram from '../../src/models/odontogram.model';
 import PasswordReset from '../../src/models/password-reset.model';
 import Patient from '../../src/models/patient.model';
 import PaymentUser from '../../src/models/payment-user.model';
@@ -39,6 +41,8 @@ const expectedTables = [
   'informed_consents',
   'medical_history_revisions',
   'oauth_states',
+  'odontogram_findings',
+  'odontograms',
   'password_resets',
   'patients',
   'payment_items',
@@ -168,6 +172,8 @@ describe('reproducible database schema', () => {
       [InformedConsent.getTableName(), 'informed_consents'],
       [MedicalHistoryRevision.getTableName(), 'medical_history_revisions'],
       [OAuthState.getTableName(), 'oauth_states'],
+      [Odontogram.getTableName(), 'odontograms'],
+      [OdontogramFinding.getTableName(), 'odontogram_findings'],
       [PasswordReset.getTableName(), 'password_resets'],
       [Patient.getTableName(), 'patients'],
       [Payment.getTableName(), 'payments'],

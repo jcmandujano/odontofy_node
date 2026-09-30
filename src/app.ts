@@ -21,6 +21,7 @@ import { ConsentServiceDependencies } from './modules/consents/consent.service';
 import { FileServiceDependencies } from './modules/files/file.service';
 import { ClinicalRecordServiceDependencies } from './modules/clinical-records/clinical-record.service';
 import { TreatmentPlanServiceDependencies } from './modules/treatment-plans/treatment-plan.service';
+import { OdontogramServiceDependencies } from './modules/odontograms/odontogram.service';
 
 export interface AppOptions {
   appointmentModule?: AppointmentModuleDependencies;
@@ -30,6 +31,7 @@ export interface AppOptions {
   files?: FileServiceDependencies;
   identity?: IdentityServiceDependencies;
   logger?: Logger;
+  odontograms?: OdontogramServiceDependencies;
   patients?: PatientServiceDependencies;
   readinessCheck?: ReadinessCheck;
   treatmentPlans?: TreatmentPlanServiceDependencies;
@@ -83,6 +85,7 @@ export const createApp = (options: AppOptions = {}): Application => {
       consents: options.consents,
       files: options.files,
       identity: options.identity,
+      odontograms: options.odontograms,
       patients: options.patients,
       treatmentPlans: options.treatmentPlans,
     })
