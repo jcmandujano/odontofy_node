@@ -119,6 +119,12 @@ export const odontogramParamsSchema = z.strictObject({
   odontogramId: id,
 });
 
+export const odontogramTreatmentLinkParamsSchema = z.strictObject({
+  odontogramId: id,
+  findingId: id,
+  itemId: id,
+});
+
 export const listOdontogramsQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
@@ -161,6 +167,9 @@ export type PatientOdontogramsParams = z.infer<
   typeof patientOdontogramsParamsSchema
 >;
 export type OdontogramParams = z.infer<typeof odontogramParamsSchema>;
+export type OdontogramTreatmentLinkParams = z.infer<
+  typeof odontogramTreatmentLinkParamsSchema
+>;
 export type ListOdontogramsQuery = z.infer<typeof listOdontogramsQuerySchema>;
 export type CreateOdontogramInput = z.infer<typeof createOdontogramSchema>;
 export type UpdateOdontogramInput = z.infer<typeof updateOdontogramSchema>;
