@@ -166,7 +166,7 @@ const ensureConcept = async (
   if (!concept) {
     throw new TreatmentPlanError(
       'USER_CONCEPT_NOT_FOUND',
-      'Concepto de usuario no encontrado'
+      'Tratamiento del catálogo no encontrado'
     );
   }
 };

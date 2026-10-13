@@ -188,7 +188,7 @@ export class BillingService {
   private conceptNotFound() {
     return new BillingError(
       'BILLING_CONCEPT_NOT_FOUND',
-      'Concepto de cobro no encontrado'
+      'Tratamiento no encontrado'
     )
   }
 

@@ -1057,7 +1057,7 @@ paths:
     get:
       operationId: listBillingConcepts
       tags: [Billing]
-      summary: Lista conceptos de cobro propios.
+      summary: Lista tratamientos propios.
       security:
         - bearerAuth: []
       parameters:
@@ -1084,7 +1084,7 @@ paths:
     post:
       operationId: createBillingConcept
       tags: [Billing]
-      summary: Crea un concepto de cobro propio.
+      summary: Crea un tratamiento propio.
       security:
         - bearerAuth: []
       requestBody:
@@ -1106,7 +1106,7 @@ paths:
     get:
       operationId: getBillingConcept
       tags: [Billing]
-      summary: Obtiene un concepto de cobro propio.
+      summary: Obtiene un tratamiento propio.
       security:
         - bearerAuth: []
       responses:
@@ -1140,7 +1140,7 @@ paths:
     delete:
       operationId: archiveBillingConcept
       tags: [Billing]
-      summary: Archiva un concepto sin alterar registros historicos.
+      summary: Archiva un tratamiento sin alterar registros historicos.
       security:
         - bearerAuth: []
       responses:
@@ -1156,7 +1156,7 @@ paths:
     post:
       operationId: reactivateBillingConcept
       tags: [Billing]
-      summary: Reactiva un concepto archivado.
+      summary: Reactiva un tratamiento archivado.
       security:
         - bearerAuth: []
       responses:
@@ -1251,7 +1251,7 @@ paths:
     get:
       operationId: getBillingRecord
       tags: [Billing]
-      summary: Obtiene un registro financiero con snapshots de sus conceptos.
+      summary: Obtiene un registro financiero con snapshots de sus tratamientos.
       security:
         - bearerAuth: []
       responses:
@@ -2025,7 +2025,7 @@ components:
           schema:
             $ref: '#/components/schemas/TreatmentPlanItemMutationResponse'
     TreatmentPlanNotFound:
-      description: Paciente, plan, item o concepto inexistente o ajeno.
+      description: Paciente, plan, item o tratamiento inexistente o ajeno.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/RequestId'
@@ -2106,7 +2106,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
     BillingConceptResource:
-      description: Concepto de cobro propio.
+      description: Tratamiento propio.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/RequestId'
@@ -2115,7 +2115,7 @@ components:
           schema:
             $ref: '#/components/schemas/BillingConceptResponse'
     BillingConceptList:
-      description: Pagina de conceptos de cobro propios.
+      description: Pagina de tratamientos propios.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/RequestId'
@@ -2160,7 +2160,7 @@ components:
           schema:
             $ref: '#/components/schemas/BillingSummaryResponse'
     BillingNotFound:
-      description: Paciente, concepto o registro inexistente o ajeno.
+      description: Paciente, tratamiento o registro inexistente o ajeno.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/RequestId'
