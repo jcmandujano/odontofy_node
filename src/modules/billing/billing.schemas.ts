@@ -91,7 +91,7 @@ const validateRecord = (
       context.addIssue({
         code: 'custom',
         path: ['items', index, 'conceptId'],
-        message: 'Cada concepto solo puede aparecer una vez',
+        message: 'Cada tratamiento solo puede aparecer una vez',
       })
     }
     seen.add(item.conceptId)

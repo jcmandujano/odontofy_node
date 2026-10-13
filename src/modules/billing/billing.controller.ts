@@ -31,7 +31,7 @@ export const createBillingController = (service: BillingService) => {
       validated<ListBillingConceptsQuery>(req, 'query')
     )
     return sendSuccess(req, res, result.records, {
-      message: 'Conceptos de cobro obtenidos',
+      message: 'Tratamientos obtenidos',
       meta: { pagination: result.pagination },
     })
   }
@@ -44,7 +44,7 @@ export const createBillingController = (service: BillingService) => {
         authenticatedUserId(req),
         validated<BillingConceptParams>(req, 'params').conceptId
       ),
-      { message: 'Concepto de cobro obtenido' }
+      { message: 'Tratamiento obtenido' }
     )
 
   const createConcept: RequestHandler = async (req, res) =>
@@ -55,7 +55,7 @@ export const createBillingController = (service: BillingService) => {
         authenticatedUserId(req),
         validated<CreateBillingConceptInput>(req, 'body')
       ),
-      { message: 'Concepto de cobro creado', statusCode: 201 }
+      { message: 'Tratamiento creado', statusCode: 201 }
     )
 
   const updateConcept: RequestHandler = async (req, res) =>
@@ -67,7 +67,7 @@ export const createBillingController = (service: BillingService) => {
         validated<BillingConceptParams>(req, 'params').conceptId,
         validated<UpdateBillingConceptInput>(req, 'body')
       ),
-      { message: 'Concepto de cobro actualizado' }
+      { message: 'Tratamiento actualizado' }
     )
 
   const setConceptActive =
@@ -83,8 +83,8 @@ export const createBillingController = (service: BillingService) => {
         ),
         {
           message: active
-            ? 'Concepto de cobro reactivado'
-            : 'Concepto de cobro archivado',
+            ? 'Tratamiento reactivado'
+            : 'Tratamiento archivado',
         }
       )
 

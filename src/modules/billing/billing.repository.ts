@@ -42,7 +42,7 @@ const escapeLike = (value: string) =>
 const conceptNotFound = () =>
   new BillingError(
     'BILLING_CONCEPT_NOT_FOUND',
-    'Concepto de cobro no encontrado'
+    'Tratamiento no encontrado'
   )
 const recordNotFound = () =>
   new BillingError(
@@ -181,7 +181,7 @@ const calculateRecord = async (
   if (archived) {
     throw new BillingError(
       'BILLING_CONCEPT_ARCHIVED',
-      'Un concepto archivado no puede usarse en registros nuevos'
+      'Un tratamiento archivado no puede usarse en registros nuevos'
     )
   }
 
