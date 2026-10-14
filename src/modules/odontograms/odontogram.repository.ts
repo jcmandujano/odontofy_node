@@ -201,7 +201,7 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         if (!item) continue;
         findingById.get(link.finding_id)?.treatmentPlanItems.push({
           id: item.id,
-          treatmentPlanId: item.treatment_plan_id,
+          treatmentPlanId: item.treatment_plan_id!,
           userConceptId: item.user_concept_id,
           name: item.name,
           status: item.status,
@@ -371,7 +371,7 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         );
       }
       const item = await TreatmentPlanItem.findByPk(itemId, { transaction });
-      const plan = item
+      const plan = item?.treatment_plan_id
         ? await TreatmentPlan.findOne({
             where: { id: item.treatment_plan_id, user_id: userId },
             transaction,

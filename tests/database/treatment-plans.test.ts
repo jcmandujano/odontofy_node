@@ -8,6 +8,7 @@ import db from '../../src/db/connection';
 import TreatmentPlanItem from '../../src/models/treatment-plan-item.model';
 import User from '../../src/models/user.model';
 import UserConcept from '../../src/models/user_concept.model';
+import Patient from '../../src/models/patient.model';
 import { JwtAccessTokenService } from '../../src/modules/identity/identity.tokens';
 
 const originalEnvironment = { ...process.env };
@@ -76,8 +77,8 @@ beforeAll(async () => {
   conceptA = await UserConcept.create({
     user_id: ownerA.id,
     concept_id: null,
-    description: 'Concept A',
-    unit_price: 100,
+    description: 'Exact item',
+    unit_price: 19.99,
     is_custom: true,
   });
   conceptB = await UserConcept.create({
@@ -203,6 +204,7 @@ describe('treatment plans v1 transactional ownership', () => {
       .post(`/api/v1/treatment-plans/${planAId}/items`)
       .set(bearer(tokenA))
       .send({
+        userConceptId: (await UserConcept.create({ user_id: ownerA.id, concept_id: null, description: 'Second item', unit_price: 33.43, is_custom: true })).id,
         name: 'Second item',
         quantity: '1.00',
         unitPrice: '33.43',
@@ -228,7 +230,7 @@ describe('treatment plans v1 transactional ownership', () => {
     const createdB = await request(app)
       .post(`/api/v1/treatment-plans/${planBId}/items`)
       .set(bearer(tokenB))
-      .send({ name: 'Owner B item', unitPrice: '20.00' });
+      .send({ userConceptId: conceptB.id });
     itemBId = createdB.body.data.item.id;
   });
 
@@ -322,7 +324,7 @@ describe('treatment plans v1 transactional ownership', () => {
     const blocked = await request(app)
       .post(`/api/v1/treatment-plans/${planAId}/items`)
       .set(bearer(tokenA))
-      .send({ name: 'Blocked item', unitPrice: '1.00' });
+      .send({ userConceptId: conceptA.id });
 
     expect(completed.body.data.item.completedAt).toBeTypeOf('string');
     expect(reopened.body.data.item.completedAt).toBeNull();
@@ -330,5 +332,55 @@ describe('treatment plans v1 transactional ownership', () => {
     expect(replay.body.data.rejectedAt).toBe(cancelled.body.data.rejectedAt);
     expect(blocked.status).toBe(409);
     expect(blocked.body.errors[0].code).toBe('TREATMENT_PLAN_NOT_EDITABLE');
+  });
+});
+
+describe('independent patient treatments', () => {
+  let independentId: number;
+  it('requires ownership and a catalog entry, and uses the server catalog price', async () => {
+    expect((await request(app).get(`/api/v1/patients/${patientAId}/treatments`)).status).toBe(401);
+    expect((await request(app).post(`/api/v1/patients/${patientAId}/treatments`).set(bearer(tokenA)).send({ name: 'Manual', unitPrice: '1.00' })).status).toBe(400);
+    expect((await request(app).post(`/api/v1/patients/${patientBId}/treatments`).set(bearer(tokenA)).send({ userConceptId: conceptA.id })).status).toBe(404);
+    expect((await request(app).post(`/api/v1/patients/${patientAId}/treatments`).set(bearer(tokenA)).send({ userConceptId: conceptB.id })).status).toBe(404);
+    const created = await request(app).post(`/api/v1/patients/${patientAId}/treatments`).set(bearer(tokenA)).send({ userConceptId: conceptA.id, name: 'Injected name', unitPrice: '0.01', quantity: '2.00', tooth: '14' });
+    expect(created.status).toBe(201);
+    expect(created.body.data).toMatchObject({ patientId: patientAId, treatmentPlanId: null, name: 'Exact item', unitPrice: '19.99', subtotal: '39.98', status: 'PENDING' });
+    independentId = created.body.data.id;
+    expect(Number((await Patient.findByPk(patientAId))!.debt)).toBe(0);
+  });
+
+  it('preserves snapshots and blocks price overrides and archived catalog entries', async () => {
+    await conceptA.update({ description: 'New catalog label', unit_price: '40.00' });
+    const edited = await request(app).patch(`/api/v1/patients/${patientAId}/treatments/${independentId}`).set(bearer(tokenA)).send({ quantity: '3.00', notes: 'Clinical note', userConceptId: conceptA.id });
+    expect(edited.status).toBe(200);
+    expect(edited.body.data).toMatchObject({ name: 'Exact item', unitPrice: '19.99', subtotal: '59.97' });
+    const priceOverride = await request(app).patch(`/api/v1/patients/${patientAId}/treatments/${independentId}`).set(bearer(tokenA)).send({ unitPrice: '1.00' });
+    expect(priceOverride.status).toBe(409);
+    await conceptA.update({ active: false });
+    expect((await request(app).post(`/api/v1/patients/${patientAId}/treatments`).set(bearer(tokenA)).send({ userConceptId: conceptA.id })).status).toBe(409);
+    await conceptA.update({ active: true });
+  });
+
+  it('paginates and filters plan membership without leaking foreign patients', async () => {
+    const independent = await request(app).get(`/api/v1/patients/${patientAId}/treatments?scope=independent&pageSize=1`).set(bearer(tokenA));
+    expect(independent.body.data.map((item: { id: number }) => item.id)).toEqual([independentId]);
+    expect(independent.body.meta.pagination.total).toBe(1);
+    const planned = await request(app).get(`/api/v1/patients/${patientAId}/treatments?scope=plan&treatmentPlanId=${planAId}`).set(bearer(tokenA));
+    expect(planned.body.data).toHaveLength(2);
+    expect((await request(app).get(`/api/v1/patients/${patientBId}/treatments`).set(bearer(tokenA))).status).toBe(404);
+    expect((await request(app).patch(`/api/v1/patients/${patientAId}/treatments/${itemAId}`).set(bearer(tokenA)).send({ notes: 'Bypass plan' })).status).toBe(409);
+  });
+
+  it('maintains clinical completion timestamps and retains cancellations', async () => {
+    const path = `/api/v1/patients/${patientAId}/treatments/${independentId}/status`;
+    expect((await request(app).patch(path).set(bearer(tokenB)).send({ status: 'COMPLETED' })).status).toBe(404);
+    const completed = await request(app).patch(path).set(bearer(tokenA)).send({ status: 'COMPLETED' });
+    const repeated = await request(app).patch(path).set(bearer(tokenA)).send({ status: 'COMPLETED' });
+    expect(completed.body.data.completedAt).toBeTypeOf('string');
+    expect(repeated.body.data.completedAt).toBe(completed.body.data.completedAt);
+    const reopened = await request(app).patch(path).set(bearer(tokenA)).send({ status: 'IN_PROGRESS' });
+    expect(reopened.body.data.completedAt).toBeNull();
+    expect((await request(app).patch(path).set(bearer(tokenA)).send({ status: 'CANCELLED' })).body.data.status).toBe('CANCELLED');
+    expect(await TreatmentPlanItem.findByPk(independentId)).not.toBeNull();
   });
 });

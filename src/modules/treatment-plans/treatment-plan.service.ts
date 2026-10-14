@@ -2,6 +2,7 @@ import {
   CreateTreatmentPlanInput,
   CreateTreatmentPlanItemInput,
   ListTreatmentPlansQuery,
+  ListPatientTreatmentsQuery,
   UpdateTreatmentPlanInput,
   UpdateTreatmentPlanItemInput,
   UpdateTreatmentPlanItemStatusInput,
@@ -76,6 +77,29 @@ export interface TreatmentPlanServiceDependencies {
 }
 
 export class TreatmentPlanService {
+  async listPatientTreatments(userId: number, patientId: number, query: ListPatientTreatmentsQuery) {
+    await this.ensurePatient(userId, patientId);
+    const page = await this.repository.listPatientTreatments(userId, patientId, query);
+    return {
+      items: page.items.map(item => ({ ...item, completedAt: isoDateTime(item.completedAt), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),
+      pagination: { page: query.page, pageSize: query.pageSize, total: page.total, totalPages: Math.ceil(page.total / query.pageSize) },
+    };
+  }
+
+  async createPatientTreatment(userId: number, patientId: number, input: CreateTreatmentPlanItemInput) {
+    const item = await this.repository.createPatientTreatment(userId, patientId, input);
+    return { ...item, completedAt: isoDateTime(item.completedAt), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+  }
+
+  async updatePatientTreatment(userId: number, patientId: number, itemId: number, input: UpdateTreatmentPlanItemInput) {
+    const item = await this.repository.updatePatientTreatment(userId, patientId, itemId, input);
+    return { ...item, completedAt: isoDateTime(item.completedAt), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+  }
+
+  async updatePatientTreatmentStatus(userId: number, patientId: number, itemId: number, input: UpdateTreatmentPlanItemStatusInput) {
+    const item = await this.repository.updatePatientTreatmentStatus(userId, patientId, itemId, input);
+    return { ...item, completedAt: isoDateTime(item.completedAt), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+  }
   private readonly repository: TreatmentPlanRepository;
 
   constructor(dependencies: TreatmentPlanServiceDependencies = {}) {
