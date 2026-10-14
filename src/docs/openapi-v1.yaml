@@ -638,6 +638,103 @@ paths:
           $ref: '#/components/responses/TreatmentPlanNotFound'
         '409':
           $ref: '#/components/responses/TreatmentPlanConflict'
+  /patients/{patientId}/treatments:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: listPatientTreatments
+      tags: [Treatment Plans]
+      summary: Lista tratamientos del paciente, con o sin plan.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: scope
+          in: query
+          schema: { type: string, enum: [all, independent, plan], default: all }
+        - name: status
+          in: query
+          schema: { type: string, enum: [all, PENDING, APPROVED, IN_PROGRESS, COMPLETED, CANCELLED], default: all }
+        - name: treatmentPlanId
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 4294967295 }
+      responses:
+        '200':
+          description: Tratamientos del paciente.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PatientTreatmentListResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/TreatmentPlanNotFound' }
+    post:
+      operationId: createPatientTreatment
+      tags: [Treatment Plans]
+      summary: Crea un tratamiento independiente desde el catálogo sin generar deuda.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTreatmentPlanItemRequest' }
+      responses:
+        '201':
+          description: Tratamiento independiente creado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PatientTreatmentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/TreatmentPlanNotFound' }
+        '409': { $ref: '#/components/responses/TreatmentPlanConflict' }
+  /patients/{patientId}/treatments/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/TreatmentPlanItemId'
+    patch:
+      operationId: updatePatientTreatment
+      tags: [Treatment Plans]
+      summary: Edita un tratamiento independiente. El precio guardado no cambia salvo al elegir otro servicio del catálogo.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTreatmentPlanItemRequest' }
+      responses:
+        '200':
+          description: Tratamiento actualizado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PatientTreatmentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/TreatmentPlanNotFound' }
+        '409': { $ref: '#/components/responses/TreatmentPlanConflict' }
+  /patients/{patientId}/treatments/{itemId}/status:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/TreatmentPlanItemId'
+    patch:
+      operationId: updatePatientTreatmentStatus
+      tags: [Treatment Plans]
+      summary: Actualiza el estado clínico sin generar cargos ni pagos.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTreatmentPlanItemStatusRequest' }
+      responses:
+        '200':
+          description: Estado actualizado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PatientTreatmentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/TreatmentPlanNotFound' }
+        '409': { $ref: '#/components/responses/TreatmentPlanConflict' }
   /treatment-plans/{treatmentPlanId}:
     parameters:
       - $ref: '#/components/parameters/TreatmentPlanId'
@@ -2769,11 +2866,9 @@ components:
       type: object
       properties:
         userConceptId:
-          oneOf:
-            - type: integer
-              minimum: 1
-              maximum: 4294967295
-            - type: 'null'
+          type: integer
+          minimum: 1
+          maximum: 4294967295
         name:
           type: string
           minLength: 1
@@ -2818,7 +2913,8 @@ components:
     CreateTreatmentPlanItemRequest:
       allOf:
         - $ref: '#/components/schemas/TreatmentPlanItemWriteFields'
-      required: [name, unitPrice]
+      required: [userConceptId]
+      description: Nombre y precio se copian del catálogo. Los campos name y unitPrice se aceptan por compatibilidad pero no definen el precio de creación.
       unevaluatedProperties: false
     UpdateTreatmentPlanItemRequest:
       allOf:
@@ -2960,6 +3056,8 @@ components:
           type: integer
           minimum: 1
         treatmentPlanId:
+          oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
+        patientId:
           type: integer
           minimum: 1
         userConceptId:
@@ -3700,6 +3798,29 @@ components:
               $ref: '#/components/schemas/TreatmentPlanItemMutationData'
             errors:
               type: 'null'
+    PatientTreatmentResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data: { $ref: '#/components/schemas/PublicTreatmentPlanItem' }
+            errors: { type: 'null' }
+    PatientTreatmentListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/PublicTreatmentPlanItem' }
+            errors: { type: 'null' }
+            meta:
+              type: object
+              required: [pagination]
+              properties:
+                pagination: { $ref: '#/components/schemas/PaginationMeta' }
     UpdateProfileRequest:
       type: object
       minProperties: 1

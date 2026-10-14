@@ -66,6 +66,11 @@ export interface TreatmentPlanDetailData extends TreatmentPlanData {
   items: TreatmentPlanItemData[];
 }
 
+export interface PatientTreatmentData extends Omit<TreatmentPlanItemData, 'treatmentPlanId'> {
+  treatmentPlanId: number | null;
+  patientId: number;
+}
+
 type SerializedDates<T> = Omit<
   T,
   | 'acceptedAt'
@@ -120,6 +125,9 @@ export type TreatmentPlanErrorCode =
   | 'TREATMENT_PLAN_NOT_FOUND'
   | 'TREATMENT_PLAN_ITEM_NOT_FOUND'
   | 'USER_CONCEPT_NOT_FOUND'
+  | 'TREATMENT_CATALOG_REQUIRED'
+  | 'TREATMENT_CATALOG_ARCHIVED'
+  | 'TREATMENT_PRICE_IMMUTABLE'
   | 'TREATMENT_PLAN_NOT_EDITABLE'
   | 'TREATMENT_PLAN_DISCOUNT_EXCEEDS_SUBTOTAL'
   | 'TREATMENT_PLAN_AMOUNT_LIMIT_EXCEEDED'

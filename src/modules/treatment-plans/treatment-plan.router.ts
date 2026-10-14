@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { sendSuccess } from '../../platform/http/response';
+import { authenticatedUserId } from '../identity/identity.middleware';
 
 import { noStore } from '../../platform/http/cache.middleware';
 import { validateRequest } from '../../platform/http/validate.middleware';
@@ -17,6 +19,12 @@ import {
   updateTreatmentPlanItemStatusSchema,
   updateTreatmentPlanSchema,
   updateTreatmentPlanStatusSchema,
+  patientTreatmentParamsSchema,
+  listPatientTreatmentsQuerySchema,
+  type ListPatientTreatmentsQuery,
+  type CreateTreatmentPlanItemInput,
+  type UpdateTreatmentPlanItemInput,
+  type UpdateTreatmentPlanItemStatusInput,
 } from './treatment-plan.schemas';
 import {
   TreatmentPlanService,
@@ -33,6 +41,24 @@ export const createTreatmentPlanRouter = (
 
   const privateRoute = [noStore, authenticate(identityService)];
   router.use('/patients/:patientId/treatment-plans', ...privateRoute);
+  router.use('/patients/:patientId/treatments', ...privateRoute);
+  router.get('/patients/:patientId/treatments', validateRequest({ params: patientTreatmentPlansParamsSchema, query: listPatientTreatmentsQuerySchema }), async (req, res) => {
+    const params = req.validated!.params as { patientId: number };
+    const result = await service.listPatientTreatments(authenticatedUserId(req), params.patientId, req.validated!.query as ListPatientTreatmentsQuery);
+    return sendSuccess(req, res, result.items, { message: 'Tratamientos del paciente obtenidos', meta: { pagination: result.pagination } });
+  });
+  router.post('/patients/:patientId/treatments', validateRequest({ params: patientTreatmentPlansParamsSchema, body: createTreatmentPlanItemSchema }), async (req, res) => {
+    const params = req.validated!.params as { patientId: number };
+    return sendSuccess(req, res, await service.createPatientTreatment(authenticatedUserId(req), params.patientId, req.validated!.body as CreateTreatmentPlanItemInput), { statusCode: 201, message: 'Tratamiento independiente creado' });
+  });
+  router.patch('/patients/:patientId/treatments/:itemId', validateRequest({ params: patientTreatmentParamsSchema, body: updateTreatmentPlanItemSchema }), async (req, res) => {
+    const params = req.validated!.params as { patientId: number; itemId: number };
+    return sendSuccess(req, res, await service.updatePatientTreatment(authenticatedUserId(req), params.patientId, params.itemId, req.validated!.body as UpdateTreatmentPlanItemInput), { message: 'Tratamiento actualizado' });
+  });
+  router.patch('/patients/:patientId/treatments/:itemId/status', validateRequest({ params: patientTreatmentParamsSchema, body: updateTreatmentPlanItemStatusSchema }), async (req, res) => {
+    const params = req.validated!.params as { patientId: number; itemId: number };
+    return sendSuccess(req, res, await service.updatePatientTreatmentStatus(authenticatedUserId(req), params.patientId, params.itemId, req.validated!.body as UpdateTreatmentPlanItemStatusInput), { message: 'Estado del tratamiento actualizado' });
+  });
   router.use('/treatment-plans', ...privateRoute);
   router.get(
     '/patients/:patientId/treatment-plans',

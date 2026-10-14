@@ -74,6 +74,7 @@ describe('treatment plan v1 schemas', () => {
     ).toBe(false);
     expect(
       createTreatmentPlanItemSchema.parse({
+        userConceptId: 1,
         name: 'Limpieza',
         quantity: '2.5',
         unitPrice: '500',
@@ -81,6 +82,7 @@ describe('treatment plan v1 schemas', () => {
     ).toMatchObject({ quantity: '2.50', unitPrice: '500.00' });
     expect(
       createTreatmentPlanItemSchema.safeParse({
+        userConceptId: 1,
         name: 'Limpieza',
         quantity: '0',
         unitPrice: '500.00',
@@ -88,5 +90,14 @@ describe('treatment plan v1 schemas', () => {
     ).toBe(false);
     expect(updateTreatmentPlanItemSchema.safeParse({ subtotal: '1.00' }).success)
       .toBe(false);
+  });
+});
+
+describe('catalog-backed patient treatments', () => {
+  it('requires a catalog entry for creation and rejects clearing it on update', () => {
+    expect(createTreatmentPlanItemSchema.safeParse({ name: 'Manual', unitPrice: '100.00' }).success).toBe(false);
+    expect(createTreatmentPlanItemSchema.safeParse({ userConceptId: null }).success).toBe(false);
+    expect(createTreatmentPlanItemSchema.parse({ userConceptId: 7 })).toMatchObject({ userConceptId: 7, quantity: '1.00' });
+    expect(updateTreatmentPlanItemSchema.safeParse({ userConceptId: null }).success).toBe(false);
   });
 });
