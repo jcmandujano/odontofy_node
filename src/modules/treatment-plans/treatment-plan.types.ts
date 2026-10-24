@@ -42,6 +42,7 @@ export interface TreatmentPlanSummaryData {
 }
 
 export interface TreatmentPlanItemData {
+  financialLocked?: boolean;
   id: number;
   treatmentPlanId: number;
   userConceptId: number | null;

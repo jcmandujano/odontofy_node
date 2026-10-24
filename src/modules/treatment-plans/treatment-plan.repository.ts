@@ -1,6 +1,7 @@
 import { Op, Transaction, WhereOptions } from 'sequelize';
 
 import db from '../../db/connection';
+import { assertPlanFinancialEditable, assertTreatmentFinancialEditable, planFinancialLocked } from '../../db/treatment-finance.repository';
 import Patient from '../../models/patient.model';
 import TreatmentPlan from '../../models/treatment-plan.model';
 import TreatmentPlanItem from '../../models/treatment-plan-item.model';
@@ -73,6 +74,7 @@ const mapPlanSummary = (plan: TreatmentPlan): TreatmentPlanSummaryData => ({
 });
 
 const mapItem = (item: TreatmentPlanItem): TreatmentPlanItemData => ({
+  financialLocked: item.charge_discount_amount !== null,
   id: item.id,
   treatmentPlanId: item.treatment_plan_id!,
   userConceptId: item.user_concept_id,
@@ -206,6 +208,7 @@ const recalculate = async (
   plan: TreatmentPlan,
   transaction: Transaction
 ): Promise<void> => {
+  if (await planFinancialLocked(plan.id, transaction)) return;
   const items = await TreatmentPlanItem.findAll({
     where: {
       treatment_plan_id: plan.id,
@@ -348,6 +351,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
       const item = (await this.lockPatientTreatment(userId, patientId, itemId, transaction))!;
       // Plan members must use the plan routes so totals and cancellation rules stay atomic.
       if (item.treatment_plan_id !== null) throw new TreatmentPlanError('TREATMENT_PLAN_NOT_EDITABLE', 'Edita este tratamiento desde su plan');
+      await assertTreatmentFinancialEditable(item, input, transaction);
       await item.update(changedItemValues(item, await fixedPriceUpdate(userId, item, input, transaction)), { transaction });
       await item.reload({ transaction });
       return mapPatientTreatment(item);
@@ -434,6 +438,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
         );
       }
       const discount = input.discount ?? normalizeDecimal(plan.discount);
+      if (discount !== normalizeDecimal(plan.discount)) await assertPlanFinancialEditable(plan.id, transaction);
       const total = subtractMoney(plan.subtotal, discount);
       if (total === null) throw discountConflict();
       await plan.update({
@@ -481,6 +486,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
     await db.transaction(async (transaction) => {
       const plan = await lockPlan(userId, treatmentPlanId, transaction);
       assertEditable(plan);
+      await assertPlanFinancialEditable(plan.id, transaction);
       const normalized = await catalogInput(userId, input, transaction);
       const item = await TreatmentPlanItem.create({
         treatment_plan_id: plan.id,
@@ -500,6 +506,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
       const plan = await lockPlan(userId, treatmentPlanId, transaction);
       assertEditable(plan);
       const item = await findItem(plan.id, itemId, transaction);
+      await assertTreatmentFinancialEditable(item, input, transaction);
       await item.update(changedItemValues(item, await fixedPriceUpdate(userId, item, input, transaction)), { transaction });
       await recalculate(plan, transaction);
     });
