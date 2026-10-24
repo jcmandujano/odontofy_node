@@ -1,4 +1,8 @@
 import { Router } from 'express'
+import { authenticatedUserId } from '../identity/identity.middleware'
+import { sendSuccess } from '../../platform/http/response'
+import { TreatmentChargeService } from './treatment-charge.service'
+import { chargePatientParams, chargeTreatmentParams, chargeQuery, confirmChargeSchema, treatmentPaymentSchema, type ChargeQuery, type ConfirmChargeInput, type TreatmentPaymentInput } from './treatment-charge.schemas'
 
 import { noStore } from '../../platform/http/cache.middleware'
 import { validateRequest } from '../../platform/http/validate.middleware'
@@ -30,6 +34,22 @@ export const createBillingRouter = (
   const router = Router()
   const controller = createBillingController(new BillingService(dependencies))
   const privateRoute = [noStore, authenticate(identityService)]
+  const charges = new TreatmentChargeService()
+  router.use('/patients/:patientId/treatment-charges', ...privateRoute)
+  router.use('/patients/:patientId/treatment-payments', ...privateRoute)
+  router.get('/patients/:patientId/treatment-charges', validateRequest({ params: chargePatientParams, query: chargeQuery }), async (req, res) => {
+    const { patientId } = req.validated!.params as { patientId: number }
+    const result = await charges.list(authenticatedUserId(req), patientId, req.validated!.query as ChargeQuery)
+    return sendSuccess(req, res, result.records, { message: 'Cargos y saldos obtenidos', meta: { pagination: result.pagination, summary: result.summary } })
+  })
+  router.post('/patients/:patientId/treatment-charges/:treatmentId/confirmation', validateRequest({ params: chargeTreatmentParams, body: confirmChargeSchema }), async (req, res) => {
+    const { patientId, treatmentId } = req.validated!.params as { patientId: number; treatmentId: number }
+    return sendSuccess(req, res, await charges.confirm(authenticatedUserId(req), patientId, treatmentId, req.validated!.body as ConfirmChargeInput), { message: 'Cargo confirmado' })
+  })
+  router.post('/patients/:patientId/treatment-payments', validateRequest({ params: chargePatientParams, headers: idempotencyHeadersSchema, body: treatmentPaymentSchema }), async (req, res) => {
+    const { patientId } = req.validated!.params as { patientId: number }
+    return sendSuccess(req, res, await charges.pay(authenticatedUserId(req), patientId, req.validated!.body as TreatmentPaymentInput, req.get('Idempotency-Key')!), { statusCode: 201, message: 'Abono registrado sin generar otro cargo' })
+  })
 
   router.use('/billing-concepts', ...privateRoute)
   router.use('/billing', ...privateRoute)

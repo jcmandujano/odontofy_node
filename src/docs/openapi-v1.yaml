@@ -1263,6 +1263,88 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/BillingNotFound'
+  /patients/{patientId}/treatment-charges:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    get:
+      operationId: listTreatmentCharges
+      tags: [Billing]
+      summary: Consulta cotizaciones, cargos confirmados y abonos por tratamiento.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: scope
+          in: query
+          schema: { type: string, enum: [all, independent, plan], default: all }
+        - name: treatmentPlanId
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 4294967295 }
+      responses:
+        '200':
+          description: Operación financiera completada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TreatmentChargeListResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/BillingNotFound' }
+        '409': { $ref: '#/components/responses/BillingConflict' }
+  /patients/{patientId}/treatment-charges/{treatmentId}/confirmation:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - name: treatmentId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1, maximum: 4294967295 }
+    post:
+      operationId: confirmTreatmentCharge
+      tags: [Billing]
+      summary: Confirma idempotentemente un cargo; fija precio, cantidad y distribución de descuentos del plan.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmTreatmentChargeRequest' }
+      responses:
+        '200':
+          description: Operación financiera completada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TreatmentChargeConfirmationResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/BillingNotFound' }
+        '409': { $ref: '#/components/responses/BillingConflict' }
+  /patients/{patientId}/treatment-payments:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+    post:
+      operationId: createTreatmentPayment
+      tags: [Billing]
+      summary: Registra un abono y sus aplicaciones sin generar nuevos cargos.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TreatmentPaymentRequest' }
+      responses:
+        '201':
+          description: Operación financiera completada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TreatmentPaymentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/BillingNotFound' }
+        '409': { $ref: '#/components/responses/BillingConflict' }
   /billing/summary:
     get:
       operationId: getBillingSummary
@@ -3052,6 +3134,8 @@ components:
         - createdAt
         - updatedAt
       properties:
+        financialLocked:
+          type: boolean
         id:
           type: integer
           minimum: 1
@@ -3821,6 +3905,102 @@ components:
               required: [pagination]
               properties:
                 pagination: { $ref: '#/components/schemas/PaginationMeta' }
+    TreatmentChargeView:
+      type: object
+      required: [treatmentId, treatmentPlanId, name, clinicalStatus, catalogLinked, chargeId, subtotal, discount, total, paid, balance, financialStatus]
+      properties:
+        treatmentId: { type: integer, minimum: 1 }
+        treatmentPlanId:
+          oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
+        name: { type: string }
+        clinicalStatus: { $ref: '#/components/schemas/TreatmentPlanItemStatus' }
+        catalogLinked: { type: boolean }
+        chargeId:
+          oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
+        subtotal: { $ref: '#/components/schemas/BillingMoney' }
+        discount: { $ref: '#/components/schemas/BillingMoney' }
+        total: { $ref: '#/components/schemas/BillingMoney' }
+        paid: { $ref: '#/components/schemas/BillingMoney' }
+        balance: { $ref: '#/components/schemas/BillingMoney' }
+        financialStatus: { type: string, enum: [UNCONFIRMED, UNPAID, PARTIAL, PAID] }
+      additionalProperties: false
+    TreatmentChargeListResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/TreatmentChargeView' }
+            errors: { type: 'null' }
+            meta:
+              type: object
+              required: [pagination, summary]
+              properties:
+                pagination: { $ref: '#/components/schemas/PaginationMeta' }
+                summary:
+                  type: object
+                  required: [charged, paid, balance]
+                  properties:
+                    charged: { $ref: '#/components/schemas/BillingMoney' }
+                    paid: { $ref: '#/components/schemas/BillingMoney' }
+                    balance: { $ref: '#/components/schemas/BillingMoney' }
+    ConfirmTreatmentChargeRequest:
+      type: object
+      required: [occurredOn, expectedTotal]
+      description: Fecha no futura e importe revisado. En planes, discount debe ser cero y se aplica la distribución del descuento del plan. En independientes, discount es opcional. Repetir confirma el mismo cargo, no crea otro.
+      properties:
+        occurredOn: { type: string, format: date }
+        expectedTotal: { $ref: '#/components/schemas/BillingMoney' }
+        discount: { $ref: '#/components/schemas/BillingMoney' }
+      additionalProperties: false
+    TreatmentChargeConfirmationResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: object
+              required: [chargeId, treatmentId, total]
+              properties:
+                chargeId: { type: integer, minimum: 1 }
+                treatmentId: { type: integer, minimum: 1 }
+                total: { $ref: '#/components/schemas/BillingMoney' }
+            errors: { type: 'null' }
+    TreatmentPaymentRequest:
+      type: object
+      required: [occurredOn, paymentMethod, allocations]
+      description: El dinero recibido es la suma de aplicaciones positivas a cargos propios y del mismo paciente. Sin exceder sus saldos ni repetir cargos. No se permite fecha anterior al cargo ni futura.
+      properties:
+        occurredOn: { type: string, format: date }
+        paymentMethod: { $ref: '#/components/schemas/BillingPaymentMethod' }
+        allocations:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required: [chargeId, amount]
+            properties:
+              chargeId: { type: integer, minimum: 1, maximum: 4294967295 }
+              amount: { $ref: '#/components/schemas/BillingMoney' }
+            additionalProperties: false
+      additionalProperties: false
+    TreatmentPaymentResponse:
+      allOf:
+        - { $ref: '#/components/schemas/BaseResponse' }
+        - type: object
+          properties:
+            success: { const: true }
+            data:
+              type: object
+              required: [billingRecordId, amountReceived]
+              properties:
+                billingRecordId: { type: integer, minimum: 1 }
+                amountReceived: { $ref: '#/components/schemas/BillingMoney' }
+            errors: { type: 'null' }
     UpdateProfileRequest:
       type: object
       minProperties: 1
@@ -4172,6 +4352,20 @@ components:
         - createdAt
         - updatedAt
       properties:
+        recordKind:
+          type: string
+          enum: [LEGACY, TREATMENT_PAYMENT]
+        allocations:
+          type: array
+          items:
+            type: object
+            required: [chargeId, treatmentId, description, amount]
+            properties:
+              chargeId: { type: integer, minimum: 1 }
+              treatmentId: { type: integer, minimum: 1 }
+              description: { type: string }
+              amount: { $ref: '#/components/schemas/BillingMoney' }
+            additionalProperties: false
         id:
           type: integer
         patientId:

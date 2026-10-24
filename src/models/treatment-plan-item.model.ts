@@ -27,9 +27,10 @@ interface TreatmentPlanItemAttributes {
   notes: string | null;
   sort_order: number;
   completed_at: Date | null;
+  charge_discount_amount: string | null;
 }
 
-type TreatmentPlanItemCreationAttributes = Optional<TreatmentPlanItemAttributes, 'id'>;
+type TreatmentPlanItemCreationAttributes = Optional<TreatmentPlanItemAttributes, 'id' | 'charge_discount_amount'>;
 
 class TreatmentPlanItem extends Model<TreatmentPlanItemAttributes, TreatmentPlanItemCreationAttributes> implements TreatmentPlanItemAttributes {
   public id!: number;
@@ -49,12 +50,14 @@ class TreatmentPlanItem extends Model<TreatmentPlanItemAttributes, TreatmentPlan
   public notes!: string | null;
   public sort_order!: number;
   public completed_at!: Date | null;
+  public charge_discount_amount!: string | null;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 }
 
 TreatmentPlanItem.init(
   {
+    charge_discount_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
     id: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,

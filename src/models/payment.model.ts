@@ -13,6 +13,7 @@ import Patient from './patient.model'
 import User from './user.model'
 
 interface PaymentAttributes {
+  record_kind: 'LEGACY' | 'TREATMENT_PAYMENT'
   id: number
   user_id: number
   patientId: number
@@ -44,6 +45,7 @@ type PaymentCreationAttributes = Optional<
   | 'request_hash'
   | 'status'
   | 'version'
+  | 'record_kind'
 >
 
 class Payment
@@ -51,6 +53,7 @@ class Payment
   implements PaymentAttributes
 {
   public id!: number
+  public record_kind!: 'LEGACY' | 'TREATMENT_PAYMENT'
   public user_id!: number
   public patientId!: number
   public author_user_id!: number
@@ -75,6 +78,7 @@ class Payment
 
 Payment.init(
   {
+    record_kind: { type: DataTypes.ENUM('LEGACY', 'TREATMENT_PAYMENT'), allowNull: false, defaultValue: 'LEGACY' },
     id: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
