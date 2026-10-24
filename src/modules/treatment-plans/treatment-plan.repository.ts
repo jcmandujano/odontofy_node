@@ -38,6 +38,7 @@ const toDate = (value: string | null): Date | null =>
   value ? new Date(`${value}T00:00:00.000Z`) : null;
 
 const mapPlan = (plan: TreatmentPlan): TreatmentPlanData => ({
+  sourceOdontogramId: plan.source_odontogram_id,
   id: plan.id,
   patientId: plan.patient_id,
   title: plan.title,
@@ -60,6 +61,7 @@ const mapPlan = (plan: TreatmentPlan): TreatmentPlanData => ({
 });
 
 const mapPlanSummary = (plan: TreatmentPlan): TreatmentPlanSummaryData => ({
+  sourceOdontogramId: plan.source_odontogram_id,
   id: plan.id,
   patientId: plan.patient_id,
   title: plan.title,
