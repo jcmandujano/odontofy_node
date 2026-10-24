@@ -3,6 +3,7 @@ import type {
   TreatmentPlanItemStatus,
   TreatmentPlanStatus,
 } from '../../types/treatment-plan.enums';
+import type { OdontogramReference } from '../../types/odontogram-reference';
 
 export interface TreatmentPlanData {
   id: number;
@@ -42,6 +43,7 @@ export interface TreatmentPlanSummaryData {
 }
 
 export interface TreatmentPlanItemData {
+  odontogramReferences?: OdontogramReference[];
   financialLocked?: boolean;
   id: number;
   treatmentPlanId: number;

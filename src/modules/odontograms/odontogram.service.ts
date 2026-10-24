@@ -3,6 +3,7 @@ import {
   CreateOdontogramInput,
   ListOdontogramsQuery,
   UpdateOdontogramInput,
+  CreateFindingTreatmentInput,
 } from './odontogram.schemas';
 import {
   OdontogramRepository,
@@ -39,6 +40,25 @@ export interface OdontogramServiceDependencies {
 }
 
 export class OdontogramService {
+  async createFindingTreatment(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    input: CreateFindingTreatmentInput,
+    key: string
+  ) {
+    const result = await this.repository.createFindingTreatment(
+      userId,
+      odontogramId,
+      findingId,
+      input,
+      key
+    );
+    return {
+      odontogram: publicDetail(result.odontogram),
+      treatmentId: result.treatmentId,
+    };
+  }
   private readonly repository: OdontogramRepository;
 
   constructor(dependencies: OdontogramServiceDependencies = {}) {
@@ -46,11 +66,7 @@ export class OdontogramService {
       dependencies.repository ?? new SequelizeOdontogramRepository();
   }
 
-  async list(
-    userId: number,
-    patientId: number,
-    query: ListOdontogramsQuery
-  ) {
+  async list(userId: number, patientId: number, query: ListOdontogramsQuery) {
     const result = await this.repository.list(userId, patientId, query);
     if (!result) throw this.patientNotFound();
     return {
@@ -76,9 +92,7 @@ export class OdontogramService {
     input: CreateOdontogramInput
   ) {
     this.validateToothCodes(input.dentition, input.findings);
-    return publicDetail(
-      await this.repository.create(userId, patientId, input)
-    );
+    return publicDetail(await this.repository.create(userId, patientId, input));
   }
 
   async update(

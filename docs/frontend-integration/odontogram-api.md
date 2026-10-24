@@ -7,8 +7,8 @@ odontograma es `ADULT` o `PEDIATRIC`, contiene hallazgos FDI y puede archivarse
 sin eliminarse. Citas, planes de tratamiento y notas de evolucion no requieren
 un odontograma.
 
-Un hallazgo puede asociarse a varios items de tratamiento de planes del mismo
-paciente. Los planes y sus items tambien pueden existir sin odontograma.
+Un hallazgo puede asociarse a varios tratamientos del mismo paciente, tanto
+independientes como de planes. Los tratamientos tambien pueden existir sin odontograma.
 
 ## Endpoints
 
@@ -20,6 +20,9 @@ paciente. Los planes y sus items tambien pueden existir sin odontograma.
   completa de hallazgos.
 - `DELETE /odontograms/{odontogramId}`: archiva de forma idempotente.
 - `POST /odontograms/{odontogramId}/restore`: restaura de forma idempotente.
+- `POST /odontograms/{odontogramId}/findings/{findingId}/treatments`: crea y asocia
+  un tratamiento independiente del catalogo en una transaccion. Requiere
+  `Idempotency-Key` UUID; recibe `userConceptId`, `quantity` y `notes` opcionales.
 - `PUT /odontograms/{odontogramId}/findings/{findingId}/treatment-items/{itemId}`:
   asocia un item existente al hallazgo; repetir la solicitud no duplica el enlace.
 - `DELETE /odontograms/{odontogramId}/findings/{findingId}/treatment-items/{itemId}`:
@@ -43,12 +46,19 @@ archivado debe restaurarse antes de modificar sus enlaces.
 
 El detalle agrega `treatmentPlanItemIds` y `treatmentPlanItems` a cada hallazgo.
 El segundo campo trae `id`, `treatmentPlanId`, `userConceptId`, `name` y `status`
-para pintar la relacion y navegar al plan sin consultas adicionales. Primero se
-crea el item con la API de planes de tratamiento y luego se vincula su `id`.
+para pintar la relacion. `treatmentPlanId` es nullable para los independientes.
+Puede crearse desde el hallazgo o vincularse un tratamiento existente por su `id`.
+No se generan planes, cargos o pagos como efecto de estas operaciones.
 Al reemplazar `findings`, los hallazgos que conservan pieza, condicion y
 superficie mantienen su `id` y enlaces aunque cambien las notas. Los hallazgos
-que se retiran pierden sus enlaces; cambiar pieza, condicion o superficie
-equivale a retirar el hallazgo anterior y crear uno nuevo.
+con tratamientos no pueden retirarse ni cambiar pieza, condicion o superficie
+sin desvincularlos antes explicitamente (409). Desvincular no elimina tratamientos
+ni modifica sus cargos o pagos. Las notas del hallazgo siguen editables.
+
+El listado de tratamientos del paciente y el detalle de planes agregan
+`odontogramReferences` para navegar de regreso al odontograma. Ver
+`docs/odontogram-treatments-stage-4.md` para reglas de creacion, compatibilidad
+historica y migracion.
 
 La denticion adulta acepta las piezas FDI `11-18`, `21-28`, `31-38` y `41-48`.
 La pediatrica acepta `51-55`, `61-65`, `71-75` y `81-85`.

@@ -9,6 +9,7 @@ import {
   OdontogramTreatmentLinkParams,
   PatientOdontogramsParams,
   UpdateOdontogramInput,
+  CreateFindingTreatmentInput,
 } from './odontogram.schemas';
 import { OdontogramService } from './odontogram.service';
 
@@ -16,6 +17,27 @@ const validated = <T>(req: Request, target: 'body' | 'params' | 'query'): T =>
   req.validated?.[target] as T;
 
 export const createOdontogramController = (service: OdontogramService) => {
+  const createFindingTreatment: RequestHandler = async (req, res) => {
+    const { odontogramId, findingId } = validated<{
+      odontogramId: number;
+      findingId: number;
+    }>(req, 'params');
+    return sendSuccess(
+      req,
+      res,
+      await service.createFindingTreatment(
+        authenticatedUserId(req),
+        odontogramId,
+        findingId,
+        validated<CreateFindingTreatmentInput>(req, 'body'),
+        req.get('Idempotency-Key')!
+      ),
+      {
+        statusCode: 201,
+        message: 'Tratamiento creado y asociado sin generar cargos',
+      }
+    );
+  };
   const list: RequestHandler = async (req, res) => {
     const result = await service.list(
       authenticatedUserId(req),
@@ -110,6 +132,7 @@ export const createOdontogramController = (service: OdontogramService) => {
   };
 
   return {
+    createFindingTreatment,
     archive,
     create,
     get,

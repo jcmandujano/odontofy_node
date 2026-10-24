@@ -124,6 +124,30 @@ export const odontogramTreatmentLinkParamsSchema = z.strictObject({
   findingId: id,
   itemId: id,
 });
+export const odontogramFindingParamsSchema = z.strictObject({
+  odontogramId: id,
+  findingId: id,
+});
+export const odontogramCreationHeadersSchema = z
+  .object({ 'idempotency-key': z.uuid() })
+  .loose();
+export const createFindingTreatmentSchema = z.strictObject({
+  userConceptId: z.number().int().positive().max(4_294_967_295),
+  quantity: z
+    .string()
+    .regex(/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/)
+    .transform(
+      (value) =>
+        `${value.split('.')[0]}.${(value.split('.')[1] ?? '').padEnd(2, '0')}`
+    )
+    .refine((value) => value !== '0.00', 'La cantidad debe ser mayor que cero')
+    .optional()
+    .default('1.00'),
+  notes: nullableText(2000).optional().default(null),
+});
+export type CreateFindingTreatmentInput = z.infer<
+  typeof createFindingTreatmentSchema
+>;
 
 export const listOdontogramsQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),

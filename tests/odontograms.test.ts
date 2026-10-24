@@ -4,6 +4,7 @@ import {
   createOdontogramSchema,
   listOdontogramsQuerySchema,
   updateOdontogramSchema,
+  createFindingTreatmentSchema,
 } from '../src/modules/odontograms/odontogram.schemas';
 import { OdontogramService } from '../src/modules/odontograms/odontogram.service';
 import type { OdontogramRepository } from '../src/modules/odontograms/odontogram.repository';
@@ -24,6 +25,7 @@ const adult: OdontogramDetailData = {
 };
 
 const repository: OdontogramRepository = {
+  createFindingTreatment: async () => ({ odontogram: adult, treatmentId: 42 }),
   list: async () => ({ odontograms: [adult, { ...adult, id: 8 }], total: 2 }),
   findById: async () => adult,
   create: async () => adult,
@@ -33,6 +35,34 @@ const repository: OdontogramRepository = {
 };
 
 describe('odontogram v1 schemas', () => {
+  it('only accepts catalog treatments, positive quantities and clinical notes for atomic assignment', () => {
+    expect(createFindingTreatmentSchema.parse({ userConceptId: 2 })).toEqual({
+      userConceptId: 2,
+      quantity: '1.00',
+      notes: null,
+    });
+    expect(
+      createFindingTreatmentSchema.safeParse({
+        userConceptId: 2,
+        quantity: '0',
+      }).success
+    ).toBe(false);
+    expect(
+      createFindingTreatmentSchema.safeParse({
+        userConceptId: 2,
+        unitPrice: '1.00',
+      }).success
+    ).toBe(false);
+    expect(
+      createFindingTreatmentSchema.safeParse({
+        userConceptId: 2,
+        treatmentPlanId: 1,
+      }).success
+    ).toBe(false);
+    expect(
+      createFindingTreatmentSchema.safeParse({ name: 'Manual' }).success
+    ).toBe(false);
+  });
   it('accepts adult and pediatric FDI teeth with structured findings', () => {
     const adultChart = createOdontogramSchema.parse({
       dentition: 'ADULT',

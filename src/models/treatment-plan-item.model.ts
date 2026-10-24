@@ -10,6 +10,8 @@ import {
 } from '../types/treatment-plan.enums';
 
 interface TreatmentPlanItemAttributes {
+  odontogram_creation_key: string | null;
+  odontogram_creation_hash: string | null;
   id: number;
   treatment_plan_id: number | null;
   patient_id: number;
@@ -30,9 +32,11 @@ interface TreatmentPlanItemAttributes {
   charge_discount_amount: string | null;
 }
 
-type TreatmentPlanItemCreationAttributes = Optional<TreatmentPlanItemAttributes, 'id' | 'charge_discount_amount'>;
+type TreatmentPlanItemCreationAttributes = Optional<TreatmentPlanItemAttributes, 'id' | 'charge_discount_amount' | 'odontogram_creation_key' | 'odontogram_creation_hash'>;
 
 class TreatmentPlanItem extends Model<TreatmentPlanItemAttributes, TreatmentPlanItemCreationAttributes> implements TreatmentPlanItemAttributes {
+  declare odontogram_creation_key: string | null;
+  declare odontogram_creation_hash: string | null;
   public id!: number;
   public treatment_plan_id!: number | null;
   public patient_id!: number;
@@ -57,6 +61,8 @@ class TreatmentPlanItem extends Model<TreatmentPlanItemAttributes, TreatmentPlan
 
 TreatmentPlanItem.init(
   {
+    odontogram_creation_key: { type: DataTypes.STRING(36), allowNull: true },
+    odontogram_creation_hash: { type: DataTypes.STRING(64), allowNull: true },
     charge_discount_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
     id: {
       type: DataTypes.INTEGER.UNSIGNED,

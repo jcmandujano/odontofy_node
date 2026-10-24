@@ -1,6 +1,7 @@
 import { Op, Transaction, WhereOptions } from 'sequelize';
 
 import db from '../../db/connection';
+import { withOdontogramReferences } from '../../db/odontogram-references.repository';
 import { assertPlanFinancialEditable, assertTreatmentFinancialEditable, planFinancialLocked } from '../../db/treatment-finance.repository';
 import Patient from '../../models/patient.model';
 import TreatmentPlan from '../../models/treatment-plan.model';
@@ -322,7 +323,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
       where, limit: query.pageSize, offset: (query.page - 1) * query.pageSize,
       order: [['created_at', 'DESC'], ['id', 'DESC']],
     });
-    return { items: rows.map(mapPatientTreatment), total: count };
+    return { items: await withOdontogramReferences(userId, patientId, rows.map(mapPatientTreatment)), total: count };
   }
 
   private async lockPatientTreatment(userId: number, patientId: number, itemId: number | null, transaction: Transaction) {
@@ -395,7 +396,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
       where: { treatment_plan_id: plan.id },
       order: [['sort_order', 'ASC'], ['id', 'ASC']],
     });
-    return { ...mapPlan(plan), items: items.map(mapItem) };
+    return { ...mapPlan(plan), items: await withOdontogramReferences(userId, plan.patient_id, items.map(mapItem)) };
   }
 
   async create(userId: number, patientId: number, input: CreateTreatmentPlanInput): Promise<TreatmentPlanDetailData> {
