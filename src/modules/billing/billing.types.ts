@@ -23,6 +23,9 @@ export interface BillingItemData {
 }
 
 export interface BillingRecordData {
+  advanceTreatmentId?: number | null
+  advanceTreatmentName?: string | null
+  availableCredit?: string
   recordKind?: 'LEGACY' | 'TREATMENT_PAYMENT'
   allocations?: Array<{ chargeId: number; treatmentId: number; description: string; amount: string }>
   id: number

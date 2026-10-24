@@ -41,6 +41,18 @@ export const assertTreatmentFinancialEditable = async (
   },
   transaction: Transaction
 ) => {
+  if (
+    input.userConceptId !== undefined &&
+    input.userConceptId !== item.user_concept_id &&
+    (await Payment.count({
+      where: { advance_treatment_id: item.id, status: 'POSTED' },
+      transaction,
+    }))
+  ) {
+    throw financialConflict(
+      'El tratamiento tiene anticipos vigentes. No se puede cambiar su vínculo al catálogo; cancela el recibo si necesitas corregirlo.'
+    )
+  }
   const changed =
     (input.quantity !== undefined &&
       cents(input.quantity) !== cents(item.quantity)) ||

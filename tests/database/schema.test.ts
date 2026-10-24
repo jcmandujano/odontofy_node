@@ -50,6 +50,7 @@ const expectedTables = [
   'payment_revisions',
   'payments',
   'payment_allocations',
+  'credit_applications',
   'treatment_charges',
   'signed_consents',
   'treatment_plan_items',

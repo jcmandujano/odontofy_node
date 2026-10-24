@@ -23,7 +23,7 @@ import type {
 const fail = (code: string, message: string, statusCode = 409): never => {
   throw new ApiError({ code, message, statusCode })
 }
-const ownedPatient = async (
+export const ownedPatient = async (
   userId: number,
   patientId: number,
   transaction?: Transaction
@@ -61,8 +61,8 @@ export class SequelizeTreatmentChargeRepository {
     })
     const shares = new Map<number, string>()
     for (const plan of plans) {
-      const members = all.filter(item => item.treatment_plan_id === plan.id)
-      const eligible = members.filter(item => item.status !== 'CANCELLED')
+      const members = all.filter((item) => item.treatment_plan_id === plan.id)
+      const eligible = members.filter((item) => item.status !== 'CANCELLED')
       if (members.every((item) => item.charge_discount_amount === null)) {
         for (const [id, share] of distributeDiscount(eligible, plan.discount))
           shares.set(id, share)
@@ -293,6 +293,44 @@ export class SequelizeTreatmentChargeRepository {
             amountReceived: String(existing.income),
           }
         }
+        let source: TreatmentPlanItem | null = null
+        if (input.sourceTreatmentId !== undefined) {
+          const candidate = await TreatmentPlanItem.findOne({
+            where: { id: input.sourceTreatmentId, patient_id: patientId },
+            transaction,
+          })
+          if (!candidate)
+            return fail('TREATMENT_NOT_FOUND', 'Tratamiento no encontrado', 404)
+          // Match plan editing lock order, so cancellation/catalog edits cannot race the advance.
+          const plan =
+            candidate.treatment_plan_id === null
+              ? null
+              : await TreatmentPlan.findOne({
+                  where: {
+                    id: candidate.treatment_plan_id,
+                    patient_id: patientId,
+                    user_id: userId,
+                  },
+                  transaction,
+                  lock: transaction.LOCK.UPDATE,
+                })
+          if (candidate.treatment_plan_id !== null && !plan)
+            return fail('TREATMENT_NOT_FOUND', 'Tratamiento no encontrado', 404)
+          source = (await TreatmentPlanItem.findByPk(candidate.id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          }))!
+          if (!source.user_concept_id)
+            return fail(
+              'TREATMENT_CATALOG_REQUIRED',
+              'El anticipo debe corresponder a un tratamiento del catálogo'
+            )
+          if (source.status === 'CANCELLED' || plan?.status === 'CANCELLED')
+            return fail(
+              'TREATMENT_CANCELLED',
+              'No se puede registrar un anticipo para un tratamiento o plan cancelado'
+            )
+        }
         const ids = input.allocations.map((row) => row.chargeId)
         const charges = await TreatmentCharge.findAll({
           where: { id: { [Op.in]: ids }, patient_id: patientId },
@@ -319,10 +357,12 @@ export class SequelizeTreatmentChargeRepository {
           )
             return fail(
               'PAYMENT_EXCEEDS_BALANCE',
-              'El abono excede el saldo del cargo. Los anticipos se habilitarán en la siguiente etapa.'
+              'El importe aplicado excede el saldo del cargo. Registra el excedente como anticipo.'
             )
           received += cents(row.amount)
         }
+        if (input.amountReceived !== undefined)
+          received = cents(input.amountReceived)
         if (received > 999_999_999_999n)
           return fail(
             'BILLING_AMOUNT_LIMIT_EXCEEDED',
@@ -335,6 +375,8 @@ export class SequelizeTreatmentChargeRepository {
         const record = await Payment.create(
           {
             record_kind: 'TREATMENT_PAYMENT',
+            advance_treatment_id: source?.id ?? null,
+            advance_treatment_name: source?.name ?? null,
             user_id: userId,
             patientId,
             author_user_id: userId,
@@ -374,6 +416,15 @@ export class SequelizeTreatmentChargeRepository {
               patientId,
               occurredOn: record.payment_date,
               recordKind: record.record_kind,
+              advanceTreatmentId: record.advance_treatment_id,
+              advanceTreatmentName: record.advance_treatment_name,
+              availableCredit: amount(
+                received -
+                  input.allocations.reduce(
+                    (sum, row) => sum + cents(row.amount),
+                    0n
+                  )
+              ),
               subtotal: '0.00',
               discount: '0.00',
               total: '0.00',

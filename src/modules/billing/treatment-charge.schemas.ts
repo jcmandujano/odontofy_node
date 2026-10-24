@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { BILLING_PAYMENT_METHODS } from '../../types/billing.enums'
+import { cents } from '../../platform/finance-money'
 
 const id = z.coerce.number().int().positive().max(4_294_967_295)
 const money = z
@@ -41,6 +42,8 @@ export const treatmentPaymentSchema = z
   .strictObject({
     occurredOn: date,
     paymentMethod: z.enum(BILLING_PAYMENT_METHODS),
+    sourceTreatmentId: id.optional(),
+    amountReceived: money.refine((value) => cents(value) > 0n).optional(),
     allocations: z
       .array(
         z.strictObject({
@@ -51,7 +54,6 @@ export const treatmentPaymentSchema = z
           ),
         })
       )
-      .min(1)
       .max(100),
   })
   .refine(
@@ -60,6 +62,51 @@ export const treatmentPaymentSchema = z
       value.allocations.length,
     'No repitas un cargo en el mismo pago'
   )
+  .refine((value) => {
+    const allocated = value.allocations.reduce(
+      (sum, row) => sum + cents(row.amount),
+      0n
+    )
+    const received =
+      value.amountReceived === undefined
+        ? allocated
+        : cents(value.amountReceived)
+    return (
+      received > 0n &&
+      received >= allocated &&
+      (received === allocated || value.sourceTreatmentId !== undefined)
+    )
+  }, 'Un anticipo requiere tratamiento del catálogo e importe recibido mayor o igual al aplicado')
+
+export const creditQuery = z.strictObject({
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+})
+export const creditPaymentParams = z.strictObject({
+  patientId: id,
+  paymentId: id,
+})
+export const applyCreditSchema = z
+  .strictObject({
+    occurredOn: date,
+    allocations: z
+      .array(
+        z.strictObject({
+          chargeId: id,
+          amount: money.refine((value) => cents(value) > 0n),
+        })
+      )
+      .min(1)
+      .max(100),
+  })
+  .refine(
+    (value) =>
+      new Set(value.allocations.map((row) => row.chargeId)).size ===
+      value.allocations.length,
+    'No repitas un cargo'
+  )
+export type CreditQuery = z.infer<typeof creditQuery>
+export type ApplyCreditInput = z.infer<typeof applyCreditSchema>
 export type ChargeQuery = z.infer<typeof chargeQuery>
 export type ConfirmChargeInput = z.infer<typeof confirmChargeSchema>
 export type TreatmentPaymentInput = z.infer<typeof treatmentPaymentSchema>
