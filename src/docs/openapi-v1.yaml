@@ -527,6 +527,58 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/OdontogramNotFound'
+  /odontograms/{odontogramId}/findings/{findingId}/treatments:
+    parameters:
+      - $ref: '#/components/parameters/OdontogramId'
+      - name: findingId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1, maximum: 4294967295 }
+    post:
+      operationId: createOdontogramFindingTreatment
+      tags: [Odontograms]
+      summary: Crea y asocia un tratamiento independiente del catálogo de forma atómica, sin plan ni cargos.
+      description: Copia pieza y superficie del hallazgo y nombre/precio del catálogo activo propio. No acepta precio libre, plan, cargos ni estado clínico. Una llave UUID permite reintentar sin duplicar; la misma llave con otros datos produce conflicto. Crear otra vez desde un catálogo ya asociado al hallazgo también produce conflicto; usa el tratamiento existente. El reintento de una creación previa no restaura vínculos retirados después.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userConceptId]
+              additionalProperties: false
+              properties:
+                userConceptId: { type: integer, minimum: 1, maximum: 4294967295 }
+                quantity: { type: string, pattern: '^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$', default: '1.00', description: Cantidad estrictamente positiva. }
+                notes: { type: [string, 'null'], maxLength: 2000 }
+      responses:
+        '201':
+          description: Tratamiento creado o resultado de la operación idempotente original.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/BaseResponse' }
+                  - type: object
+                    properties:
+                      success: { const: true }
+                      data:
+                        type: object
+                        required: [odontogram, treatmentId]
+                        properties:
+                          odontogram: { $ref: '#/components/schemas/PublicOdontogram' }
+                          treatmentId: { type: integer, minimum: 1 }
+                      errors: { type: 'null' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OdontogramNotFound' }
+        '409': { $ref: '#/components/responses/OdontogramConflict' }
   /odontograms/{odontogramId}/findings/{findingId}/treatment-items/{itemId}:
     parameters:
       - $ref: '#/components/parameters/OdontogramId'
@@ -539,6 +591,7 @@ paths:
       operationId: linkOdontogramFindingTreatmentItem
       tags: [Odontograms]
       summary: Asocia idempotentemente un hallazgo con un item de tratamiento del mismo paciente.
+      description: Admite tratamientos independientes o de planes. Una nueva asociación requiere catálogo y tratamiento/plan no cancelado. Repetir un vínculo existente conserva compatibilidad histórica. Vincular o desvincular no modifica tratamiento, notas, plan, cargos ni pagos. Para quitar un hallazgo asociado o cambiar su pieza/condición/superficie deben retirarse antes sus vínculos; las notas se pueden editar conservándolos.
       security:
         - bearerAuth: []
       responses:
@@ -3203,6 +3256,19 @@ components:
         - createdAt
         - updatedAt
       properties:
+        odontogramReferences:
+          type: array
+          items:
+            type: object
+            required: [odontogramId, findingId, title, toothCode, condition, surface, archived]
+            properties:
+              odontogramId: { type: integer, minimum: 1 }
+              findingId: { type: integer, minimum: 1 }
+              title: { type: [string, 'null'] }
+              toothCode: { type: string }
+              condition: { type: string }
+              surface: { type: [string, 'null'] }
+              archived: { type: boolean }
         financialLocked:
           type: boolean
         id:
@@ -3766,7 +3832,7 @@ components:
             required: [id, treatmentPlanId, userConceptId, name, status]
             properties:
               id: { type: integer, minimum: 1 }
-              treatmentPlanId: { type: integer, minimum: 1 }
+              treatmentPlanId: { type: [integer, 'null'], minimum: 1 }
               userConceptId:
                 oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }]
               name: { type: string }

@@ -1,4 +1,10 @@
-import { Op, Transaction, WhereOptions } from 'sequelize';
+import {
+  Op,
+  Transaction,
+  UniqueConstraintError,
+  WhereOptions,
+} from 'sequelize';
+import { createHash } from 'node:crypto';
 
 import db from '../../db/connection';
 import OdontogramFinding from '../../models/odontogram-finding.model';
@@ -8,11 +14,15 @@ import Patient from '../../models/patient.model';
 import TreatmentPlan from '../../models/treatment-plan.model';
 import TreatmentPlanItem from '../../models/treatment-plan-item.model';
 import User from '../../models/user.model';
+import UserConcept from '../../models/user_concept.model';
+import { ApiError } from '../../platform/http/api-error';
+import { amount, cents } from '../../platform/finance-money';
 import {
   CreateOdontogramInput,
   ListOdontogramsQuery,
   OdontogramFindingInput,
   UpdateOdontogramInput,
+  CreateFindingTreatmentInput,
 } from './odontogram.schemas';
 import {
   OdontogramData,
@@ -102,12 +112,22 @@ const findingRows = (
   }));
 
 export interface OdontogramRepository {
+  createFindingTreatment(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    input: CreateFindingTreatmentInput,
+    key: string
+  ): Promise<{ odontogram: OdontogramDetailData; treatmentId: number }>;
   list(
     userId: number,
     patientId: number,
     query: ListOdontogramsQuery
   ): Promise<OdontogramPage | null>;
-  findById(userId: number, odontogramId: number): Promise<OdontogramDetailData | null>;
+  findById(
+    userId: number,
+    odontogramId: number
+  ): Promise<OdontogramDetailData | null>;
   create(
     userId: number,
     patientId: number,
@@ -185,15 +205,19 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
       where: { finding_id: detail.findings.map((finding) => finding.id) },
       order: [['treatment_plan_item_id', 'ASC']],
     });
-    const findingById = new Map(detail.findings.map((finding) => [finding.id, finding]));
+    const findingById = new Map(
+      detail.findings.map((finding) => [finding.id, finding])
+    );
     for (const link of links) {
-      findingById.get(link.finding_id)?.treatmentPlanItemIds.push(
-        link.treatment_plan_item_id
-      );
+      findingById
+        .get(link.finding_id)
+        ?.treatmentPlanItemIds.push(link.treatment_plan_item_id);
     }
     if (links.length > 0) {
       const items = await TreatmentPlanItem.findAll({
-        where: { id: [...new Set(links.map((link) => link.treatment_plan_item_id))] },
+        where: {
+          id: [...new Set(links.map((link) => link.treatment_plan_item_id))],
+        },
       });
       const itemById = new Map(items.map((item) => [item.id, item]));
       for (const link of links) {
@@ -201,7 +225,7 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         if (!item) continue;
         findingById.get(link.finding_id)?.treatmentPlanItems.push({
           id: item.id,
-          treatmentPlanId: item.treatment_plan_id!,
+          treatmentPlanId: item.treatment_plan_id,
           userConceptId: item.user_concept_id,
           name: item.name,
           status: item.status,
@@ -282,7 +306,8 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
           toothCode: string;
           condition: string;
           surface: string | null;
-        }) => `${finding.toothCode}:${finding.condition}:${finding.surface ?? ''}`;
+        }) =>
+          `${finding.toothCode}:${finding.condition}:${finding.surface ?? ''}`;
         const byKey = new Map(
           existing.map((finding) => [
             findingKey({
@@ -309,6 +334,21 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
           }
         }
         if (byKey.size > 0) {
+          if (
+            await OdontogramFindingTreatmentItem.count({
+              where: {
+                finding_id: [...byKey.values()].map((finding) => finding.id),
+              },
+              transaction,
+            })
+          ) {
+            throw new ApiError({
+              code: 'ODONTOGRAM_FINDING_HAS_TREATMENTS',
+              message:
+                'Desvincula primero los tratamientos antes de quitar el hallazgo o cambiar su pieza, condición o superficie. Sus notas sí pueden editarse.',
+              statusCode: 409,
+            });
+          }
           await OdontogramFinding.destroy({
             where: { id: [...byKey.values()].map((finding) => finding.id) },
             transaction,
@@ -330,7 +370,10 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
         odontogramId,
         transaction
       );
-      if ((archived && odontogram.archived_at) || (!archived && !odontogram.archived_at)) {
+      if (
+        (archived && odontogram.archived_at) ||
+        (!archived && !odontogram.archived_at)
+      ) {
         return;
       }
       await odontogram.update(
@@ -348,59 +391,257 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
     itemId: number,
     linked: boolean
   ): Promise<OdontogramDetailData> {
-    await db.transaction(async (transaction) => {
-      const odontogram = await this.lockOdontogram(
-        userId,
-        odontogramId,
-        transaction
-      );
-      if (odontogram.archived_at) {
-        throw new OdontogramError(
-          'ODONTOGRAM_ARCHIVED',
-          'El odontograma debe restaurarse antes de editarse'
+    await db.transaction(
+      { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
+      async (transaction) => {
+        await this.lockChartPatient(userId, odontogramId, transaction);
+        const odontogram = await this.lockOdontogram(
+          userId,
+          odontogramId,
+          transaction
         );
-      }
-      const finding = await OdontogramFinding.findOne({
-        where: { id: findingId, odontogram_id: odontogram.id },
-        transaction,
-      });
-      if (!finding) {
-        throw new OdontogramError(
-          'ODONTOGRAM_FINDING_NOT_FOUND',
-          'Hallazgo no encontrado'
-        );
-      }
-      const item = await TreatmentPlanItem.findByPk(itemId, { transaction });
-      const plan = item?.treatment_plan_id
-        ? await TreatmentPlan.findOne({
-            where: { id: item.treatment_plan_id, user_id: userId },
-            transaction,
-          })
-        : null;
-      if (!plan) {
-        throw new OdontogramError(
-          'TREATMENT_PLAN_ITEM_NOT_FOUND',
-          'Item de tratamiento no encontrado'
-        );
-      }
-      if (plan.patient_id !== odontogram.patient_id) {
-        throw new OdontogramError(
-          'TREATMENT_PATIENT_MISMATCH',
-          'El tratamiento pertenece a otro paciente'
-        );
-      }
-      const where = { finding_id: finding.id, treatment_plan_item_id: item!.id };
-      if (linked) {
-        await OdontogramFindingTreatmentItem.findOrCreate({
-          where,
-          defaults: where,
+        if (odontogram.archived_at) {
+          throw new OdontogramError(
+            'ODONTOGRAM_ARCHIVED',
+            'El odontograma debe restaurarse antes de editarse'
+          );
+        }
+        const finding = await OdontogramFinding.findOne({
+          where: { id: findingId, odontogram_id: odontogram.id },
           transaction,
         });
-      } else {
-        await OdontogramFindingTreatmentItem.destroy({ where, transaction });
+        if (!finding) {
+          throw new OdontogramError(
+            'ODONTOGRAM_FINDING_NOT_FOUND',
+            'Hallazgo no encontrado'
+          );
+        }
+        const candidate = await TreatmentPlanItem.findByPk(itemId, {
+          transaction,
+        });
+        const owner = candidate
+          ? await Patient.findOne({
+              where: { id: candidate.patient_id, user_id: userId },
+              transaction,
+            })
+          : null;
+        if (!candidate || !owner)
+          throw new OdontogramError(
+            'TREATMENT_PLAN_ITEM_NOT_FOUND',
+            'Tratamiento no encontrado'
+          );
+        if (candidate.patient_id !== odontogram.patient_id)
+          throw new OdontogramError(
+            'TREATMENT_PATIENT_MISMATCH',
+            'El tratamiento pertenece a otro paciente'
+          );
+        const plan = candidate.treatment_plan_id
+          ? await TreatmentPlan.findOne({
+              where: {
+                id: candidate.treatment_plan_id,
+                user_id: userId,
+                patient_id: odontogram.patient_id,
+              },
+              transaction,
+              lock: transaction.LOCK.UPDATE,
+            })
+          : null;
+        if (candidate.treatment_plan_id !== null && !plan) {
+          throw new OdontogramError(
+            'TREATMENT_PLAN_ITEM_NOT_FOUND',
+            'Item de tratamiento no encontrado'
+          );
+        }
+        const item = (await TreatmentPlanItem.findByPk(itemId, {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        }))!;
+        const where = {
+          finding_id: finding.id,
+          treatment_plan_item_id: item.id,
+        };
+        if (linked) {
+          const existing = await OdontogramFindingTreatmentItem.findOne({
+            where,
+            transaction,
+          });
+          if (existing) return;
+          if (!item.user_concept_id)
+            throw new ApiError({
+              code: 'TREATMENT_CATALOG_REQUIRED',
+              message:
+                'Vincula el tratamiento histórico al catálogo antes de asociarlo a un hallazgo.',
+              statusCode: 409,
+            });
+          if (item.status === 'CANCELLED' || plan?.status === 'CANCELLED')
+            throw new ApiError({
+              code: 'TREATMENT_CANCELLED',
+              message: 'No se pueden asociar tratamientos o planes cancelados.',
+              statusCode: 409,
+            });
+          await OdontogramFindingTreatmentItem.findOrCreate({
+            where,
+            defaults: where,
+            transaction,
+          });
+        } else {
+          await OdontogramFindingTreatmentItem.destroy({ where, transaction });
+        }
       }
-    });
+    );
     return (await this.findById(userId, odontogramId))!;
+  }
+
+  async createFindingTreatment(
+    userId: number,
+    odontogramId: number,
+    findingId: number,
+    input: CreateFindingTreatmentInput,
+    key: string
+  ) {
+    const hash = createHash('sha256')
+      .update(JSON.stringify({ userId, odontogramId, findingId, input }))
+      .digest('hex');
+    const conflict = (code: string, message: string): never => {
+      throw new ApiError({ code, message, statusCode: 409 });
+    };
+    const treatmentId = await db
+      .transaction(
+        { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
+        async (transaction) => {
+          await this.lockChartPatient(userId, odontogramId, transaction);
+          const chart = await this.lockOdontogram(
+            userId,
+            odontogramId,
+            transaction
+          );
+          const existing = await TreatmentPlanItem.findOne({
+            where: { odontogram_creation_key: key },
+            transaction,
+          });
+          if (existing) {
+            if (
+              existing.patient_id !== chart.patient_id ||
+              existing.odontogram_creation_hash !== hash
+            )
+              return conflict(
+                'IDEMPOTENCY_KEY_REUSED',
+                'La llave ya se utilizó con otros datos. No se duplicó el tratamiento.'
+              );
+            return existing.id;
+          }
+          if (chart.archived_at)
+            throw new OdontogramError(
+              'ODONTOGRAM_ARCHIVED',
+              'Restaura el odontograma antes de asignar tratamientos'
+            );
+          const finding = await OdontogramFinding.findOne({
+            where: { id: findingId, odontogram_id: odontogramId },
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
+          if (!finding)
+            throw new OdontogramError(
+              'ODONTOGRAM_FINDING_NOT_FOUND',
+              'Hallazgo no encontrado'
+            );
+          const catalog = await UserConcept.findOne({
+            where: { id: input.userConceptId, user_id: userId },
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
+          if (!catalog)
+            throw new ApiError({
+              code: 'TREATMENT_CATALOG_NOT_FOUND',
+              message: 'Tratamiento del catálogo no encontrado',
+              statusCode: 404,
+            });
+          if (!catalog.active)
+            return conflict(
+              'TREATMENT_CATALOG_ARCHIVED',
+              'El tratamiento del catálogo está archivado'
+            );
+          const links = await OdontogramFindingTreatmentItem.findAll({
+            where: { finding_id: findingId },
+            transaction,
+          });
+          if (
+            links.length &&
+            (await TreatmentPlanItem.count({
+              where: {
+                id: links.map((link) => link.treatment_plan_item_id),
+                user_concept_id: input.userConceptId,
+              },
+              transaction,
+            }))
+          ) {
+            return conflict(
+              'FINDING_TREATMENT_ALREADY_EXISTS',
+              'Este hallazgo ya tiene un tratamiento de ese catálogo. Revisa el existente antes de crear otro.'
+            );
+          }
+          const subtotal =
+            (cents(input.quantity) * cents(catalog.unit_price) + 50n) / 100n;
+          if (subtotal > 999_999_999_999n)
+            return conflict(
+              'TREATMENT_PLAN_AMOUNT_LIMIT_EXCEEDED',
+              'El importe excede el límite permitido'
+            );
+          const item = await TreatmentPlanItem.create(
+            {
+              patient_id: chart.patient_id,
+              treatment_plan_id: null,
+              user_concept_id: catalog.id,
+              name: catalog.description,
+              description: null,
+              tooth: finding.tooth_code,
+              area: finding.surface,
+              quantity: input.quantity,
+              unit_price: amount(cents(catalog.unit_price)),
+              subtotal: amount(subtotal),
+              phase: null,
+              priority: null,
+              notes: input.notes,
+              sort_order: 0,
+              status: 'PENDING',
+              completed_at: null,
+              odontogram_creation_key: key,
+              odontogram_creation_hash: hash,
+            },
+            { transaction }
+          );
+          await OdontogramFindingTreatmentItem.create(
+            { finding_id: finding.id, treatment_plan_item_id: item.id },
+            { transaction }
+          );
+          return item.id;
+        }
+      )
+      .catch((error) => {
+        if (error instanceof UniqueConstraintError)
+          return conflict(
+            'IDEMPOTENCY_KEY_REUSED',
+            'La llave ya se utilizó en otra operación. No se duplicó el tratamiento.'
+          );
+        throw error;
+      });
+    return {
+      odontogram: (await this.findById(userId, odontogramId))!,
+      treatmentId,
+    };
+  }
+
+  private async lockChartPatient(
+    userId: number,
+    odontogramId: number,
+    transaction: Transaction
+  ) {
+    const chart = await Odontogram.findOne({
+      where: { id: odontogramId, user_id: userId },
+      transaction,
+    });
+    if (!chart) throw odontogramNotFound();
+    await lockPatient(userId, chart.patient_id, transaction);
   }
 
   private async patientExists(userId: number, patientId: number) {

@@ -13,6 +13,9 @@ import {
   odontogramTreatmentLinkParamsSchema,
   patientOdontogramsParamsSchema,
   updateOdontogramSchema,
+  odontogramFindingParamsSchema,
+  odontogramCreationHeadersSchema,
+  createFindingTreatmentSchema,
 } from './odontogram.schemas';
 import {
   OdontogramService,
@@ -31,6 +34,15 @@ export const createOdontogramRouter = (
 
   router.use('/patients/:patientId/odontograms', ...privateRoute);
   router.use('/odontograms', ...privateRoute);
+  router.post(
+    '/odontograms/:odontogramId/findings/:findingId/treatments',
+    validateRequest({
+      params: odontogramFindingParamsSchema,
+      headers: odontogramCreationHeadersSchema,
+      body: createFindingTreatmentSchema,
+    }),
+    controller.createFindingTreatment
+  );
   router.get(
     '/patients/:patientId/odontograms',
     validateRequest({
