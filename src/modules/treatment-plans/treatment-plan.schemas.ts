@@ -115,13 +115,13 @@ const itemFields = {
 } as const;
 
 export const createTreatmentPlanItemSchema = z.strictObject({
-  userConceptId: itemFields.userConceptId.optional().default(null),
-  name: itemFields.name,
+  userConceptId: z.number().int().positive().max(4_294_967_295),
+  name: itemFields.name.optional().default(''),
   description: itemFields.description.optional().default(null),
   tooth: itemFields.tooth.optional().default(null),
   area: itemFields.area.optional().default(null),
   quantity: itemFields.quantity.optional().default('1.00'),
-  unitPrice: itemFields.unitPrice,
+  unitPrice: itemFields.unitPrice.optional().default('0.00'),
   phase: itemFields.phase.optional().default(null),
   priority: itemFields.priority.optional().default(null),
   notes: itemFields.notes.optional().default(null),
@@ -130,7 +130,7 @@ export const createTreatmentPlanItemSchema = z.strictObject({
 
 export const updateTreatmentPlanItemSchema = z
   .strictObject({
-    userConceptId: itemFields.userConceptId.optional(),
+    userConceptId: z.number().int().positive().max(4_294_967_295).optional(),
     name: itemFields.name.optional(),
     description: itemFields.description.optional(),
     tooth: itemFields.tooth.optional(),
@@ -181,3 +181,15 @@ export type PatientTreatmentPlansParams = z.infer<typeof patientTreatmentPlansPa
 export type TreatmentPlanParams = z.infer<typeof treatmentPlanParamsSchema>;
 export type TreatmentPlanItemParams = z.infer<typeof treatmentPlanItemParamsSchema>;
 export type ListTreatmentPlansQuery = z.infer<typeof listTreatmentPlansQuerySchema>;
+
+export const patientTreatmentParamsSchema = z.strictObject({ patientId: id, itemId: id });
+export const listPatientTreatmentsQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.union([z.enum(TREATMENT_PLAN_ITEM_STATUSES), z.literal('all')]).default('all'),
+  scope: z.enum(['all', 'independent', 'plan']).default('all'),
+  treatmentPlanId: id.optional(),
+}).refine(value => value.scope !== 'independent' || value.treatmentPlanId === undefined, {
+  path: ['treatmentPlanId'], message: 'El filtro de tratamientos independientes no admite un plan',
+});
+export type ListPatientTreatmentsQuery = z.infer<typeof listPatientTreatmentsQuerySchema>;

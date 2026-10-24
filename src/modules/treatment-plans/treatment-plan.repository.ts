@@ -9,6 +9,7 @@ import {
   CreateTreatmentPlanInput,
   CreateTreatmentPlanItemInput,
   ListTreatmentPlansQuery,
+  ListPatientTreatmentsQuery,
   UpdateTreatmentPlanInput,
   UpdateTreatmentPlanItemInput,
   UpdateTreatmentPlanItemStatusInput,
@@ -28,6 +29,7 @@ import {
   TreatmentPlanItemMutationData,
   TreatmentPlanPage,
   TreatmentPlanSummaryData,
+  PatientTreatmentData,
 } from './treatment-plan.types';
 
 const toDate = (value: string | null): Date | null =>
@@ -72,7 +74,7 @@ const mapPlanSummary = (plan: TreatmentPlan): TreatmentPlanSummaryData => ({
 
 const mapItem = (item: TreatmentPlanItem): TreatmentPlanItemData => ({
   id: item.id,
-  treatmentPlanId: item.treatment_plan_id,
+  treatmentPlanId: item.treatment_plan_id!,
   userConceptId: item.user_concept_id,
   name: item.name,
   description: item.description,
@@ -157,11 +159,13 @@ const ensureConcept = async (
   userConceptId: number | null | undefined,
   transaction: Transaction
 ) => {
-  if (userConceptId == null) return;
+  if (userConceptId == null) {
+    throw new TreatmentPlanError('TREATMENT_CATALOG_REQUIRED', 'Selecciona un tratamiento del catálogo');
+  }
   const concept = await UserConcept.findOne({
     where: { id: userConceptId, user_id: userId },
-    attributes: ['id'],
     transaction,
+    lock: transaction.LOCK.UPDATE,
   });
   if (!concept) {
     throw new TreatmentPlanError(
@@ -169,7 +173,34 @@ const ensureConcept = async (
       'Tratamiento del catálogo no encontrado'
     );
   }
+  if (!concept.active) {
+    throw new TreatmentPlanError('TREATMENT_CATALOG_ARCHIVED', 'El tratamiento del catálogo está archivado');
+  }
+  return concept;
 };
+
+const catalogInput = async (userId: number, input: CreateTreatmentPlanItemInput, transaction: Transaction) => {
+  const concept = await ensureConcept(userId, input.userConceptId, transaction);
+  return { ...input, name: concept.description, unitPrice: normalizeDecimal(concept.unit_price) };
+};
+
+const fixedPriceUpdate = async (
+  userId: number, item: TreatmentPlanItem, input: UpdateTreatmentPlanItemInput, transaction: Transaction
+): Promise<UpdateTreatmentPlanItemInput> => {
+  if (input.userConceptId !== undefined && input.userConceptId !== item.user_concept_id) {
+    const concept = await ensureConcept(userId, input.userConceptId, transaction);
+    return { ...input, name: concept.description, unitPrice: normalizeDecimal(concept.unit_price) };
+  }
+  if ((input.name !== undefined && input.name !== item.name) ||
+      (input.unitPrice !== undefined && input.unitPrice !== normalizeDecimal(item.unit_price))) {
+    throw new TreatmentPlanError('TREATMENT_PRICE_IMMUTABLE', 'El nombre y precio provienen del catálogo y no pueden editarse libremente');
+  }
+  return input;
+};
+
+const mapPatientTreatment = (item: TreatmentPlanItem): PatientTreatmentData => ({
+  ...mapItem(item), patientId: item.patient_id, treatmentPlanId: item.treatment_plan_id,
+});
 
 const recalculate = async (
   plan: TreatmentPlan,
@@ -253,6 +284,10 @@ const changedItemValues = (
 };
 
 export interface TreatmentPlanRepository {
+  listPatientTreatments(userId: number, patientId: number, query: ListPatientTreatmentsQuery): Promise<{ items: PatientTreatmentData[]; total: number }>;
+  createPatientTreatment(userId: number, patientId: number, input: CreateTreatmentPlanItemInput): Promise<PatientTreatmentData>;
+  updatePatientTreatment(userId: number, patientId: number, itemId: number, input: UpdateTreatmentPlanItemInput): Promise<PatientTreatmentData>;
+  updatePatientTreatmentStatus(userId: number, patientId: number, itemId: number, input: UpdateTreatmentPlanItemStatusInput): Promise<PatientTreatmentData>;
   patientExists(userId: number, patientId: number): Promise<boolean>;
   list(
     userId: number,
@@ -271,6 +306,63 @@ export interface TreatmentPlanRepository {
 }
 
 export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository {
+  async listPatientTreatments(userId: number, patientId: number, query: ListPatientTreatmentsQuery) {
+    if (!(await this.patientExists(userId, patientId))) throw new TreatmentPlanError('PATIENT_NOT_FOUND', 'Paciente no encontrado');
+    const where: WhereOptions = {
+      patient_id: patientId,
+      ...(query.status !== 'all' && { status: query.status }),
+      ...(query.scope === 'independent' && { treatment_plan_id: null }),
+      ...(query.scope === 'plan' && { treatment_plan_id: { [Op.ne]: null } }),
+      ...(query.treatmentPlanId !== undefined && { treatment_plan_id: query.treatmentPlanId }),
+    };
+    const { rows, count } = await TreatmentPlanItem.findAndCountAll({
+      where, limit: query.pageSize, offset: (query.page - 1) * query.pageSize,
+      order: [['created_at', 'DESC'], ['id', 'DESC']],
+    });
+    return { items: rows.map(mapPatientTreatment), total: count };
+  }
+
+  private async lockPatientTreatment(userId: number, patientId: number, itemId: number | null, transaction: Transaction) {
+    const patient = await Patient.findOne({ where: { id: patientId, user_id: userId }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!patient) throw new TreatmentPlanError('PATIENT_NOT_FOUND', 'Paciente no encontrado');
+    if (itemId === null) return null;
+    const item = await TreatmentPlanItem.findOne({ where: { id: itemId, patient_id: patientId }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!item) throw itemNotFound();
+    return item;
+  }
+
+  async createPatientTreatment(userId: number, patientId: number, input: CreateTreatmentPlanItemInput) {
+    return db.transaction(async transaction => {
+      await this.lockPatientTreatment(userId, patientId, null, transaction);
+      const normalized = await catalogInput(userId, input, transaction);
+      const item = await TreatmentPlanItem.create({
+        patient_id: patientId, treatment_plan_id: null, ...itemValues(normalized), status: 'PENDING', completed_at: null,
+      }, { transaction });
+      await item.reload({ transaction });
+      return mapPatientTreatment(item);
+    });
+  }
+
+  async updatePatientTreatment(userId: number, patientId: number, itemId: number, input: UpdateTreatmentPlanItemInput) {
+    return db.transaction(async transaction => {
+      const item = (await this.lockPatientTreatment(userId, patientId, itemId, transaction))!;
+      // Plan members must use the plan routes so totals and cancellation rules stay atomic.
+      if (item.treatment_plan_id !== null) throw new TreatmentPlanError('TREATMENT_PLAN_NOT_EDITABLE', 'Edita este tratamiento desde su plan');
+      await item.update(changedItemValues(item, await fixedPriceUpdate(userId, item, input, transaction)), { transaction });
+      await item.reload({ transaction });
+      return mapPatientTreatment(item);
+    });
+  }
+
+  async updatePatientTreatmentStatus(userId: number, patientId: number, itemId: number, input: UpdateTreatmentPlanItemStatusInput) {
+    return db.transaction(async transaction => {
+      const item = (await this.lockPatientTreatment(userId, patientId, itemId, transaction))!;
+      if (item.treatment_plan_id !== null) throw new TreatmentPlanError('TREATMENT_PLAN_NOT_EDITABLE', 'Actualiza este tratamiento desde su plan');
+      await item.update({ status: input.status, completed_at: input.status === 'COMPLETED' ? item.completed_at ?? new Date() : null }, { transaction });
+      await item.reload({ transaction });
+      return mapPatientTreatment(item);
+    });
+  }
   async patientExists(userId: number, patientId: number): Promise<boolean> {
     return (await Patient.count({ where: { id: patientId, user_id: userId } })) > 0;
   }
@@ -389,10 +481,11 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
     await db.transaction(async (transaction) => {
       const plan = await lockPlan(userId, treatmentPlanId, transaction);
       assertEditable(plan);
-      await ensureConcept(userId, input.userConceptId, transaction);
+      const normalized = await catalogInput(userId, input, transaction);
       const item = await TreatmentPlanItem.create({
         treatment_plan_id: plan.id,
-        ...itemValues(input),
+        patient_id: plan.patient_id,
+        ...itemValues(normalized),
         status: 'PENDING',
         completed_at: null,
       }, { transaction });
@@ -407,8 +500,7 @@ export class SequelizeTreatmentPlanRepository implements TreatmentPlanRepository
       const plan = await lockPlan(userId, treatmentPlanId, transaction);
       assertEditable(plan);
       const item = await findItem(plan.id, itemId, transaction);
-      await ensureConcept(userId, input.userConceptId, transaction);
-      await item.update(changedItemValues(item, input), { transaction });
+      await item.update(changedItemValues(item, await fixedPriceUpdate(userId, item, input, transaction)), { transaction });
       await recalculate(plan, transaction);
     });
     return this.mutationResult(userId, treatmentPlanId, itemId);

@@ -4,6 +4,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../src/app';
+import { createCatalogEntry } from './catalog-helper';
 import db from '../../src/db/connection';
 import Odontogram from '../../src/models/odontogram.model';
 import Patient from '../../src/models/patient.model';
@@ -205,7 +206,7 @@ describe('odontogram finding treatment links', () => {
     const item = await request(app)
       .post(`/api/v1/treatment-plans/${plan.body.data.id}/items`)
       .set(bearer(tokenA))
-      .send({ name: 'Resina', unitPrice: '250.00' });
+      .send({ userConceptId: await createCatalogEntry(app, tokenA, 'Resina', '250.00') });
     expect(item.status).toBe(201);
     const itemId = item.body.data.item.id as number;
     const path = `/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${itemId}`;
@@ -217,7 +218,7 @@ describe('odontogram finding treatment links', () => {
     const foreignItem = await request(app)
       .post(`/api/v1/treatment-plans/${foreignPlan.body.data.id}/items`)
       .set(bearer(tokenB))
-      .send({ name: 'Resina ajena', unitPrice: '1.00' });
+      .send({ userConceptId: await createCatalogEntry(app, tokenB, 'Resina ajena', '1.00') });
     const foreignLink = await request(app)
       .put(`/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${foreignItem.body.data.item.id}`)
       .set(bearer(tokenA));
@@ -231,7 +232,7 @@ describe('odontogram finding treatment links', () => {
     const otherItem = await request(app)
       .post(`/api/v1/treatment-plans/${otherPlan.body.data.id}/items`)
       .set(bearer(tokenA))
-      .send({ name: 'Tratamiento distinto', unitPrice: '1.00' });
+      .send({ userConceptId: await createCatalogEntry(app, tokenA, 'Tratamiento distinto', '1.00') });
     const mismatch = await request(app)
       .put(`/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${otherItem.body.data.item.id}`)
       .set(bearer(tokenA));
@@ -247,7 +248,7 @@ describe('odontogram finding treatment links', () => {
       {
         id: itemId,
         treatmentPlanId: plan.body.data.id,
-        userConceptId: null,
+        userConceptId: item.body.data.item.userConceptId,
         name: 'Resina',
         status: 'PENDING',
       },
@@ -255,7 +256,7 @@ describe('odontogram finding treatment links', () => {
     const secondItem = await request(app)
       .post(`/api/v1/treatment-plans/${plan.body.data.id}/items`)
       .set(bearer(tokenA))
-      .send({ name: 'Corona', unitPrice: '500.00' });
+      .send({ userConceptId: await createCatalogEntry(app, tokenA, 'Corona', '500.00') });
     const secondItemId = secondItem.body.data.item.id as number;
     const secondPath = `/api/v1/odontograms/${chartId}/findings/${findingId}/treatment-items/${secondItemId}`;
     const secondLink = await request(app)

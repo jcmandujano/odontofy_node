@@ -11,7 +11,8 @@ import {
 
 interface TreatmentPlanItemAttributes {
   id: number;
-  treatment_plan_id: number;
+  treatment_plan_id: number | null;
+  patient_id: number;
   user_concept_id: number | null;
   name: string;
   description: string | null;
@@ -32,7 +33,8 @@ type TreatmentPlanItemCreationAttributes = Optional<TreatmentPlanItemAttributes,
 
 class TreatmentPlanItem extends Model<TreatmentPlanItemAttributes, TreatmentPlanItemCreationAttributes> implements TreatmentPlanItemAttributes {
   public id!: number;
-  public treatment_plan_id!: number;
+  public treatment_plan_id!: number | null;
+  public patient_id!: number;
   public user_concept_id!: number | null;
   public name!: string;
   public description!: string | null;
@@ -60,8 +62,9 @@ TreatmentPlanItem.init(
     },
     treatment_plan_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
+      allowNull: true,
     },
+    patient_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     user_concept_id: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,

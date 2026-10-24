@@ -5,6 +5,7 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { createApp } from '../../src/app'
+import { createCatalogEntry } from './catalog-helper'
 import db from '../../src/db/connection'
 import EvolutionNoteRevision from '../../src/models/evolution-note-revision.model'
 import EvolutionNote from '../../src/models/evolution-note.model'
@@ -68,7 +69,7 @@ const createPlanAndItem = async (
   const item = await request(app)
     .post(`/api/v1/treatment-plans/${plan.body.data.id}/items`)
     .set(bearer(token))
-    .send({ name: `Clinical item ${suffix}`, unitPrice: '100.00' })
+    .send({ userConceptId: await createCatalogEntry(app, token, `Clinical item ${suffix}`, '100.00') })
   expect(item.status).toBe(201)
   return {
     planId: plan.body.data.id as number,
@@ -235,7 +236,7 @@ describe('clinical records v1 ownership and provenance', () => {
     const item = await request(app)
       .post(`/api/v1/treatment-plans/${planAId}/items`)
       .set(bearer(tokenA))
-      .send({ name: 'Cancelled item', unitPrice: '20.00' })
+      .send({ userConceptId: await createCatalogEntry(app, tokenA, 'Cancelled item', '20.00') })
     const cancelledItemId = item.body.data.item.id as number
     await request(app)
       .delete(`/api/v1/treatment-plans/${planAId}/items/${cancelledItemId}`)
