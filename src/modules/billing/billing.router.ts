@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { authenticatedUserId } from '../identity/identity.middleware'
 import { sendSuccess } from '../../platform/http/response'
 import { TreatmentChargeService } from './treatment-charge.service'
+import { creditQuery, creditPaymentParams, applyCreditSchema, type CreditQuery, type ApplyCreditInput } from './treatment-charge.schemas'
 import { chargePatientParams, chargeTreatmentParams, chargeQuery, confirmChargeSchema, treatmentPaymentSchema, type ChargeQuery, type ConfirmChargeInput, type TreatmentPaymentInput } from './treatment-charge.schemas'
 
 import { noStore } from '../../platform/http/cache.middleware'
@@ -35,6 +36,16 @@ export const createBillingRouter = (
   const controller = createBillingController(new BillingService(dependencies))
   const privateRoute = [noStore, authenticate(identityService)]
   const charges = new TreatmentChargeService()
+  router.use('/patients/:patientId/treatment-credits', ...privateRoute)
+  router.get('/patients/:patientId/treatment-credits', validateRequest({ params: chargePatientParams, query: creditQuery }), async (req, res) => {
+    const { patientId } = req.validated!.params as { patientId: number }
+    const result = await charges.creditList(authenticatedUserId(req), patientId, req.validated!.query as CreditQuery)
+    return sendSuccess(req, res, result.records, { message: 'Anticipos obtenidos', meta: { pagination: result.pagination, availableCredit: result.availableCredit } })
+  })
+  router.post('/patients/:patientId/treatment-credits/:paymentId/applications', validateRequest({ params: creditPaymentParams, headers: idempotencyHeadersSchema, body: applyCreditSchema }), async (req, res) => {
+    const { patientId, paymentId } = req.validated!.params as { patientId: number; paymentId: number }
+    return sendSuccess(req, res, await charges.applyCredit(authenticatedUserId(req), patientId, paymentId, req.validated!.body as ApplyCreditInput, req.get('Idempotency-Key')!), { statusCode: 201, message: 'Anticipo aplicado sin registrar otro ingreso' })
+  })
   router.use('/patients/:patientId/treatment-charges', ...privateRoute)
   router.use('/patients/:patientId/treatment-payments', ...privateRoute)
   router.get('/patients/:patientId/treatment-charges', validateRequest({ params: chargePatientParams, query: chargeQuery }), async (req, res) => {

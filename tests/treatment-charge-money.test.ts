@@ -7,9 +7,64 @@ import {
 import {
   confirmChargeSchema,
   treatmentPaymentSchema,
+  applyCreditSchema,
 } from '../src/modules/billing/treatment-charge.schemas'
 
 describe('charge arithmetic and validation', () => {
+  it('requires a catalog treatment for unallocated money and validates credit applications', () => {
+    const base = {
+      occurredOn: new Date().toISOString().slice(0, 10),
+      paymentMethod: 'CASH',
+      allocations: [],
+    }
+    expect(
+      treatmentPaymentSchema.safeParse({ ...base, amountReceived: '1200' })
+        .success
+    ).toBe(false)
+    expect(
+      treatmentPaymentSchema.parse({
+        ...base,
+        sourceTreatmentId: 5,
+        amountReceived: '1200',
+      }).amountReceived
+    ).toBe('1200.00')
+    expect(
+      treatmentPaymentSchema.safeParse({
+        ...base,
+        sourceTreatmentId: 5,
+        amountReceived: '0',
+      }).success
+    ).toBe(false)
+    expect(
+      treatmentPaymentSchema.safeParse({
+        ...base,
+        sourceTreatmentId: 5,
+        amountReceived: '10',
+        allocations: [{ chargeId: 1, amount: '11' }],
+      }).success
+    ).toBe(false)
+    expect(
+      applyCreditSchema.safeParse({
+        occurredOn: base.occurredOn,
+        allocations: [],
+      }).success
+    ).toBe(false)
+    expect(
+      applyCreditSchema.safeParse({
+        occurredOn: base.occurredOn,
+        allocations: [{ chargeId: 1, amount: '0' }],
+      }).success
+    ).toBe(false)
+    expect(
+      applyCreditSchema.safeParse({
+        occurredOn: base.occurredOn,
+        allocations: [
+          { chargeId: 1, amount: '1' },
+          { chargeId: 1, amount: '2' },
+        ],
+      }).success
+    ).toBe(false)
+  })
   it('distributes discounts exactly and independently of input order', () => {
     const items = [
       { id: 3, subtotal: '0.01' },

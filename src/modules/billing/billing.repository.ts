@@ -6,7 +6,7 @@ import TreatmentCharge from '../../models/treatment-charge.model'
 import PaymentAllocation from '../../models/payment-allocation.model'
 import TreatmentPlanItem from '../../models/treatment-plan-item.model'
 import { ApiError } from '../../platform/http/api-error'
-import { cents } from '../../platform/finance-money'
+import { amount, cents } from '../../platform/finance-money'
 import Patient from '../../models/patient.model'
 import PaymentRevision from '../../models/payment-revision.model'
 import Payment from '../../models/payment.model'
@@ -80,6 +80,8 @@ const mapRecord = (
   items: PaymentUser[]
 ): BillingRecordData => ({
   recordKind: payment.record_kind,
+  advanceTreatmentId: payment.advance_treatment_id,
+  advanceTreatmentName: payment.advance_treatment_name,
   id: payment.id,
   patientId: payment.patientId,
   occurredOn: payment.payment_date,
@@ -725,7 +727,9 @@ export class SequelizeBillingRepository implements BillingRepository {
     const rows = await PaymentAllocation.findAll({ where: { payment_id: { [Op.in]: ids } }, transaction })
     const charges = await TreatmentCharge.findAll({ where: { id: { [Op.in]: rows.map(row => row.charge_id) } }, transaction })
     const byId = new Map(charges.map(charge => [charge.id, charge]))
-    return records.map(record => record.recordKind !== 'TREATMENT_PAYMENT' ? record : { ...record, allocations: rows.filter(row => row.payment_id === record.id).map(row => ({ chargeId: row.charge_id, treatmentId: byId.get(row.charge_id)!.treatment_id, description: byId.get(row.charge_id)!.description, amount: normalizeBillingDecimal(row.amount) })) })
+    return records.map(record => record.recordKind !== 'TREATMENT_PAYMENT' ? record : { ...record,
+      availableCredit: record.status === 'POSTED' ? amount(cents(record.amountReceived) - rows.filter(row => row.payment_id === record.id).reduce((sum, row) => sum + cents(row.amount), 0n)) : '0.00',
+      allocations: rows.filter(row => row.payment_id === record.id).map(row => ({ chargeId: row.charge_id, treatmentId: byId.get(row.charge_id)!.treatment_id, description: byId.get(row.charge_id)!.description, amount: normalizeBillingDecimal(row.amount) })) })
   }
 
   private mapRevision(revision: PaymentRevision): BillingRecordRevisionData {
