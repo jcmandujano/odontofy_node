@@ -8,6 +8,9 @@ import {
 } from '../types/treatment-plan.enums';
 
 interface TreatmentPlanAttributes {
+  source_odontogram_id: number | null;
+  odontogram_creation_key: string | null;
+  odontogram_creation_hash: string | null;
   id: number;
   user_id: number;
   patient_id: number;
@@ -28,9 +31,12 @@ interface TreatmentPlanAttributes {
   total: string | number;
 }
 
-type TreatmentPlanCreationAttributes = Optional<TreatmentPlanAttributes, 'id'>;
+type TreatmentPlanCreationAttributes = Optional<TreatmentPlanAttributes, 'id' | 'source_odontogram_id' | 'odontogram_creation_key' | 'odontogram_creation_hash'>;
 
 class TreatmentPlan extends Model<TreatmentPlanAttributes, TreatmentPlanCreationAttributes> implements TreatmentPlanAttributes {
+  declare source_odontogram_id: number | null;
+  declare odontogram_creation_key: string | null;
+  declare odontogram_creation_hash: string | null;
   public id!: number;
   public user_id!: number;
   public patient_id!: number;
@@ -55,6 +61,9 @@ class TreatmentPlan extends Model<TreatmentPlanAttributes, TreatmentPlanCreation
 
 TreatmentPlan.init(
   {
+    source_odontogram_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    odontogram_creation_key: { type: DataTypes.STRING(36), allowNull: true },
+    odontogram_creation_hash: { type: DataTypes.STRING(64), allowNull: true },
     id: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,

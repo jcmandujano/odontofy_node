@@ -527,6 +527,98 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/OdontogramNotFound'
+  /odontograms/{odontogramId}/treatment-plan-preview:
+    parameters:
+      - $ref: '#/components/parameters/OdontogramId'
+    get:
+      operationId: previewOdontogramTreatmentPlan
+      tags: [Odontograms]
+      summary: Revisa los tratamientos únicos del odontograma para agruparlos sin duplicar.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Cada tratamiento aparece una sola vez con sus hallazgos y revisión. El disponible no crea un plan ni movimientos financieros.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/BaseResponse' }
+                  - type: object
+                    properties:
+                      success: { const: true }
+                      errors: { type: 'null' }
+                      data:
+                        type: object
+                        required: [odontogramId, patientId, title, archived, treatments]
+                        properties:
+                          odontogramId: { type: integer, minimum: 1 }
+                          patientId: { type: integer, minimum: 1 }
+                          title: { type: [string, 'null'] }
+                          archived: { type: boolean }
+                          treatments:
+                            type: array
+                            items: { $ref: '#/components/schemas/OdontogramPlanCandidate' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OdontogramNotFound' }
+  /odontograms/{odontogramId}/treatment-plans:
+    parameters:
+      - $ref: '#/components/parameters/OdontogramId'
+    post:
+      operationId: createTreatmentPlanFromOdontogram
+      tags: [Odontograms]
+      summary: Agrupa tratamientos existentes en un borrador, sin duplicarlos ni generar cargos.
+      description: Solo tratamientos del catálogo, independientes, no cancelados, sin cargos confirmados y aún vinculados al odontograma. Verifica revisiones e importe revisado. Mueve las mismas filas conservando hallazgos, datos clínicos y anticipos. Inicia DRAFT, descuento cero, sin aceptación ni cobros. Idempotente por llave, usuario, odontograma y solicitud normalizada.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, expectedSubtotal, treatments]
+              additionalProperties: false
+              properties:
+                title: { type: string, minLength: 1, maxLength: 255 }
+                expectedSubtotal: { $ref: '#/components/schemas/BillingMoney' }
+                treatments:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  description: Sin IDs repetidos; la revisión proviene de la previsualización.
+                  items:
+                    type: object
+                    required: [treatmentId, revision]
+                    additionalProperties: false
+                    properties:
+                      treatmentId: { type: integer, minimum: 1, maximum: 4294967295 }
+                      revision: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '201':
+          description: Borrador creado o resultado de la operación original; reintentar no genera un segundo plan.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/BaseResponse' }
+                  - type: object
+                    properties:
+                      success: { const: true }
+                      errors: { type: 'null' }
+                      data:
+                        type: object
+                        required: [treatmentPlanId, patientId]
+                        properties:
+                          treatmentPlanId: { type: integer, minimum: 1 }
+                          patientId: { type: integer, minimum: 1 }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OdontogramNotFound' }
+        '409': { $ref: '#/components/responses/OdontogramConflict' }
   /odontograms/{odontogramId}/findings/{findingId}/treatments:
     parameters:
       - $ref: '#/components/parameters/OdontogramId'
@@ -3132,6 +3224,34 @@ components:
         status:
           $ref: '#/components/schemas/TreatmentPlanItemStatus'
       additionalProperties: false
+    OdontogramPlanCandidate:
+      type: object
+      required: [treatmentId, treatmentPlanId, userConceptId, name, tooth, area, notes, clinicalStatus, quantity, unitPrice, subtotal, findings, reason, eligible, revision]
+      properties:
+        treatmentId: { type: integer, minimum: 1 }
+        treatmentPlanId: { type: [integer, 'null'], minimum: 1 }
+        userConceptId: { type: [integer, 'null'], minimum: 1 }
+        name: { type: string }
+        tooth: { type: [string, 'null'] }
+        area: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        clinicalStatus: { $ref: '#/components/schemas/TreatmentPlanItemStatus' }
+        quantity: { type: string }
+        unitPrice: { $ref: '#/components/schemas/BillingMoney' }
+        subtotal: { $ref: '#/components/schemas/BillingMoney' }
+        eligible: { type: boolean }
+        reason: { type: [string, 'null'], enum: [ALREADY_IN_PLAN, CANCELLED, CATALOG_REQUIRED, CHARGE_CONFIRMED, null] }
+        revision: { type: string, pattern: '^[a-f0-9]{64}$' }
+        findings:
+          type: array
+          items:
+            type: object
+            required: [findingId, toothCode, condition, surface]
+            properties:
+              findingId: { type: integer, minimum: 1 }
+              toothCode: { type: string }
+              condition: { type: string }
+              surface: { type: [string, 'null'] }
     PublicTreatmentPlanSummary:
       type: object
       required:
@@ -3148,6 +3268,7 @@ components:
         - createdAt
         - updatedAt
       properties:
+        sourceOdontogramId: { type: [integer, 'null'], minimum: 1 }
         id:
           type: integer
           minimum: 1

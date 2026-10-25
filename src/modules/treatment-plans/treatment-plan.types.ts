@@ -6,6 +6,7 @@ import type {
 import type { OdontogramReference } from '../../types/odontogram-reference';
 
 export interface TreatmentPlanData {
+  sourceOdontogramId?: number | null;
   id: number;
   patientId: number;
   title: string;
@@ -28,6 +29,7 @@ export interface TreatmentPlanData {
 }
 
 export interface TreatmentPlanSummaryData {
+  sourceOdontogramId?: number | null;
   id: number;
   patientId: number;
   title: string;
