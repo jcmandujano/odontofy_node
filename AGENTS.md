@@ -11,6 +11,8 @@ Odontofy ayuda al médico a gestionar su consulta de forma práctica y amigable.
 
 ## Reglas del dominio
 
+Consultar [docs/product-rules.md](docs/product-rules.md) antes de analizar o modificar tratamientos, odontogramas, planes o pagos. Es la referencia funcional compartida con UI; distingue reglas acordadas, compatibilidad y límites actuales.
+
 - El catálogo de tratamientos es la fuente de los nuevos tratamientos y servicios cobrados. No permitir nuevos servicios de texto libre ajenos al catálogo.
 - Mantener las instantáneas históricas de nombre y precio; editar el catálogo no debe reescribir tratamientos ni movimientos anteriores.
 - Un tratamiento del paciente puede ser independiente o pertenecer a un plan. El plan es una agrupación opcional para cotización y seguimiento.
