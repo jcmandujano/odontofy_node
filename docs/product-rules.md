@@ -1,4 +1,33 @@
-# Reglas de producto: tratamientos, odontogramas, planes y pagos
+# Reglas de producto de Odontofy
+
+## Alcance vigente del MVP — 12 de noviembre de 2026
+
+Esta sección reemplaza el alcance anterior de tratamientos y planes descrito más abajo. El usuario decidió priorizar una aplicación práctica de gestión del consultorio. El [plan de simplificación](mvp-functional-scope.md) documenta las dependencias y fases; esta entrega solo define alcance y no cambia la aplicación.
+
+| Área | Incluido |
+| --- | --- |
+| Acceso | Registro e inicio de sesión. |
+| Configuración | Catálogo de tratamientos con precios, catálogo de consentimientos informados e información del médico. |
+| Agenda | Gestión de citas locales, conexión con Google Calendar y sincronización de citas. |
+| Pacientes | Ficha de identificación e información clínica existente del paciente. |
+| Pagos | Registro directo desde el catálogo de tratamientos, historial y gestión de movimientos y adeudos. |
+| Notas de evolución | Notas generales del paciente, con fecha y contenido clínico; consulta, edición y trazabilidad existentes. |
+| Consentimientos | Selección, impresión y gestión de documentos firmados del paciente. |
+| Odontograma | Creación y consulta de odontogramas adultos y pediátricos con hallazgos; captura y corrección de hallazgos para mantener el registro. Sin asociar tratamientos ni generar planes. |
+
+- El catálogo de tratamientos permanece dentro del MVP. El módulo separado de tratamientos del paciente y los planes quedan fuera de la experiencia objetivo, junto con las relaciones entre odontograma, tratamientos, planes y notas.
+- Cada nuevo servicio cobrado procede del catálogo del médico. No hay precio unitario libre en el pago; si falta un servicio, se crea primero en configuración. El importe recibido es un dato distinto del precio y puede capturarse.
+- Los cambios del catálogo no reescriben precios ni descripciones de movimientos existentes. Cantidades y descuentos actuales no se eliminan por esta decisión; cualquier ajuste debe delimitarse en la fase de pagos.
+- Registrar una nota no exige crear un tratamiento, seleccionar un plan, registrar un pago ni disponer de odontograma. El catálogo se utiliza para cobro, sin asociación clínica obligatoria con notas.
+- Crear o actualizar hallazgos no genera tratamientos, planes, cargos ni pagos. Se conservan varios odontogramas por paciente.
+- No ampliar el MVP con estados clínicos de tratamientos, cotizaciones, distribución manual de anticipos ni seguimiento por planes. Los mecanismos ya implementados se conservan hasta resolver su compatibilidad, sin exigirlos para una atención nueva del MVP.
+- Toda simplificación conserva propiedad, autorización, validación monetaria y auditoría. No modificar saldos, pagos o relaciones históricas por ocultar controles.
+- El usuario confirmó que sus odontogramas actuales son de prueba y prevé eliminarlos posteriormente vía SQL. Esta fase no ejecuta limpieza, no supone vacías otras tablas y no autoriza borrados genéricos.
+- La edición de hallazgos se incluye como capacidad necesaria de captura; no se incorpora cierre clínico irreversible ni un nuevo ciclo de aprobación.
+
+## Antecedentes del alcance anterior
+
+El contenido siguiente documenta el diseño implementado antes de acotar el MVP. Se conserva para interpretar contratos, relaciones y datos existentes. No obliga a mantener esos módulos visibles ni a implementar sus recorridos en el MVP vigente. En caso de conflicto, aplicar el alcance vigente anterior y las instrucciones posteriores del usuario.
 
 ## Propósito y uso
 
