@@ -15,13 +15,12 @@ Consultar [docs/product-rules.md](docs/product-rules.md) antes de analizar o mod
 
 - El catálogo de tratamientos es la fuente de los nuevos tratamientos y servicios cobrados. No permitir nuevos servicios de texto libre ajenos al catálogo.
 - Mantener las instantáneas históricas de nombre y precio; editar el catálogo no debe reescribir tratamientos ni movimientos anteriores.
-- Un tratamiento del paciente puede ser independiente o pertenecer a un plan. El plan es una agrupación opcional para cotización y seguimiento.
-- Un paciente puede tener varios odontogramas, de adulto o pediátricos. Los hallazgos pueden ser referencia clínica y asociarse opcionalmente a tratamientos.
-- Citas, tratamientos y notas de evolución pueden existir sin odontograma. No introducir dependencias obligatorias entre estos flujos.
-- Generar un plan desde el odontograma debe reutilizar los tratamientos elegibles existentes, sin duplicarlos ni perder sus relaciones.
-- Crear o aceptar una cotización o plan, asociar tratamientos y completar su estado clínico no genera deuda. Solo la confirmación explícita del cargo la genera.
-- Mantener separados el estado clínico y el financiero. Los pagos pueden aplicarse a tratamientos independientes o incluidos en planes.
-- Los anticipos deben tener como origen un tratamiento del paciente vinculado al catálogo. Aplicar saldo disponible requiere una acción explícita y no debe registrar ingreso nuevamente.
+- Consultar [docs/mvp-functional-scope.md](docs/mvp-functional-scope.md): el MVP vigente incluye acceso, configuración, agenda local/Google, ficha, pagos directos de catálogo, notas generales, consentimientos y odontograma de referencia.
+- Los módulos de tratamientos del paciente, planes y relaciones con odontograma quedan fuera de la experiencia objetivo. No ampliarlos como requisito del MVP.
+- Un paciente puede tener varios odontogramas adultos o pediátricos con hallazgos, sin crear tratamientos ni planes. Notas, citas y pagos no requieren odontograma.
+- Registrar pagos directamente desde el catálogo, con precio unitario determinado en servidor. El importe recibido es distinto del precio y admite captura.
+- Las notas generales no requieren tratamiento ni plan. Conservar referencias previas al editar datos históricos.
+- Mantener separados datos clínicos y financieros. Los cargos y anticipos previos conservan sus reglas y trazabilidad hasta resolver su compatibilidad en la fase de pagos; no ocultar saldos ni generar ingresos duplicados.
 - Conservar la compatibilidad de registros históricos, sin inferir asociaciones financieras ni migrar silenciosamente datos manuales.
 
 ## Arquitectura y contratos
