@@ -10,6 +10,7 @@ import type {
   CorrectBillingRecordInput,
   CreateBillingConceptInput,
   CreateBillingRecordInput,
+  CreateBillingInstallmentInput,
   ListBillingConceptsQuery,
   ListBillingRecordsQuery,
   ListBillingRevisionsQuery,
@@ -98,7 +99,7 @@ export class BillingService {
   ) {
     const result = await this.repository.listRecords(userId, patientId, query)
     if (!result) throw this.patientNotFound()
-    return this.page(result, query.page, query.pageSize, serializeRecord)
+    return { ...this.page(result, query.page, query.pageSize, serializeRecord), hasTreatmentFinance: result.hasTreatmentFinance ?? false }
   }
 
   async getRecord(userId: number, patientId: number, recordId: number) {
@@ -125,6 +126,11 @@ export class BillingService {
         requestHash
       )
     )
+  }
+
+  async createInstallment(userId: number, patientId: number, recordId: number, input: CreateBillingInstallmentInput, key: string) {
+    const hash = createHash('sha256').update(JSON.stringify({ operation: 'billing-installment', patientId, recordId, input })).digest('hex')
+    return serializeRecord(await this.repository.createInstallment(userId, patientId, recordId, input, key, hash))
   }
 
   async correctRecord(

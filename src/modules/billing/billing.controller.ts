@@ -10,6 +10,7 @@ import type {
   CorrectBillingRecordInput,
   CreateBillingConceptInput,
   CreateBillingRecordInput,
+  CreateBillingInstallmentInput,
   IdempotencyHeaders,
   ListBillingConceptsQuery,
   ListBillingRecordsQuery,
@@ -96,7 +97,7 @@ export const createBillingController = (service: BillingService) => {
     )
     return sendSuccess(req, res, result.records, {
       message: 'Registros financieros obtenidos',
-      meta: { pagination: result.pagination },
+      meta: { pagination: result.pagination, hasTreatmentFinance: result.hasTreatmentFinance },
     })
   }
 
@@ -126,6 +127,11 @@ export const createBillingController = (service: BillingService) => {
       ),
       { message: 'Registro financiero creado', statusCode: 201 }
     )
+
+  const createInstallment: RequestHandler = async (req, res) => {
+    const params = validated<BillingRecordParams>(req, 'params')
+    return sendSuccess(req, res, await service.createInstallment(authenticatedUserId(req), params.patientId, params.billingRecordId, validated<CreateBillingInstallmentInput>(req, 'body'), validated<IdempotencyHeaders>(req, 'headers')['idempotency-key']), { message: 'Abono registrado', statusCode: 201 })
+  }
 
   const correctRecord: RequestHandler = async (req, res) => {
     const params = validated<BillingRecordParams>(req, 'params')
@@ -188,6 +194,7 @@ export const createBillingController = (service: BillingService) => {
     correctRecord,
     createConcept,
     createRecord,
+    createInstallment,
     getConcept,
     getRecord,
     listConcepts,

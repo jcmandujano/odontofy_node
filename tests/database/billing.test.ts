@@ -188,18 +188,18 @@ describe('billing v1 ownership, history, and balances', () => {
         amountReceived: '5.00',
         paymentMethod: 'CASH',
         items: [{ conceptId: conceptAId, quantity: 1 }],
-        changeReason: 'Precio vigente confirmado por el consultorio',
+        changeReason: 'Corrección de cantidad conservando el precio original',
       })
     const patient = await request(app)
       .get(`/api/v1/patients/${patientAId}`)
       .set(bearer(tokenA))
     expect(corrected.body.data).toMatchObject({
-      total: '20.00',
-      balanceChange: '15.00',
-      balanceAfter: '20.00',
+      total: '10.10',
+      balanceChange: '5.10',
+      balanceAfter: '10.10',
       version: 2,
     })
-    expect(patient.body.data.currentBalance).toBe('20.00')
+    expect(patient.body.data.currentBalance).toBe('10.10')
   })
 
   it('cancels logically, keeps revisions, and excludes the record by default', async () => {
@@ -256,11 +256,11 @@ describe('billing v1 ownership, history, and balances', () => {
     expect(foreignRecord.status).toBe(404)
     expect(foreignConcept.status).toBe(404)
     expect(summary.body.data).toEqual({
-      totalBilled: '20.00',
+      totalBilled: '10.10',
       totalReceived: '5.00',
       totalDiscount: '0.00',
-      netChange: '15.00',
-      currentBalance: '15.00',
+      netChange: '5.10',
+      currentBalance: '5.10',
     })
   })
 

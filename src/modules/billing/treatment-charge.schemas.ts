@@ -27,6 +27,7 @@ export const chargeQuery = z
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     scope: z.enum(['all', 'independent', 'plan']).default('all'),
     treatmentPlanId: id.optional(),
+    confirmedOnly: z.enum(['true', 'false']).transform(value => value === 'true').optional(),
   })
   .refine(
     (value) =>

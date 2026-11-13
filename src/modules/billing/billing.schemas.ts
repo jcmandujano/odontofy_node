@@ -123,6 +123,15 @@ export const correctBillingRecordSchema = z
   })
   .superRefine(validateRecord)
 
+export const createBillingInstallmentSchema = z.strictObject({
+  occurredOn: z.iso.date(),
+  amountReceived: decimal.refine(value => value !== '0.00', 'El abono debe ser mayor a cero'),
+  paymentMethod: z.enum(BILLING_PAYMENT_METHODS),
+}).refine(value => value.occurredOn <= new Date().toISOString().slice(0, 10), {
+  path: ['occurredOn'], message: 'La fecha del abono no puede estar en el futuro',
+})
+export type CreateBillingInstallmentInput = z.infer<typeof createBillingInstallmentSchema>
+
 export const cancelBillingRecordSchema = z.strictObject({
   changeReason: text(500),
 })

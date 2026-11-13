@@ -1417,6 +1417,9 @@ paths:
       summary: Consulta cotizaciones, cargos confirmados y abonos por tratamiento.
       security: [{ bearerAuth: [] }]
       parameters:
+        - name: confirmedOnly
+          in: query
+          schema: { type: boolean, default: false }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
         - name: scope
@@ -1654,6 +1657,32 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/BillingNotFound'
+  /patients/{patientId}/billing-records/{billingRecordId}/installments:
+    parameters:
+      - $ref: '#/components/parameters/PatientId'
+      - $ref: '#/components/parameters/BillingRecordId'
+    post:
+      operationId: createBillingInstallment
+      tags: [Billing]
+      summary: Registra un abono a servicios de catálogo existentes sin repetir el cobro.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBillingInstallmentRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/BillingRecordResource' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/BillingNotFound' }
+        '409': { $ref: '#/components/responses/BillingConflict' }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
   /patients/{patientId}/billing-records/{billingRecordId}/correction:
     parameters:
       - $ref: '#/components/parameters/PatientId'
@@ -4596,6 +4625,17 @@ components:
           items:
             $ref: '#/components/schemas/BillingRecordItemRequest'
       additionalProperties: false
+    CreateBillingInstallmentRequest:
+      type: object
+      required: [occurredOn, amountReceived, paymentMethod]
+      properties:
+        occurredOn: { type: string, format: date }
+        amountReceived:
+          type: string
+          pattern: '^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$'
+          description: Importe positivo hasta el adeudo pendiente. No se permiten fechas futuras ni anteriores al servicio.
+        paymentMethod: { $ref: '#/components/schemas/BillingPaymentMethod' }
+      additionalProperties: false
     CorrectBillingRecordRequest:
       type: object
       required: [occurredOn, items, changeReason]
@@ -4682,6 +4722,11 @@ components:
         - createdAt
         - updatedAt
       properties:
+        sourceBillingRecordId: { type: [integer, 'null'], minimum: 1 }
+        sourceDescription: { type: string }
+        amountPaid: { $ref: '#/components/schemas/BillingMoney' }
+        outstandingAmount: { $ref: '#/components/schemas/BillingMoney' }
+        hasInstallments: { type: boolean }
         advanceTreatmentId: { type: [integer, 'null'], minimum: 1 }
         advanceTreatmentName: { type: [string, 'null'] }
         availableCredit: { $ref: '#/components/schemas/BillingMoney' }
@@ -4830,6 +4875,7 @@ components:
             errors:
               type: 'null'
     BillingRecordListResponse:
+      description: Incluye meta.hasTreatmentFinance para indicar cargos o anticipos anteriores del paciente, sin depender de la página actual.
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object

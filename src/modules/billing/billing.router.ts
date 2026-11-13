@@ -19,6 +19,7 @@ import {
   correctBillingRecordSchema,
   createBillingConceptSchema,
   createBillingRecordSchema,
+  createBillingInstallmentSchema,
   idempotencyHeadersSchema,
   listBillingConceptsQuerySchema,
   listBillingRecordsQuerySchema,
@@ -124,6 +125,11 @@ export const createBillingRouter = (
     '/patients/:patientId/billing-records/:billingRecordId',
     validateRequest({ params: billingRecordParamsSchema }),
     controller.getRecord
+  )
+  router.post(
+    '/patients/:patientId/billing-records/:billingRecordId/installments',
+    validateRequest({ params: billingRecordParamsSchema, headers: idempotencyHeadersSchema, body: createBillingInstallmentSchema }),
+    controller.createInstallment
   )
   router.put(
     '/patients/:patientId/billing-records/:billingRecordId/correction',
