@@ -21,6 +21,7 @@ import {
   CorrectBillingRecordInput,
   CreateBillingConceptInput,
   CreateBillingRecordInput,
+  CreateBillingInstallmentInput,
   ListBillingConceptsQuery,
   ListBillingRecordsQuery,
   ListBillingRevisionsQuery,
@@ -79,6 +80,7 @@ const mapRecord = (
   payment: Payment,
   items: PaymentUser[]
 ): BillingRecordData => ({
+  sourceBillingRecordId: payment.source_billing_record_id,
   recordKind: payment.record_kind,
   advanceTreatmentId: payment.advance_treatment_id,
   advanceTreatmentName: payment.advance_treatment_name,
@@ -175,7 +177,8 @@ interface CalculatedRecord {
 const calculateRecord = async (
   userId: number,
   input: CreateBillingRecordInput | CorrectBillingRecordInput,
-  transaction: Transaction
+  transaction: Transaction,
+  previousItems: PaymentUser[] = []
 ): Promise<CalculatedRecord> => {
   const conceptIds = input.items.map((item) => item.conceptId)
   const concepts = await UserConcept.findAll({
@@ -186,7 +189,7 @@ const calculateRecord = async (
   })
   if (concepts.length !== conceptIds.length) throw conceptNotFound()
   const byId = new Map(concepts.map((concept) => [concept.id, concept]))
-  const archived = concepts.find((concept) => !concept.active)
+  const archived = concepts.find((concept) => !concept.active && !previousItems.some(item => item.conceptId === concept.id))
   if (archived) {
     throw new BillingError(
       'BILLING_CONCEPT_ARCHIVED',
@@ -197,10 +200,11 @@ const calculateRecord = async (
   try {
     const items = input.items.map((requested) => {
       const concept = byId.get(requested.conceptId)!
-      const unitPrice = normalizeBillingDecimal(concept.unit_price)
+      const previous = previousItems.find(item => item.conceptId === concept.id)
+      const unitPrice = normalizeBillingDecimal(previous?.unit_price_snapshot ?? concept.unit_price)
       return {
         conceptId: concept.id,
-        description: concept.description,
+        description: previous?.description_snapshot ?? concept.description,
         unitPrice,
         quantity: requested.quantity,
         subtotal: multiplyBillingMoney(requested.quantity, unitPrice),
@@ -285,6 +289,8 @@ const appendRevision = async (
 const recalculatePatientBalances = recalculatePatientFinancialBalance
 
 export interface BillingRepository {
+  createInstallment(userId: number, patientId: number, recordId: number, input: CreateBillingInstallmentInput, key: string, requestHash: string): Promise<BillingRecordData>
+
   listConcepts(
     userId: number,
     query: ListBillingConceptsQuery
@@ -448,6 +454,7 @@ export class SequelizeBillingRepository implements BillingRepository {
     return {
       records: await this.withAllocations(rows.map((row) => mapRecord(row, items.get(row.id) ?? []))),
       total: count,
+      hasTreatmentFinance: (await TreatmentCharge.count({ where: { patient_id: patientId } })) > 0 || (await Payment.count({ where: { patientId, user_id: userId, record_kind: 'TREATMENT_PAYMENT' } })) > 0,
     }
   }
 
@@ -492,7 +499,7 @@ export class SequelizeBillingRepository implements BillingRepository {
         const paid = await allocatedAmounts(charges.map(charge => charge.id), transaction)
         const pendingIds = charges.filter(charge => (paid.get(charge.id) ?? 0n) < cents(charge.total_amount)).map(charge => charge.treatment_id)
         const pending = pendingIds.length ? await TreatmentPlanItem.findAll({ where: { id: { [Op.in]: pendingIds }, user_concept_id: { [Op.in]: input.items.map(item => item.conceptId) } }, transaction }) : []
-        if (pending.length) throw new ApiError({ code: 'CHARGE_PAYMENT_REQUIRED', message: 'Ya hay cargos pendientes de ese tratamiento. Registra un abono desde Cargos y abonos para no generar otro cobro.', statusCode: 409 })
+        if (pending.length) throw new ApiError({ code: 'CHARGE_PAYMENT_REQUIRED', message: 'Este servicio tiene un cargo pendiente. Abre Movimientos anteriores para registrar el abono sin generar otro cobro.', statusCode: 409 })
         const calculated = await calculateRecord(userId, input, transaction)
         const revisionActor = await actor(userId, transaction)
         const payment = await Payment.create(
@@ -549,6 +556,41 @@ export class SequelizeBillingRepository implements BillingRepository {
     return record
   }
 
+  async createInstallment(userId: number, patientId: number, recordId: number, input: CreateBillingInstallmentInput, key: string, requestHash: string) {
+    const paymentId = await db.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED }, async transaction => {
+      const patient = await lockPatient(userId, patientId, transaction)
+      const existing = await Payment.findOne({ where: { user_id: userId, idempotency_key: key }, transaction })
+      if (existing) {
+        if (existing.request_hash !== requestHash || existing.patientId !== patientId || existing.source_billing_record_id !== recordId) throw new BillingError('IDEMPOTENCY_KEY_REUSED', 'La llave ya se usó para otra operación')
+        return existing.id
+      }
+      const source = await lockRecord(userId, patientId, recordId, transaction)
+      if (source.record_kind !== 'LEGACY' || source.source_billing_record_id !== null || source.status !== 'POSTED') throw new ApiError({ code: 'BILLING_INSTALLMENT_SOURCE_INVALID', message: 'Selecciona un registro de servicios vigente para abonar.', statusCode: 409 })
+      if (input.occurredOn < source.payment_date) throw new ApiError({ code: 'BILLING_INSTALLMENT_DATE_INVALID', message: 'El abono no puede ser anterior al registro de servicios.', statusCode: 422 })
+      const items = await PaymentUser.findAll({ where: { paymentId: recordId }, transaction })
+      if (!items.length) throw new ApiError({ code: 'BILLING_INSTALLMENT_SOURCE_INVALID', message: 'El registro no contiene servicios del catálogo.', statusCode: 409 })
+      const previous = await Payment.findAll({ where: { source_billing_record_id: recordId, status: 'POSTED' }, transaction })
+      const pending = cents(source.total) - cents(source.income) - previous.reduce((sum, row) => sum + cents(row.income), 0n)
+      if (cents(input.amountReceived) > pending) throw new ApiError({ code: 'BILLING_INSTALLMENT_EXCEEDS_BALANCE', message: 'El abono excede el adeudo pendiente. Actualiza el historial y revisa el importe.', statusCode: 409 })
+      const revisionActor = await actor(userId, transaction)
+      const receipt = await Payment.create({
+        user_id: userId, patientId, source_billing_record_id: recordId,
+        author_user_id: userId, author_name: revisionActor.name,
+        payment_date: input.occurredOn, subtotal: '0.00', discount: '0.00', total: '0.00',
+        income: input.amountReceived, debt: '0.00', payment_method: input.paymentMethod,
+        idempotency_key: key, request_hash: requestHash,
+      }, { transaction })
+      await recalculatePatientBalances(patient, transaction)
+      await receipt.reload({ transaction })
+      await appendRevision(await this.detailInTransaction(receipt, transaction), revisionActor, 'CREATED', null, transaction)
+      return receipt.id
+    }).catch(error => {
+      if (error instanceof UniqueConstraintError) throw new BillingError('IDEMPOTENCY_KEY_REUSED', 'La llave ya se usó para otra operación')
+      throw error
+    })
+    return (await this.findRecord(userId, patientId, paymentId))!
+  }
+
   async correctRecord(
     userId: number,
     patientId: number,
@@ -558,6 +600,7 @@ export class SequelizeBillingRepository implements BillingRepository {
     await db.transaction(async (transaction) => {
       const patient = await lockPatient(userId, patientId, transaction)
       const payment = await lockRecord(userId, patientId, recordId, transaction)
+      if (payment.source_billing_record_id !== null || await Payment.count({ where: { source_billing_record_id: payment.id }, transaction })) throw new ApiError({ code: 'BILLING_RECORD_HAS_INSTALLMENTS', message: 'Este registro tiene abonos asociados. Conserva su importe; cancela los abonos vigentes antes de cancelar el registro original.', statusCode: 409 })
       if (payment.record_kind === 'TREATMENT_PAYMENT') throw new ApiError({ code: 'PAYMENT_CORRECTION_REQUIRES_CANCELLATION', message: 'Para corregir un abono, cancélalo con un motivo y registra el importe correcto. El cargo no se modifica.', statusCode: 409 })
       if (payment.status === 'CANCELLED') {
         throw new BillingError(
@@ -565,7 +608,8 @@ export class SequelizeBillingRepository implements BillingRepository {
           'Un registro cancelado no puede corregirse'
         )
       }
-      const calculated = await calculateRecord(userId, input, transaction)
+      const previousItems = await PaymentUser.findAll({ where: { paymentId: recordId }, transaction })
+      const calculated = await calculateRecord(userId, input, transaction, previousItems)
       const revisionActor = await actor(userId, transaction)
       await payment.update(
         {
@@ -604,6 +648,7 @@ export class SequelizeBillingRepository implements BillingRepository {
       const patient = await lockPatient(userId, patientId, transaction)
       const payment = await lockRecord(userId, patientId, recordId, transaction)
       if (payment.status === 'CANCELLED') return
+      if (await Payment.count({ where: { source_billing_record_id: payment.id, status: 'POSTED' }, transaction })) throw new ApiError({ code: 'BILLING_RECORD_HAS_INSTALLMENTS', message: 'Cancela primero los abonos de este registro antes de cancelar el servicio original.', statusCode: 409 })
       const revisionActor = await actor(userId, transaction)
       await payment.update(
         {
@@ -722,6 +767,7 @@ export class SequelizeBillingRepository implements BillingRepository {
   }
 
   private async withAllocations(records: BillingRecordData[], transaction?: Transaction) {
+    records = await this.withDirectPayments(records, transaction)
     const ids = records.filter(record => record.recordKind === 'TREATMENT_PAYMENT').map(record => record.id)
     if (!ids.length) return records
     const rows = await PaymentAllocation.findAll({ where: { payment_id: { [Op.in]: ids } }, transaction })
@@ -730,6 +776,20 @@ export class SequelizeBillingRepository implements BillingRepository {
     return records.map(record => record.recordKind !== 'TREATMENT_PAYMENT' ? record : { ...record,
       availableCredit: record.status === 'POSTED' ? amount(cents(record.amountReceived) - rows.filter(row => row.payment_id === record.id).reduce((sum, row) => sum + cents(row.amount), 0n)) : '0.00',
       allocations: rows.filter(row => row.payment_id === record.id).map(row => ({ chargeId: row.charge_id, treatmentId: byId.get(row.charge_id)!.treatment_id, description: byId.get(row.charge_id)!.description, amount: normalizeBillingDecimal(row.amount) })) })
+  }
+
+  private async withDirectPayments(records: BillingRecordData[], transaction?: Transaction): Promise<BillingRecordData[]> {
+    const roots = records.filter(record => record.recordKind !== 'TREATMENT_PAYMENT' && !record.sourceBillingRecordId)
+    const sourceIds = [...new Set(records.map(record => record.sourceBillingRecordId).filter((id): id is number => !!id))]
+    const children = roots.length ? await Payment.findAll({ where: { source_billing_record_id: { [Op.in]: roots.map(row => row.id) } }, transaction }) : []
+    const sourceItems = sourceIds.length ? await PaymentUser.findAll({ where: { paymentId: { [Op.in]: sourceIds } }, order: [['id', 'ASC']], transaction }) : []
+    return records.map(record => {
+      if (record.sourceBillingRecordId) return { ...record, sourceDescription: sourceItems.filter(item => item.paymentId === record.sourceBillingRecordId).map(item => item.description_snapshot).join(', ') }
+      if (record.recordKind === 'TREATMENT_PAYMENT') return record
+      const receipts = children.filter(child => child.source_billing_record_id === record.id)
+      const paid = cents(record.amountReceived) + receipts.filter(child => child.status === 'POSTED').reduce((sum, child) => sum + cents(child.income), 0n)
+      return { ...record, hasInstallments: receipts.length > 0, amountPaid: record.status === 'POSTED' ? amount(paid) : '0.00', outstandingAmount: record.status === 'POSTED' ? amount(cents(record.total) > paid ? cents(record.total) - paid : 0n) : '0.00' }
+    })
   }
 
   private mapRevision(revision: PaymentRevision): BillingRecordRevisionData {

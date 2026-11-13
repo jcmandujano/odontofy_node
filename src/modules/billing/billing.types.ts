@@ -23,6 +23,11 @@ export interface BillingItemData {
 }
 
 export interface BillingRecordData {
+  sourceBillingRecordId?: number | null
+  sourceDescription?: string
+  amountPaid?: string
+  outstandingAmount?: string
+  hasInstallments?: boolean
   advanceTreatmentId?: number | null
   advanceTreatmentName?: string | null
   availableCredit?: string
@@ -60,6 +65,7 @@ export interface BillingRecordRevisionData extends BillingRecordData {
 export interface BillingPage<T> {
   records: T[]
   total: number
+  hasTreatmentFinance?: boolean
 }
 
 export type BillingErrorCode =

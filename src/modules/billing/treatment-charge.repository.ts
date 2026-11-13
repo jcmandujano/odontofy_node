@@ -39,8 +39,10 @@ export const ownedPatient = async (
 export class SequelizeTreatmentChargeRepository {
   async list(userId: number, patientId: number, query: ChargeQuery) {
     await ownedPatient(userId, patientId)
+    const confirmed = query.confirmedOnly ? await TreatmentCharge.findAll({ where: { patient_id: patientId }, attributes: ['treatment_id'] }) : []
     const where: WhereOptions = {
       patient_id: patientId,
+      ...(query.confirmedOnly && { id: { [Op.in]: confirmed.map(charge => charge.treatment_id) } }),
       ...(query.scope === 'independent' && { treatment_plan_id: null }),
       ...(query.scope === 'plan' && { treatment_plan_id: { [Op.ne]: null } }),
       ...(query.treatmentPlanId !== undefined && {

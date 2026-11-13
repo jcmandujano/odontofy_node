@@ -13,6 +13,7 @@ import Patient from './patient.model'
 import User from './user.model'
 
 interface PaymentAttributes {
+  source_billing_record_id: number | null
   advance_treatment_id: number | null
   advance_treatment_name: string | null
   record_kind: 'LEGACY' | 'TREATMENT_PAYMENT'
@@ -50,12 +51,14 @@ type PaymentCreationAttributes = Optional<
   | 'record_kind'
   | 'advance_treatment_id'
   | 'advance_treatment_name'
+  | 'source_billing_record_id'
 >
 
 class Payment
   extends Model<PaymentAttributes, PaymentCreationAttributes>
   implements PaymentAttributes
 {
+  public source_billing_record_id!: number | null
   public id!: number
   public advance_treatment_id!: number | null
   public advance_treatment_name!: string | null
@@ -84,6 +87,7 @@ class Payment
 
 Payment.init(
   {
+    source_billing_record_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     advance_treatment_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     advance_treatment_name: { type: DataTypes.STRING(255), allowNull: true },
     record_kind: { type: DataTypes.ENUM('LEGACY', 'TREATMENT_PAYMENT'), allowNull: false, defaultValue: 'LEGACY' },
