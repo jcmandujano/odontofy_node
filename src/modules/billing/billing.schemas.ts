@@ -145,6 +145,7 @@ export const listBillingRecordsQuerySchema = z
   .strictObject({
     page: z.coerce.number().int().min(1).max(1_000_000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    grouped: z.enum(['true', 'false']).optional(),
     status: z
       .union([z.enum(BILLING_RECORD_STATUSES), z.literal('all')])
       .default('POSTED'),

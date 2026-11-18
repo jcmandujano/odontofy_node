@@ -1593,6 +1593,10 @@ paths:
         - $ref: '#/components/parameters/PageSize'
         - $ref: '#/components/parameters/DateFrom'
         - $ref: '#/components/parameters/DateTo'
+        - name: grouped
+          in: query
+          description: Agrupa los abonos bajo su registro original y pagina los registros principales. Incluye abonos cancelados en el detalle.
+          schema: { type: string, enum: ['true', 'false'], default: 'false' }
         - name: status
           in: query
           schema:
@@ -4727,6 +4731,18 @@ components:
         amountPaid: { $ref: '#/components/schemas/BillingMoney' }
         outstandingAmount: { $ref: '#/components/schemas/BillingMoney' }
         hasInstallments: { type: boolean }
+        installments:
+          type: array
+          description: Abonos del registro, presentes al solicitar grouped=true; incluye cancelados.
+          items:
+            type: object
+            required: [id, occurredOn, amountReceived, paymentMethod, status]
+            properties:
+              id: { type: integer, minimum: 1 }
+              occurredOn: { type: string, format: date }
+              amountReceived: { $ref: '#/components/schemas/BillingMoney' }
+              paymentMethod: { type: [string, 'null'] }
+              status: { type: string, enum: [POSTED, CANCELLED] }
         advanceTreatmentId: { type: [integer, 'null'], minimum: 1 }
         advanceTreatmentName: { type: [string, 'null'] }
         availableCredit: { $ref: '#/components/schemas/BillingMoney' }

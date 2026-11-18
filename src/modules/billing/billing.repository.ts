@@ -431,6 +431,7 @@ export class SequelizeBillingRepository implements BillingRepository {
     const where: WhereOptions = {
       user_id: userId,
       patientId,
+      ...(query.grouped === 'true' && { source_billing_record_id: null }),
       ...(query.status !== 'all' && { status: query.status }),
       ...(query.dateFrom || query.dateTo
         ? {
@@ -451,8 +452,22 @@ export class SequelizeBillingRepository implements BillingRepository {
       ],
     })
     const items = await this.itemsFor(rows.map((row) => row.id))
+    const records = await this.withAllocations(rows.map((row) => mapRecord(row, items.get(row.id) ?? [])))
+    if (query.grouped === 'true') {
+      const children = rows.length ? await Payment.findAll({
+        where: { user_id: userId, patientId, source_billing_record_id: { [Op.in]: rows.map((row) => row.id) } },
+        order: [['payment_date', 'ASC'], ['id', 'ASC']],
+      }) : []
+      for (const record of records) {
+        if (record.recordKind === 'TREATMENT_PAYMENT') continue
+        record.installments = children.filter((child) => child.source_billing_record_id === record.id).map((child) => ({
+          id: child.id, occurredOn: child.payment_date, amountReceived: normalizeBillingDecimal(child.income),
+          paymentMethod: child.payment_method, status: child.status,
+        }))
+      }
+    }
     return {
-      records: await this.withAllocations(rows.map((row) => mapRecord(row, items.get(row.id) ?? []))),
+      records,
       total: count,
       hasTreatmentFinance: (await TreatmentCharge.count({ where: { patient_id: patientId } })) > 0 || (await Payment.count({ where: { patientId, user_id: userId, record_kind: 'TREATMENT_PAYMENT' } })) > 0,
     }

@@ -28,6 +28,7 @@ export interface BillingRecordData {
   amountPaid?: string
   outstandingAmount?: string
   hasInstallments?: boolean
+  installments?: Array<{ id: number; occurredOn: string; amountReceived: string; paymentMethod: BillingPaymentMethod | null; status: BillingRecordStatus }>
   advanceTreatmentId?: number | null
   advanceTreatmentName?: string | null
   availableCredit?: string
