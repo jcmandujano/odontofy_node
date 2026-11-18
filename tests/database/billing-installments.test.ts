@@ -87,6 +87,10 @@ describe('catalog payment installments', () => {
     const listed = await request(app).get(`/api/v1/patients/${patientId}/billing-records?pageSize=1`).set(auth())
     expect(listed.body.meta.hasTreatmentFinance).toBe(false)
     expect(listed.body.data[0].sourceBillingRecordId).toBe(id)
+    const grouped = await request(app).get(`/api/v1/patients/${patientId}/billing-records?grouped=true&pageSize=1`).set(auth())
+    expect(grouped.body.meta.pagination.total).toBe(1)
+    expect(grouped.body.data[0]).toMatchObject({ id, amountPaid: '1000.00', outstandingAmount: '0.00', installments: [{ id: first.body.data.id, amountReceived: '600.00', status: 'POSTED' }] })
+    expect((await request(app).get(`/api/v1/patients/${patientId}/billing-records?grouped=true`).set({ Authorization: `Bearer ${otherToken}` })).status).toBe(404)
     await request(app).post(`/api/v1/billing-concepts/${conceptId}/reactivate`).set(auth())
     await request(app).patch(`/api/v1/billing-concepts/${conceptId}`).set(auth()).send({ description: 'Resina', unitPrice: '1000.00' })
   })
@@ -96,6 +100,22 @@ describe('catalog payment installments', () => {
     const results = await Promise.all([abono(id, '400.00'), abono(id, '400.00')])
     expect(results.map(res => res.status).sort()).toEqual([201, 409])
     expect((await request(app).get(pathFor(id)).set(auth())).body.data.outstandingAmount).toBe('200.00')
+  })
+
+  it('paginates parent records while keeping each installment with its source', async () => {
+    const first = await source()
+    const second = await source()
+    const receipt = await abono(first, '100.00')
+    const url = `/api/v1/patients/${patientId}/billing-records?grouped=true&pageSize=1`
+    const pages = []
+    for (let page = 1; page <= 4; page++) {
+      const response = await request(app).get(`${url}&page=${page}`).set(auth())
+      expect(response.status).toBe(200)
+      pages.push(...response.body.data)
+    }
+    expect(pages.find(record => record.id === first)).toMatchObject({ installments: [{ id: receipt.body.data.id, amountReceived: '100.00' }] })
+    expect(pages.find(record => record.id === second)).toMatchObject({ installments: [] })
+    expect(pages.some(record => record.id === receipt.body.data.id)).toBe(false)
   })
 
   it('protects ownership, source identity, dates, and strict monetary input', async () => {
@@ -117,6 +137,8 @@ describe('catalog payment installments', () => {
     expect((await cancel(id)).status).toBe(409)
     expect((await request(app).put(`${pathFor(id)}/correction`).set(auth()).send({ occurredOn: '2026-08-10', amountReceived: '400.00', paymentMethod: 'CASH', changeReason: 'Cambio de prueba', items: [{ conceptId, quantity: 2 }] })).status).toBe(409)
     expect((await cancel(receipt.body.data.id)).status).toBe(200)
+    const grouped = await request(app).get(`/api/v1/patients/${patientId}/billing-records?grouped=true&pageSize=1`).set(auth())
+    expect(grouped.body.data[0]).toMatchObject({ id, amountPaid: '400.00', outstandingAmount: '600.00', installments: [{ id: receipt.body.data.id, status: 'CANCELLED' }] })
     expect((await abono(id, '600.00', key)).body.data.status).toBe('CANCELLED')
     expect((await request(app).get(pathFor(id)).set(auth())).body.data.outstandingAmount).toBe('600.00')
     const history = await request(app).get(`${pathFor(receipt.body.data.id)}/revisions`).set(auth())
