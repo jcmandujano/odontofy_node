@@ -61,6 +61,7 @@ const mapOdontogram = (odontogram: Odontogram): OdontogramData => ({
   },
   occurredAt: odontogram.occurred_at,
   archivedAt: odontogram.archived_at,
+  isCompleted: odontogram.is_completed,
   createdAt: odontogram.createdAt,
   updatedAt: odontogram.updatedAt,
 });
@@ -290,6 +291,7 @@ export class SequelizeOdontogramRepository implements OdontogramRepository {
       await odontogram.update(
         {
           ...(input.title !== undefined && { title: input.title }),
+          ...(input.isCompleted !== undefined && { is_completed: input.isCompleted }),
           ...(input.occurredAt !== undefined && {
             occurred_at: new Date(input.occurredAt),
           }),

@@ -3940,6 +3940,7 @@ components:
       type: object
       minProperties: 1
       properties:
+        isCompleted: { type: boolean, description: Estado de finalización indicado por el médico; puede revertirse. }
         title:
           oneOf:
             - type: string
@@ -3996,6 +3997,7 @@ components:
       type: object
       required: [id, patientId, dentition, title, author, occurredAt, archivedAt, createdAt, updatedAt]
       properties:
+        isCompleted: { type: boolean }
         id: { type: integer, minimum: 1 }
         patientId: { type: integer, minimum: 1 }
         dentition: { type: string, enum: [ADULT, PEDIATRIC] }
@@ -4018,6 +4020,7 @@ components:
       type: object
       required: [id, patientId, dentition, title, author, occurredAt, archivedAt, createdAt, updatedAt, findings]
       properties:
+        isCompleted: { type: boolean }
         id: { type: integer, minimum: 1 }
         patientId: { type: integer, minimum: 1 }
         dentition: { type: string, enum: [ADULT, PEDIATRIC] }

@@ -19,6 +19,7 @@ const adult: OdontogramDetailData = {
   author: { userId: 1, name: 'Doctora Ejemplo' },
   occurredAt: now,
   archivedAt: null,
+  isCompleted: false,
   createdAt: now,
   updatedAt: now,
   findings: [],

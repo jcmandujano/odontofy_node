@@ -34,6 +34,7 @@ export interface OdontogramData {
   author: { userId: number; name: string };
   occurredAt: Date;
   archivedAt: Date | null;
+  isCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

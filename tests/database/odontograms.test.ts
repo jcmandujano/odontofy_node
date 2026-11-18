@@ -150,6 +150,19 @@ describe('odontograms v1 ownership and lifecycle', () => {
     expect(list.status).toBe(200);
     expect(list.body.data).toHaveLength(2);
     expect(list.body.meta.pagination.total).toBe(2);
+    expect(adult.body.data.isCompleted).toBe(false);
+  });
+
+  it('persists and reopens completion without removing findings or allowing foreign updates', async () => {
+    const url = `/api/v1/odontograms/${adultId}`;
+    const done = await request(app).patch(url).set(bearer(tokenA)).send({ isCompleted: true });
+    expect(done.status).toBe(200);
+    expect(done.body.data).toMatchObject({ isCompleted: true, findings: [{ toothCode: '16' }] });
+    const list = await request(app).get(`/api/v1/patients/${patientA.id}/odontograms`).set(bearer(tokenA));
+    expect(list.body.data.find((item: { id: number }) => item.id === adultId).isCompleted).toBe(true);
+    expect((await request(app).patch(url).set(bearer(tokenB)).send({ isCompleted: false })).status).toBe(404);
+    const reopened = await request(app).patch(url).set(bearer(tokenA)).send({ isCompleted: false });
+    expect(reopened.body.data.isCompleted).toBe(false);
   });
 
   it('hides foreign patients and odontograms with the same 404 boundary', async () => {
