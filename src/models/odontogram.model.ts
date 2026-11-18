@@ -15,11 +15,12 @@ interface OdontogramAttributes {
   author_name: string;
   occurred_at: Date;
   archived_at: Date | null;
+  is_completed: boolean;
 }
 
 type OdontogramCreationAttributes = Optional<
   OdontogramAttributes,
-  'archived_at' | 'id' | 'title'
+  'archived_at' | 'id' | 'title' | 'is_completed'
 >;
 
 class Odontogram
@@ -35,6 +36,7 @@ class Odontogram
   public author_name!: string;
   public occurred_at!: Date;
   public archived_at!: Date | null;
+  public is_completed!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -57,6 +59,7 @@ Odontogram.init(
     author_name: { type: DataTypes.STRING(350), allowNull: false },
     occurred_at: { type: DataTypes.DATE, allowNull: false },
     archived_at: { type: DataTypes.DATE, allowNull: true },
+    is_completed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
   },
   {
     sequelize: db,

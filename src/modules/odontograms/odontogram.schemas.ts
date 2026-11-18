@@ -174,6 +174,7 @@ export const createOdontogramSchema = z
 export const updateOdontogramSchema = z
   .strictObject({
     title: nullableText(255).optional(),
+    isCompleted: z.boolean().optional(),
     occurredAt: occurredAt.optional(),
     findings: z.array(odontogramFindingSchema).max(500).optional(),
   })
